@@ -74,8 +74,13 @@ describe('Dispatcher V3 phase 4 pipeline', () => {
   });
 
   it('does not falsely promise that backup is en route', () => {
-    const text = composeV3Response({ plan: { action: 'REQUEST_BACKUP', input: {} }, result: { success: true, data: { requested: true } }, speakerCallsign: 'INDIANA-1' });
-    expect(text).toBe('INDIANA-1, backup request sent.');
+    const text = composeV3Response({
+      plan: { action: 'REQUEST_BACKUP', input: {} },
+      result: { success: true, data: { requested: true } },
+      speakerCallsign: 'INDIANA-1',
+      now: new Date('2026-08-07T15:59:00Z'),
+    });
+    expect(text).toBe('INDIANA-1, backup request sent, 1159 hours.');
     expect(text.toLowerCase()).not.toContain('en route');
   });
 

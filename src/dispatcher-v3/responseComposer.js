@@ -1,6 +1,18 @@
 import { V3_ACTIONS } from './actionContracts.js';
 
-export function composeV3Response({ plan, result, speakerCallsign } = {}) {
+const TIMESTAMPED_ACTIONS = new Set([
+  V3_ACTIONS.SET_UNIT_STATUS,
+  V3_ACTIONS.GET_CURRENT_CALL,
+  V3_ACTIONS.CREATE_CALL,
+  V3_ACTIONS.ADD_CALL_NOTE,
+  V3_ACTIONS.ASSIGN_UNIT,
+  V3_ACTIONS.CLEAR_UNIT,
+  V3_ACTIONS.CLOSE_CALL,
+  V3_ACTIONS.STATUS_CHECK,
+  V3_ACTIONS.REQUEST_BACKUP,
+]);
+
+export function composeV3Response({ plan, result, speakerCallsign, now = new Date() } = {}) {
   const unit = clean(speakerCallsign) || 'unit';
   if (plan?.action === 'NO_ACTION') return null;
   if (plan?.action === 'CLARIFY') return clean(plan.clarification) || `${unit}, repeat your last.`;
@@ -16,34 +28,57 @@ export function composeV3Response({ plan, result, speakerCallsign } = {}) {
   }
 
   const data = result.data || {};
+  let response;
   switch (plan.action) {
     case V3_ACTIONS.RADIO_CHECK:
-      return `${unit}, loud and clear.`;
+      response = `${unit}, loud and clear.`;
+      break;
     case V3_ACTIONS.TIME_CHECK:
-      return `${unit}, ${formatTime(data.timestamp)}.`;
+      response = `${unit}, ${formatMilitaryTime(data.timestamp || now)}.`;
+      break;
     case V3_ACTIONS.SET_UNIT_STATUS:
-      return `${unit}, showing ${statusForSpeech(plan.input?.status)}.`;
+      response = `${unit}, showing ${statusForSpeech(plan.input?.status)}.`;
+      break;
     case V3_ACTIONS.GET_CURRENT_CALL:
-      return currentCallResponse(unit, data);
+      response = currentCallResponse(unit, data);
+      break;
     case V3_ACTIONS.CREATE_CALL:
-      return `${unit}, call created${callNumber(data) ? `, ${callNumber(data)}` : ''}.`;
+      response = `${unit}, call created${callNumber(data) ? `, ${callNumber(data)}` : ''}.`;
+      break;
     case V3_ACTIONS.ADD_CALL_NOTE:
-      return `${unit}, note added.`;
+      response = `${unit}, note added.`;
+      break;
     case V3_ACTIONS.ASSIGN_UNIT:
-      return `${unit}, assignment updated.`;
+      response = `${unit}, assignment updated.`;
+      break;
     case V3_ACTIONS.CLEAR_UNIT:
-      return `${unit}, clear.`;
+      response = `${unit}, clear.`;
+      break;
     case V3_ACTIONS.CLOSE_CALL:
-      return `${unit}, call closed.`;
+      response = `${unit}, call closed.`;
+      break;
     case V3_ACTIONS.STATUS_CHECK:
-      return statusCheckResponse(unit, data);
+      response = statusCheckResponse(unit, data);
+      break;
     case V3_ACTIONS.REQUEST_BACKUP:
-      return `${unit}, backup request sent.`;
+      response = `${unit}, backup request sent.`;
+      break;
     case V3_ACTIONS.DECLARE_EMERGENCY:
-      return `${unit}, emergency activated.`;
+      response = `${unit}, emergency activated.`;
+      break;
     default:
-      return `${unit}, copy.`;
+      response = `${unit}, copy.`;
+      break;
   }
+
+  return TIMESTAMPED_ACTIONS.has(plan.action) ? appendMilitaryTime(response, now) : response;
+}
+
+function appendMilitaryTime(value, now) {
+  const text = clean(value);
+  if (!text) return text;
+  const withoutPeriod = text.replace(/\.+$/, '');
+  return `${withoutPeriod}, ${formatMilitaryTime(now)}.`;
 }
 
 function currentCallResponse(unit, data) {
@@ -68,10 +103,16 @@ function statusForSpeech(value) {
   return clean(value)?.replace(/_/g, ' ') || 'updated';
 }
 
-function formatTime(value) {
-  const date = value ? new Date(value) : new Date();
+function formatMilitaryTime(value) {
+  const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return 'time unavailable';
-  return new Intl.DateTimeFormat('en-US', { timeZone: process.env.TZ || 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
+  const formatted = new Intl.DateTimeFormat('en-GB', {
+    timeZone: process.env.TZ || 'America/New_York',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(date);
+  return `${formatted.replace(':', '')} hours`;
 }
 
 function clean(value) {
