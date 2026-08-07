@@ -80,8 +80,19 @@ describe('Dispatcher V3 phase 4 pipeline', () => {
       speakerCallsign: 'INDIANA-1',
       now: new Date('2026-08-07T15:59:00Z'),
     });
-    expect(text).toBe('INDIANA-1, backup request sent, 1159 hours.');
+    expect(text).toBe('INDIANA-1, backup request sent, eleven fifty-nine hours.');
     expect(text.toLowerCase()).not.toContain('en route');
+  });
+
+  it('does not read the generated call number over the air after creating a call', () => {
+    const text = composeV3Response({
+      plan: { action: 'CREATE_CALL', input: { type: 'building check', location: '100 Main St' } },
+      result: { success: true, data: { call_number: '26-000123' } },
+      speakerCallsign: 'INDIANA-1',
+      now: new Date('2026-08-07T15:59:00Z'),
+    });
+    expect(text).toBe('INDIANA-1, call created, eleven fifty-nine hours.');
+    expect(text).not.toContain('26-000123');
   });
 
   it('unwraps Command Link payloads through gateway helpers', async () => {
