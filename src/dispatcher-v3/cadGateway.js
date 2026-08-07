@@ -48,11 +48,14 @@ export class CommandLinkGateway {
     const headers = this._buildHeaders(options.headers, correlationId);
     const body = this._serializeBody(options.body, headers);
     const attempts = SAFE_RETRY_METHODS.has(method) ? 1 + this.maxSafeRetries : 1;
+    const requestTimeoutMs = Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
+      ? Number(options.timeoutMs)
+      : this.timeoutMs;
 
     let lastError = null;
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       try {
-        return await this._execute({ url, method, headers, body, correlationId, attempt });
+        return await this._execute({ url, method, headers, body, correlationId, attempt, timeoutMs: requestTimeoutMs });
       } catch (error) {
         lastError = error;
         if (!this._shouldRetry(error, method, attempt, attempts)) throw error;
@@ -98,9 +101,9 @@ export class CommandLinkGateway {
     return JSON.stringify(body);
   }
 
-  async _execute({ url, method, headers, body, correlationId, attempt }) {
+  async _execute({ url, method, headers, body, correlationId, attempt, timeoutMs }) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     timer.unref?.();
 
     let response;
@@ -111,7 +114,7 @@ export class CommandLinkGateway {
       throw new DispatcherV3Error(
         V3_ERROR_CODES.CAD_UNAVAILABLE,
         timedOut ? 'Command Link request timed out' : 'Command Link request failed',
-        { retryable: true, cause: error, details: { correlationId, attempt, timedOut, method, url: redactUrl(url) } },
+        { retryable: true, cause: error, details: { correlationId, attempt, timedOut, timeoutMs, method, url: redactUrl(url) } },
       );
     } finally {
       clearTimeout(timer);
@@ -130,10 +133,6 @@ export class CommandLinkGateway {
       );
     }
 
-    // Command Link has several legacy endpoints that report an operational
-    // rejection as HTTP 200 with { success: false }. Never let that shape cross
-    // the V3 boundary as a successful action or the dispatcher can speak a
-    // false "10-4" even though CAD rejected the mutation.
     if (payload.success === false) {
       throw cadRejectedError({ payload, response, responseCorrelationId, method, url });
     }
