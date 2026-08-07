@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
 
 private const val TAG = "[RadioEngine]"
 private const val DEFAULT_MIC_SAMPLE_RATE = 16000
+private const val PHONE_MIC_SAMPLE_RATE = 48000
 private const val CAPTURE_INTERVAL_MS = 20L
 private const val RX_DIAG_INTERVAL_MS = 5_000L
 private const val PRE_BUFFER_MAX_FRAMES = 150
@@ -424,18 +425,17 @@ class RadioAudioEngine(private val context: Context) {
         val deviceKey = "${Build.MANUFACTURER}/${Build.MODEL}/API${Build.VERSION.SDK_INT}"
 
         if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
-            // Phone PTT must be immediate. Do not open/close several temporary
-            // AudioRecord sessions on every key-down to probe sources; Samsung/
-            // MediaTek devices can take hundreds of ms per probe and may leave
-            // the final recorder in a muted/settling state. Use the handset MIC
-            // directly and keep the normal MEDIA/A2DP output route.
-            val source = MediaRecorder.AudioSource.MIC
-            val name = "MIC"
+            // Keep phone PTT immediate and bypass the Samsung/MediaTek processed
+            // MIC path. UNPROCESSED is the cleanest handset input on Android N+
+            // and avoids vendor AGC/noise processing that produced near-zero PCM.
+            val source = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+                MediaRecorder.AudioSource.UNPROCESSED else MediaRecorder.AudioSource.MIC
+            val name = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) "UNPROCESSED" else "MIC"
             txSessionStats.audioSource = name
             cachedSourceKey = deviceKey
             cachedSourceValue = source
             cachedSourceName = name
-            Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_SELECTED source=$name reason=direct_phone_mic_no_probe device=$deviceKey")
+            Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_SELECTED source=$name reason=raw_phone_capture device=$deviceKey")
             return source
         }
 
@@ -588,7 +588,8 @@ class RadioAudioEngine(private val context: Context) {
             RadioDiagLog.resetSessionClock()
             txSessionStats.reset()
             txSessionStats.startTimeMs = System.currentTimeMillis()
-            txSessionStats.requestedRate = DEFAULT_MIC_SAMPLE_RATE
+            val requestedMicRate = if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") PHONE_MIC_SAMPLE_RATE else DEFAULT_MIC_SAMPLE_RATE
+            txSessionStats.requestedRate = requestedMicRate
             pcmReadRateLimiter.reset()
             dspRateLimiter.reset()
             opusCodec.resetFailureCounts()
@@ -610,30 +611,30 @@ class RadioAudioEngine(private val context: Context) {
             }
 
             val minBufferSize = AudioRecord.getMinBufferSize(
-                DEFAULT_MIC_SAMPLE_RATE,
+                requestedMicRate,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT
             )
-            val requestedFrameSizeBytes = (DEFAULT_MIC_SAMPLE_RATE / 1000 * CAPTURE_INTERVAL_MS.toInt()) * 2
+            val requestedFrameSizeBytes = (requestedMicRate / 1000 * CAPTURE_INTERVAL_MS.toInt()) * 2
             val bufferSize = maxOf(minBufferSize, requestedFrameSizeBytes * 4)
 
-            Log.d("[AudioCapture]", "PRE_CAPTURE_AUDIORECORD_INIT requestedRate=$DEFAULT_MIC_SAMPLE_RATE source=${txSessionStats.audioSource} minBufSize=$minBufferSize allocBufSize=$bufferSize frameMs=$CAPTURE_INTERVAL_MS ${RadioDiagLog.elapsedTag()}")
+            Log.d("[AudioCapture]", "PRE_CAPTURE_AUDIORECORD_INIT requestedRate=$requestedMicRate source=${txSessionStats.audioSource} minBufSize=$minBufferSize allocBufSize=$bufferSize frameMs=$CAPTURE_INTERVAL_MS ${RadioDiagLog.elapsedTag()}")
 
             val record = try {
                 AudioRecord(
                     audioSource,
-                    DEFAULT_MIC_SAMPLE_RATE,
+                    requestedMicRate,
                     AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT,
                     bufferSize
                 )
             } catch (e: Exception) {
-                Log.e("[RadioError]", "AudioRecord constructor threw: ${e::class.simpleName}: ${e.message} source=${txSessionStats.audioSource} rate=$DEFAULT_MIC_SAMPLE_RATE method=startPreCapture", e)
+                Log.e("[RadioError]", "AudioRecord constructor threw: ${e::class.simpleName}: ${e.message} source=${txSessionStats.audioSource} rate=$requestedMicRate method=startPreCapture", e)
                 txSessionStats.stopReason = "audiorecord_constructor_exception"
                 return false
             }
             if (record.state != AudioRecord.STATE_INITIALIZED) {
-                Log.e("[RadioError]", "AudioRecord failed to initialize state=${record.state} source=${txSessionStats.audioSource} rate=$DEFAULT_MIC_SAMPLE_RATE method=startPreCapture")
+                Log.e("[RadioError]", "AudioRecord failed to initialize state=${record.state} source=${txSessionStats.audioSource} rate=$requestedMicRate method=startPreCapture")
                 record.release()
                 txSessionStats.stopReason = "audiorecord_init_failed"
                 return false
@@ -662,14 +663,14 @@ class RadioAudioEngine(private val context: Context) {
                 return false
             }
 
-            Log.d("[AudioCapture]", "PRE_CAPTURE_HAL_NEGOTIATED requestedRate=$DEFAULT_MIC_SAMPLE_RATE actualRate=$actualSampleRate actualChannels=$actualChannelCount needsStereoDownmix=$needsStereoDownmix bufferSize=$bufferSize monoFrameSamples=$actualFrameSizeSamples monoFrameBytes=${actualFrameSizeSamples * 2} ${RadioDiagLog.elapsedTag()}")
+            Log.d("[AudioCapture]", "PRE_CAPTURE_HAL_NEGOTIATED requestedRate=$requestedMicRate actualRate=$actualSampleRate actualChannels=$actualChannelCount needsStereoDownmix=$needsStereoDownmix bufferSize=$bufferSize monoFrameSamples=$actualFrameSizeSamples monoFrameBytes=${actualFrameSizeSamples * 2} ${RadioDiagLog.elapsedTag()}")
 
             if (needsStereoDownmix) {
                 Log.w("[AudioCapture]", "PRE_CAPTURE_STEREO_DETECTED HAL returned stereo ($actualChannelCount ch) despite requesting CHANNEL_IN_MONO — will downmix to mono before DSP/Opus encoding")
             }
 
-            if (actualSampleRate != DEFAULT_MIC_SAMPLE_RATE) {
-                Log.w("[AudioCapture]", "PRE_CAPTURE_SAMPLE_RATE_MISMATCH requested=$DEFAULT_MIC_SAMPLE_RATE actual=$actualSampleRate — adapting pipeline")
+            if (actualSampleRate != requestedMicRate) {
+                Log.w("[AudioCapture]", "PRE_CAPTURE_SAMPLE_RATE_MISMATCH requested=$requestedMicRate actual=$actualSampleRate — adapting pipeline")
             }
 
             opusCodec.currentAudioSource = txSessionStats.audioSource
@@ -711,25 +712,31 @@ class RadioAudioEngine(private val context: Context) {
             val monoFrameSizeBytes = actualFrameSizeSamples * 2
 
             val sessionId = record.audioSessionId
-            try {
-                if (AutomaticGainControl.isAvailable()) {
-                    autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = true }
-                    Log.d("[AudioCapture]", "AGC attached=true enabled=true sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
-                } else {
-                    Log.d("[AudioCapture]", "AGC attached=false reason=unavailable ${RadioDiagLog.elapsedTag()}")
+            if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+                autoGainControl = null
+                noiseSuppressor = null
+                Log.d("[AudioCapture]", "PHONE_PLATFORM_EFFECTS_BYPASSED agc=false ns=false sessionId=$sessionId source=${txSessionStats.audioSource} rate=$actualSampleRate ${RadioDiagLog.elapsedTag()}")
+            } else {
+                try {
+                    if (AutomaticGainControl.isAvailable()) {
+                        autoGainControl = AutomaticGainControl.create(sessionId)?.also { it.enabled = true }
+                        Log.d("[AudioCapture]", "AGC attached=true enabled=true sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
+                    } else {
+                        Log.d("[AudioCapture]", "AGC attached=false reason=unavailable ${RadioDiagLog.elapsedTag()}")
+                    }
+                } catch (e: Exception) {
+                    Log.w("[RadioError]", "AutomaticGainControl unavailable: ${e.message} method=startPreCapture")
                 }
-            } catch (e: Exception) {
-                Log.w("[RadioError]", "AutomaticGainControl unavailable: ${e.message} method=startPreCapture")
-            }
-            try {
-                if (NoiseSuppressor.isAvailable()) {
-                    noiseSuppressor = NoiseSuppressor.create(sessionId)?.also { it.enabled = true }
-                    Log.d("[AudioCapture]", "NoiseSuppressor attached=true enabled=true sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
-                } else {
-                    Log.d("[AudioCapture]", "NoiseSuppressor attached=false reason=unavailable ${RadioDiagLog.elapsedTag()}")
+                try {
+                    if (NoiseSuppressor.isAvailable()) {
+                        noiseSuppressor = NoiseSuppressor.create(sessionId)?.also { it.enabled = true }
+                        Log.d("[AudioCapture]", "NoiseSuppressor attached=true enabled=true sessionId=$sessionId ${RadioDiagLog.elapsedTag()}")
+                    } else {
+                        Log.d("[AudioCapture]", "NoiseSuppressor attached=false reason=unavailable ${RadioDiagLog.elapsedTag()}")
+                    }
+                } catch (e: Exception) {
+                    Log.w("[RadioError]", "NoiseSuppressor unavailable: ${e.message} method=startPreCapture")
                 }
-            } catch (e: Exception) {
-                Log.w("[RadioError]", "NoiseSuppressor unavailable: ${e.message} method=startPreCapture")
             }
 
             synchronized(preBufferLock) {
@@ -844,20 +851,20 @@ class RadioAudioEngine(private val context: Context) {
                                         dspRateLimiter.tick()
                                         val preStats = if (dspRateLimiter.shouldLogDetail()) RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes) else null
 
-                                        applyGain(monoFrame, monoFrameSizeBytes, txMicGain)
-                                        highPassFilter(monoFrame, monoFrameSizeBytes)
-                                        // The phone handset mic can arrive at a much lower level than
-                                        // the dedicated-radio VOIP path. The -42 dB radio noise gate
-                                        // was zeroing valid phone speech and producing "open carrier"
-                                        // dead air. Keep the gate for T320/SD7, bypass it on phones.
-                                        if (BuildConfig.RADIO_DEVICE_TYPE != "android_phone") {
-                                            txNoiseGate(monoFrame, monoFrameSizeBytes)
-                                        } else {
+                                        if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+                                            // Keep phone capture as close to raw as possible while we
+                                            // establish a healthy handset PCM path. A small digital gain
+                                            // is safe and cannot turn non-zero speech into silence.
                                             txGateOpen = true
+                                            applyGain(monoFrame, monoFrameSizeBytes, txMicGain)
+                                        } else {
+                                            applyGain(monoFrame, monoFrameSizeBytes, txMicGain)
+                                            highPassFilter(monoFrame, monoFrameSizeBytes)
+                                            txNoiseGate(monoFrame, monoFrameSizeBytes)
+                                            lowPassFilter(monoFrame, monoFrameSizeBytes)
+                                            softwareCompressor(monoFrame, monoFrameSizeBytes)
+                                            applyGain(monoFrame, monoFrameSizeBytes, txGain)
                                         }
-                                        lowPassFilter(monoFrame, monoFrameSizeBytes)
-                                        softwareCompressor(monoFrame, monoFrameSizeBytes)
-                                        applyGain(monoFrame, monoFrameSizeBytes, txGain)
 
                                         if (preStats != null) {
                                             val postStats = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes)
