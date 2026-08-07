@@ -34,17 +34,12 @@ npm run build
 cd ..
 
 echo "[6/6] Restarting application..."
-# PM2 can retain stale metadata for a deleted/missing process. A successful
-# `pm2 describe` therefore does not guarantee `pm2 restart` will work. Try the
-# normal restart first, then recover by deleting the stale entry and starting
-# cleanly from the ecosystem file.
-if pm2 restart deploy/ecosystem.config.cjs --update-env; then
-  echo "PM2 restart succeeded."
-else
-  echo "PM2 restart failed; clearing stale process metadata and starting cleanly..."
-  pm2 delete command-comms 2>/dev/null || true
-  pm2 start deploy/ecosystem.config.cjs --update-env
-fi
+# This VM has developed a corrupted/stale PM2 process table where even
+# `restart`/`delete command-comms` can crash while looking up process id 0.
+# Reset the PM2 daemon itself, then start the single Command Comms app fresh.
+pm2 kill 2>/dev/null || true
+sleep 2
+pm2 start deploy/ecosystem.config.cjs --only command-comms --update-env
 pm2 save
 
 echo ""
