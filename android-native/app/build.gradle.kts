@@ -18,13 +18,6 @@ android {
         buildConfigField("String", "BASE_URL", "\"https://comms.reeder-systems.com\"")
     }
 
-    // Per-device build flavors.
-    //
-    // The audio transport, signaling, floor control, jitter buffer, Opus
-    // codec, and dispatch UI are shared across every flavor — only
-    // device-integration code and the device_type reported to the backend
-    // differ. The regular phone build uses the existing Firebase package ID.
-    // The bridge and SD7 builds use separate package IDs so they can coexist.
     flavorDimensions += "device"
     productFlavors {
         create("t320") {
@@ -33,11 +26,9 @@ android {
         }
         create("phone") {
             dimension = "device"
-            versionCode = 5
-            versionNameSuffix = "-phone-v5"
-            // Reuse the existing authenticated phone session flow. The phone
-            // source set renders the dedicated touch-first handset UI.
-            buildConfigField("String", "RADIO_DEVICE_TYPE", "\"android_phone_bridge\"")
+            versionCode = 6
+            versionNameSuffix = "-phone-v6"
+            buildConfigField("String", "RADIO_DEVICE_TYPE", "\"android_phone\"")
         }
         create("bridge") {
             dimension = "device"
@@ -54,8 +45,6 @@ android {
         }
     }
 
-    // Preserve the existing bridge implementation under the new `bridge`
-    // flavor name. The normal `phone` flavor is isolated in phoneClient.
     sourceSets {
         getByName("bridge").setRoot("src/phone")
         getByName("phone").setRoot("src/phoneClient")
