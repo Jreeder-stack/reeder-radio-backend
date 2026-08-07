@@ -682,15 +682,17 @@ class SignalingService {
   }
 
   _handlePttPre(socket, data) {
-    const channelId = canonicalChannelKey(data.channelId);
-    if (!socket.unitId) return;
-    socket.to(`channel:${channelId}`).emit('ptt:pre', {
-      unitId: socket.unitId,
-      channelId,
-    });
-  }
+  const channelId = canonicalChannelKey(data.channelId);
+  if (!socket.unitId) return;
+  // A second handset/radio signed in as the same unit must not react
+  // to this unit's own pre-key event.
+  this._emitToChannelExcludingUnit(channelId, 'ptt:pre', {
+    unitId: socket.unitId,
+    channelId,
+  }, socket.unitId);
+}
 
-  _handlePttStart(socket, data) {
+_handlePttStart(socket, data) {
     const channelId = canonicalChannelKey(data.channelId);
     
     if (!socket.unitId) {
@@ -1486,23 +1488,23 @@ class SignalingService {
   }
 
   /**
-   * Like _emitToChannelExcludingUnit but skips only the originating device's
-   * sockets. This lets multiple devices on the same unitId (e.g. a T320 radio
-   * and an external CAD client) coexist: the device that initiated the PTT is
-   * skipped, while sibling devices on the same unitId still receive the event
-   * and can enter RX.
-   */
-  _emitToChannelExcludingDevice(channelId, event, data, excludeDeviceId) {
-    if (!this.io) return;
-    const room = `channel:${channelId}`;
-    this.io.sockets.sockets.forEach((s) => {
-      if (!s.rooms || !s.rooms.has(room)) return;
-      if (excludeDeviceId && s.deviceId === excludeDeviceId) return;
-      s.emit(event, data);
-    });
-  }
+ * Emit radio TX state to other units while isolating every endpoint owned by
+ * the transmitting unit. A user may be signed into both a phone and T320;
+ * sibling endpoints must not enter RX/busy state from their own PTT.
+ */
+_emitToChannelExcludingDevice(channelId, event, data, excludeDeviceId) {
+  if (!this.io) return;
+  const room = `channel:${channelId}`;
+  const originUnitId = data?.senderUnitId || data?.unitId || data?.heldBy || null;
+  this.io.sockets.sockets.forEach((s) => {
+    if (!s.rooms || !s.rooms.has(room)) return;
+    if (excludeDeviceId && s.deviceId === excludeDeviceId) return;
+    if (originUnitId && s.unitId === originUnitId) return;
+    s.emit(event, data);
+  });
+}
 
-  _emitChannelFloorTakenToRoom(channelId, data, excludeUnitId) {
+_emitChannelFloorTakenToRoom(channelId, data, excludeUnitId) {
     if (!this.io) return;
     const room = `channel:${channelId}`;
     this.io.sockets.sockets.forEach((s) => {
@@ -1517,20 +1519,22 @@ class SignalingService {
   }
 
   _emitChannelFloorTakenToRoomExcludingDevice(channelId, data, excludeDeviceId) {
-    if (!this.io) return;
-    const room = `channel:${channelId}`;
-    this.io.sockets.sockets.forEach((s) => {
-      if (!s.rooms || !s.rooms.has(room)) return;
-      if (excludeDeviceId && s.deviceId === excludeDeviceId) return;
-      if (s.isRadioDevice) {
-        s.emit(RADIO_EVENTS.CHANNEL_FLOOR_TAKEN, data);
-      } else {
-        s.emit(RADIO_EVENTS.CHANNEL_BUSY, data);
-      }
-    });
-  }
+  if (!this.io) return;
+  const room = `channel:${channelId}`;
+  const originUnitId = data?.heldBy || data?.unitId || data?.senderUnitId || null;
+  this.io.sockets.sockets.forEach((s) => {
+    if (!s.rooms || !s.rooms.has(room)) return;
+    if (excludeDeviceId && s.deviceId === excludeDeviceId) return;
+    if (originUnitId && s.unitId === originUnitId) return;
+    if (s.isRadioDevice) {
+      s.emit(RADIO_EVENTS.CHANNEL_FLOOR_TAKEN, data);
+    } else {
+      s.emit(RADIO_EVENTS.CHANNEL_BUSY, data);
+    }
+  });
+}
 
-  _findSocketByUnitId(unitId) {
+_findSocketByUnitId(unitId) {
     if (!this.io) return null;
     for (const [, s] of this.io.sockets.sockets) {
       if (s.unitId === unitId) return s;

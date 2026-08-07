@@ -81,16 +81,10 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
                 put("agencyId", "default")
                 put("isDispatcher", false)
                 deviceId?.let { put("deviceId", it) }
-                // Per-flavor device_type so dispatchers can distinguish T320s
-                // from Siyata SD7s in the admin Devices tab. Non-radio
-                // (desktop/CAD) connections reuse the existing "desktop" tag.
-                // BuildConfig.RADIO_DEVICE_TYPE is "t320" for the t320 flavor
-                // and "siyata_sd7" for the sd7 flavor (see app/build.gradle.kts).
-                put(
-                    "deviceType",
-                    if (radioToken != null) com.reedersystems.commandcomms.BuildConfig.RADIO_DEVICE_TYPE
-                    else "desktop"
-                )
+                // Native builds always report their actual build flavor. This keeps
+                // authenticated handset sessions registered as android_phone rather
+                // than incorrectly masquerading as a desktop client.
+                put("deviceType", com.reedersystems.commandcomms.BuildConfig.RADIO_DEVICE_TYPE)
                 put("clientType", "radio")
             }
             Log.d(STARTUP_TAG, "SIGNALING_AUTH_SENT unitId=$unitId deviceId=${deviceId ?: "none"}")
