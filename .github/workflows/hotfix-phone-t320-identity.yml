@@ -1,0 +1,93 @@
+name: Hotfix phone T320 identity isolation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/hotfix-phone-t320-identity.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, 'Hotfix phone/T320 identity isolation') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch canonical auth and device-targeted grant
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/services/signalingService.js')
+          s = p.read_text()
+
+          anchor = """    if (sessionUser) {
+      validatedUnitId = sessionUser.unit_id || sessionUser.username || unitId;
+      validatedUsername = sessionUser.username || username;
+      validatedIsDispatcher = sessionUser.role === 'admin' || sessionUser.role === 'dispatcher' || false;
+    }
+
+    socket.unitId = validatedUnitId;"""
+          replacement = """    if (sessionUser) {
+      validatedUnitId = sessionUser.unit_id || sessionUser.username || unitId;
+      validatedUsername = sessionUser.username || username;
+      validatedIsDispatcher = sessionUser.role === 'admin' || sessionUser.role === 'dispatcher' || false;
+    } else {
+      // Native Socket.IO clients do not share the REST OkHttp cookie jar with the
+      // socket client, so canonicalize the claimed login identity against the DB.
+      // This guarantees a phone and its assigned T320 resolve to the exact same
+      // unitId, allowing same-unit sibling PTT suppression to work reliably.
+      try {
+        const userResult = await pool.query(
+          `SELECT id, username, unit_id, role
+             FROM users
+            WHERE username = $1 OR unit_id = $1 OR username = $2 OR unit_id = $2
+            LIMIT 1`,
+          [username, unitId]
+        );
+        if (userResult.rows.length > 0) {
+          const canonicalUser = userResult.rows[0];
+          validatedUnitId = canonicalUser.unit_id || canonicalUser.username || unitId;
+          validatedUsername = canonicalUser.username || username;
+          validatedIsDispatcher = canonicalUser.role === 'admin' || canonicalUser.role === 'dispatcher' || false;
+          sessionUser = canonicalUser;
+        }
+      } catch (identityErr) {
+        console.warn('[Signaling] Canonical native identity lookup failed:', identityErr.message);
+      }
+    }
+
+    socket.unitId = validatedUnitId;"""
+          if anchor not in s:
+              raise SystemExit('auth anchor not found')
+          s = s.replace(anchor, replacement, 1)
+
+          grant = """      socket.emit(RADIO_EVENTS.PTT_GRANTED, {
+        channelId,
+        senderUnitId: socket.unitId,
+        timestamp: Date.now(),
+      });"""
+          grant_repl = """      socket.emit(RADIO_EVENTS.PTT_GRANTED, {
+        channelId,
+        senderUnitId: socket.unitId,
+        requestId: data.requestId || null,
+        targetDeviceId: socket.deviceId || null,
+        originSocketId: socket.id,
+        timestamp: Date.now(),
+      });"""
+          if grant not in s:
+              raise SystemExit('grant anchor not found')
+          s = s.replace(grant, grant_repl, 1)
+          p.write_text(s)
+      - name: Syntax check
+        run: node --check src/services/signalingService.js
+      - name: Commit hotfix
+        run: |
+          git config user.name "Jreeder-stack"
+          git config user.email "227722155+Jreeder-stack@users.noreply.github.com"
+          git add src/services/signalingService.js
+          git commit -m "Hotfix phone/T320 identity isolation"
+          git push origin HEAD:main
