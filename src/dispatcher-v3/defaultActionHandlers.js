@@ -42,7 +42,21 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
 
     [V3_ACTIONS.SET_UNIT_STATUS]: async ({ input, correlationId }) => {
       const callsign = await resolveSafeCallsign(input.unitId, correlationId);
-      return gateway.post('/api/radio/status', { unit_id: callsign, status: input.status, note: input.note || undefined }, { correlationId });
+      const result = await gateway.post('/api/radio/status', { unit_id: callsign, status: input.status, note: input.note || undefined }, { correlationId });
+      const returnedStatus = normalizeStatus(result?.status || result?.current_status || result?.currentStatus);
+      const requestedStatus = normalizeStatus(input.status);
+      if (!returnedStatus || returnedStatus !== requestedStatus) {
+        throw new DispatcherV3Error(
+          V3_ERROR_CODES.CAD_REJECTED,
+          `Command Link did not confirm ${callsign} changed to ${requestedStatus}`,
+          {
+            statusCode: 502,
+            retryable: false,
+            details: { correlationId, callsign, requestedStatus, returnedStatus, response: result || null },
+          },
+        );
+      }
+      return result;
     },
 
     [V3_ACTIONS.CHANGE_UNIT_ZONE]: async ({ input, correlationId }) => {
@@ -85,10 +99,6 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
       const identity = await resolveSafeIdentity(input.unitId, correlationId);
       const callsign = identity.callsign;
 
-      // Clearing a unit from a call is a lifecycle operation, not just a status change.
-      // If this unit is the only active unit left, dispose the call in one authoritative
-      // CAD operation. If other units remain (or the assignment shape is unknown), only
-      // clear this unit and leave the call open.
       let callDetails = null;
       try {
         callDetails = await gateway.get(`/api/radio/call/${encodeURIComponent(input.callId)}`, { correlationId });
@@ -171,4 +181,8 @@ function unitMatches(candidate, identity) {
 
 function normalizeIdentity(value) {
   return value === undefined || value === null ? '' : String(value).trim().toUpperCase();
+}
+
+function normalizeStatus(value) {
+  return String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
 }
