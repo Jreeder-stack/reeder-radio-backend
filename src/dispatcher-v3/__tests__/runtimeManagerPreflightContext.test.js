@@ -31,7 +31,7 @@ vi.mock('../../services/cadService.js', async () => {
     CORE_AI_DISPATCHER_CAD_SCOPES: ['call.read'],
     validateDispatcherCadIntegration: (...args) => preflightMock(getRuntimeContext(), ...args),
   };
-}));
+});
 
 vi.mock('../intentPlanner.js', () => ({
   isV3PlannerConfigured: () => true,
