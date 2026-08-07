@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -51,8 +52,6 @@ private const val KEY_ACC = 231
 private const val KEY_STAR = 17
 private const val KEY_DPAD_UP = 19
 private const val KEY_DPAD_DOWN = 20
-// SD7 rotary-knob press. Not emitted by any T320 hardware path so adding
-// this constant is a non-T320-affecting extension.
 private const val KEY_DPAD_CENTER = 23
 private const val KEY_DPAD_LEFT = 21
 private const val KEY_DPAD_RIGHT = 22
@@ -67,29 +66,12 @@ class MainActivity : ComponentActivity() {
     private var starDownTime = 0L
     private var lastCapturedKeyCode = -1
     private val rootFocusRequester = FocusRequester()
+    private var lastT320VolumeDetentAtMs = 0L
+    private var lastT320VolumeDirection = 0
 
-    /**
-     * Set to true when we have launched ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENTS.
-     * On the next onResume we open battery optimization settings instead of doing it
-     * immediately (which would conflict with the settings activity still on screen).
-     */
     private var pendingBatteryPromptAfterFullScreenIntent = false
-
-    /**
-     * Set to true when we have launched ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS.
-     * On the next onResume we open overlay (SYSTEM_ALERT_WINDOW) settings if not yet granted.
-     */
     private var pendingOverlayPromptAfterBattery = false
 
-    /**
-     * Receives [CommandCommsApp.ACTION_REMOTE_KIOSK_CHANGED] for the entire
-     * lifetime of the activity (registered in [onCreate], unregistered in
-     * [onDestroy]) so dispatcher Unlock/Re-lock commands trigger an
-     * immediate `startLockTask` / `stopLockTask` regardless of whether the
-     * activity is currently in `RESUMED` state. This avoids the race where
-     * `startActivity(SINGLE_TOP)` only delivers `onNewIntent` (not
-     * `onResume`) when MainActivity is already foregrounded.
-     */
     private val remoteKioskReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != CommandCommsApp.ACTION_REMOTE_KIOSK_CHANGED) return
@@ -198,18 +180,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * Activity-side complement to [CommandCommsApp.applyRemoteKioskState]:
-     * the Application owns persistent enforcement (apply/clear Device
-     * Owner policies, schedule auto-relock, react to dispatcher
-     * unlock/relock broadcasts at process level). MainActivity contributes
-     * the one piece that requires an Activity context —
-     * [android.app.Activity.startLockTask] / [android.app.Activity.stopLockTask].
-     *
-     * This runs from `onResume`, `onNewIntent`, and the in-activity
-     * broadcast receiver so the lock-task transition is guaranteed
-     * regardless of which lifecycle path delivers the dispatcher command.
-     */
     private fun applyKioskLockTaskTransition() {
         val policy = app.kioskPolicyManager
         val now = System.currentTimeMillis()
@@ -225,8 +195,6 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             Log.w(TAG, "applyKioskLockTaskTransition failed: ${e.message}")
         }
-        // Re-run the process-level reconciler so timers and policy bundle
-        // stay in sync with what the activity just observed (idempotent).
         app.applyRemoteKioskState(launchActivityIfPinning = false)
     }
 
@@ -253,11 +221,6 @@ class MainActivity : ComponentActivity() {
             app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
         }
         handlePageIntent(intent)
-        // Cover the singleTop / reorder-to-front relock path: when
-        // CommandCommsApp.applyRemoteKioskState() brings an already-RESUMED
-        // MainActivity to the front, neither onCreate nor onResume fires —
-        // only onNewIntent. Triggering the lock-task transition here ensures
-        // dispatcher Re-lock takes effect immediately.
         applyKioskLockTaskTransition()
     }
 
@@ -390,13 +353,7 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "Diagnostics: PTT via PttHardwareReceiver (T320 vendor broadcasts)")
     }
 
-    // ── DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────────
     private fun isPttKey(keyCode: Int): Boolean {
-        // KEY_PTT_F11 (141) was historically mapped to PTT for some Inrico
-        // T320 firmware variants. On the Siyata SD7 the *exact same*
-        // keycode is the SOS button (handled via the SOS broadcast path),
-        // so we must never treat F11 as PTT on the SD7 build — gate by
-        // BuildConfig.FLAVOR.
         if (keyCode == KEY_PTT_F11 && BuildConfig.FLAVOR == "t320") return true
         if (keyCode == KEY_PTT) return true
         if (app.pttKeyPrefs.volumeButtonPttEnabled && keyCode == KeyEvent.KEYCODE_VOLUME_UP) return true
@@ -409,37 +366,10 @@ class MainActivity : ComponentActivity() {
         return keyCode == KEY_EMERGENCY || keyCode == KEY_TV_TELETEXT
     }
 
-    /**
-     * SD7 rotary-knob press alias. Inrico T320 firmware emits
-     * KEYCODE_DPAD_CENTER (23) for the channel-knob press, but on the
-     * SD7 the same physical button surfaces as KEYCODE_F8 (141 is taken
-     * by SOS). Only treated as DpadCenter on the SD7 flavor so the
-     * T320 build's F8 behavior — if any — is unaffected.
-     */
     private fun isSd7KnobPress(keyCode: Int): Boolean {
         return BuildConfig.FLAVOR == "sd7" && keyCode == KeyEvent.KEYCODE_F8
     }
 
-    /**
-     * SD7 side-button volume keys: short press = volume change (system
-     * default — we never consume the down event), long press (~600 ms)
-     * = scan toggle (top, VOLUME_UP) / scan-list toggle for current
-     * channel (bottom, VOLUME_DOWN). Long-press detection happens in
-     * [dispatchKeyEvent] off the event's own [KeyEvent.getDownTime] —
-     * no state tracking required.
-     *
-     * Only true on the SD7 flavor AND when the key event originates
-     * from an actual hardware input device that is **not** a typing
-     * keyboard (the SD7 side buttons surface as gpio-keys with
-     * [InputDevice.KEYBOARD_TYPE_NON_ALPHABETIC]; a paired BT keyboard
-     * or USB keyboard reports `KEYBOARD_TYPE_ALPHABETIC` and is
-     * deliberately excluded so dev rigs that plug a keyboard into an
-     * SD7 build keep normal volume behavior). Returns false when the
-     * event has no [InputDevice] attached at all (e.g., synthetic /
-     * injected events) so we never accidentally claim a non-hardware
-     * source. The T320 build never enters this path because of the
-     * flavor gate.
-     */
     private fun isSd7SideVolumeKey(keyCode: Int, event: KeyEvent?): Boolean {
         if (BuildConfig.FLAVOR != "sd7") return false
         if (keyCode != KeyEvent.KEYCODE_VOLUME_UP && keyCode != KeyEvent.KEYCODE_VOLUME_DOWN) return false
@@ -447,6 +377,43 @@ class MainActivity : ComponentActivity() {
         if (device.isVirtual) return false
         if (device.keyboardType == InputDevice.KEYBOARD_TYPE_ALPHABETIC) return false
         return true
+    }
+
+    private fun isT320VolumeKnobKey(keyCode: Int): Boolean {
+        if (BuildConfig.FLAVOR != "t320") return false
+        return keyCode == KeyEvent.KEYCODE_MEDIA_PREVIOUS ||
+            keyCode == KeyEvent.KEYCODE_MEDIA_NEXT
+    }
+
+    private fun adjustT320VolumeKnob(keyCode: Int) {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val now = SystemClock.uptimeMillis()
+        val direction = if (keyCode == KeyEvent.KEYCODE_MEDIA_NEXT) {
+            AudioManager.ADJUST_RAISE
+        } else {
+            AudioManager.ADJUST_LOWER
+        }
+        val rapidSameDirection =
+            lastT320VolumeDirection == direction &&
+                now - lastT320VolumeDetentAtMs <= T320_VOLUME_ACCEL_WINDOW_MS
+        val steps = if (rapidSameDirection) T320_VOLUME_ACCEL_STEPS else 1
+
+        repeat(steps) {
+            audioManager.adjustStreamVolume(
+                AudioManager.STREAM_VOICE_CALL,
+                direction,
+                0
+            )
+        }
+
+        lastT320VolumeDetentAtMs = now
+        lastT320VolumeDirection = direction
+        val current = audioManager.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
+        val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
+        Log.d(
+            TAG,
+            "T320 volume knob immediate keyCode=$keyCode direction=$direction steps=$steps volume=$current/$max"
+        )
     }
 
     private fun isOurKey(keyCode: Int, @Suppress("UNUSED_PARAMETER") event: KeyEvent? = null): Boolean {
@@ -457,18 +424,12 @@ class MainActivity : ComponentActivity() {
             keyCode == KEY_DPAD_DOWN ||
             keyCode == KEY_DPAD_LEFT ||
             keyCode == KEY_DPAD_RIGHT ||
-            keyCode == KEY_DPAD_CENTER  // SD7 rotary-knob press; ignored on T320
+            keyCode == KEY_DPAD_CENTER
         ) return true
         if (isSd7KnobPress(keyCode)) return true
-        // SD7 side-button volume keys are intentionally NOT included
-        // here. They are handled in dispatchKeyEvent so the short-press
-        // path stays uninterrupted by the activity's key-event routing
-        // (the system gets the key-down/key-up untouched, the same way
-        // it would on any other Android device).
         if (keyCode == KEY_ACC || keyCode == KEY_STAR) return true
         return false
     }
-    // ── END DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────
 
     private fun handleKeyCaptureIfActive(keyCode: Int): Boolean {
         val capturing = app.keyCapturingFlow.value
@@ -483,10 +444,6 @@ class MainActivity : ComponentActivity() {
         return true
     }
 
-    /**
-     * Intercept our hardware keys during Compose's preview phase so D-pad navigation doesn't
-     * consume them for focus traversal before the radio shortcuts can react.
-     */
     private fun handlePreviewKeyEvent(event: androidx.compose.ui.input.key.KeyEvent): Boolean {
         val nativeEvent = event.nativeKeyEvent
         if (app.keyCapturingFlow.value) {
@@ -511,12 +468,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * First-chance interception so kiosk mode can swallow the green call key
-     * before the framework dispatches it to the system dialer. Anything we
-     * do NOT swallow here falls through to the normal `onKeyDown` / `onKeyUp`
-     * path so PTT / emergency / D-pad handling is unaffected.
-     */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.keyCode == KeyEvent.KEYCODE_CALL && app.kioskPrefs.kioskEnabled) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
@@ -525,14 +476,16 @@ class MainActivity : ComponentActivity() {
             return true
         }
 
-        // SD7 side-button volume long-press detection. We deliberately do
-        // NOT consume the key-down — short-press must fall through to the
-        // platform's normal volume handling untouched (correct stream,
-        // correct policy/UI). On key-up we measure the held duration off
-        // the event's own getDownTime/getEventTime; if it crossed the
-        // long-press threshold, we emit the scan KeyAction and consume
-        // the up so the system doesn't double-react on release. Short
-        // presses still call super and the platform owns volume entirely.
+        if (isT320VolumeKnobKey(event.keyCode)) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                if (event.repeatCount == 0) {
+                    adjustT320VolumeKnob(event.keyCode)
+                }
+                return true
+            }
+            if (event.action == KeyEvent.ACTION_UP) return true
+        }
+
         if (
             event.action == KeyEvent.ACTION_UP &&
             isSd7SideVolumeKey(event.keyCode, event)
@@ -574,9 +527,6 @@ class MainActivity : ComponentActivity() {
         return super.onKeyUp(keyCode, event)
     }
 
-    // ── DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────────
-    // Key dispatch routes hardware events to BackgroundAudioService via intents.
-    // Only the service-side handler (what happens AFTER the intent) may change.
     private fun handleKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         when {
             isPttKey(keyCode) -> {
@@ -623,17 +573,11 @@ class MainActivity : ComponentActivity() {
                 return true
             }
 
-            // SD7 rotary-knob press. Cycles unit status (see KeyAction.DpadCenter
-            // doc-comment). T320 hardware never emits this keycode so this arm
-            // is a no-op on the T320 build.
             keyCode == KEY_DPAD_CENTER -> {
                 if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadCenter)
                 return true
             }
 
-            // SD7 channel-knob press surfaces as KEYCODE_F8 on SD7
-            // firmware. Aliased to KeyAction.DpadCenter so the same
-            // status-cycle handler in RadioViewModel fires. SD7-only.
             isSd7KnobPress(keyCode) -> {
                 if (event?.repeatCount == 0) app.keyEventFlow.tryEmit(KeyAction.DpadCenter)
                 return true
@@ -686,6 +630,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private val SD7_SIDE_LONGPRESS_MS = 600L
+    private val T320_VOLUME_ACCEL_WINDOW_MS = 180L
+    private val T320_VOLUME_ACCEL_STEPS = 2
 
     @Suppress("unused")
     private fun isDeviceInteractive(): Boolean {
@@ -707,5 +653,4 @@ class MainActivity : ComponentActivity() {
         }
         ContextCompat.startForegroundService(this, intent)
     }
-    // ── END DO NOT MODIFY — VERIFIED HARDWARE MAPPING ──────────────────
 }
