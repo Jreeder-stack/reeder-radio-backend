@@ -53,6 +53,7 @@ export { V3ActionExecutor } from './actionExecutor.js';
 export { createDefaultV3ActionHandlers } from './defaultActionHandlers.js';
 export { V3SpeechPipeline } from './speechPipeline.js';
 export { V3IntentPlanner, isV3PlannerConfigured } from './intentPlanner.js';
+export { V3ConversationGate } from './conversationGate.js';
 export { materializeV3Plan } from './planMaterializer.js';
 export { composeV3Response } from './responseComposer.js';
 export { V3LiveDispatcher } from './liveRuntime.js';
