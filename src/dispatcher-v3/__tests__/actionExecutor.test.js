@@ -25,7 +25,9 @@ function makeIdentityService() {
 function makeGateway() {
   return {
     get: vi.fn(async () => ({ success: true })),
-    post: vi.fn(async () => ({ success: true })),
+    post: vi.fn(async (path, body) => path === '/api/radio/status'
+      ? { success: true, unit_id: body.unit_id, status: body.status }
+      : { success: true }),
     patch: vi.fn(async () => ({ success: true })),
   };
 }
@@ -62,6 +64,7 @@ describe('default V3 handlers', () => {
     const handlers = createDefaultV3ActionHandlers({ gateway, unitIdentityService: identities });
     const result = await handlers[V3_ACTIONS.SET_UNIT_STATUS]({ input: { unitId: 'uuid-1', status: 'en_route', note: null }, correlationId: 'c1' });
     expect(result.success).toBe(true);
+    expect(result.status).toBe('en_route');
     expect(identities.resolve).toHaveBeenNthCalledWith(1, 'uuid-1', { correlationId: 'c1' });
     expect(identities.resolve).toHaveBeenNthCalledWith(2, 'INDIANA-1', { correlationId: 'c1' });
     expect(gateway.post).toHaveBeenCalledWith('/api/radio/status', expect.objectContaining({ unit_id: 'INDIANA-1', status: 'en_route' }), { correlationId: 'c1' });
@@ -78,6 +81,20 @@ describe('default V3 handlers', () => {
     await expect(handlers[V3_ACTIONS.SET_UNIT_STATUS]({ input: { unitId: 'uuid-1', status: 'en_route' }, correlationId: 'c2' }))
       .rejects.toMatchObject({ code: 'UNIT_AMBIGUOUS', statusCode: 409 });
     expect(gateway.post).not.toHaveBeenCalled();
+  });
+
+  it('fails if CAD success does not confirm the requested status', async () => {
+    const gateway = makeGateway();
+    gateway.post.mockResolvedValueOnce({ success: true, unit_id: 'INDIANA-1', status: 'off_duty' });
+    const handlers = createDefaultV3ActionHandlers({ gateway, unitIdentityService: makeIdentityService() });
+
+    await expect(handlers[V3_ACTIONS.SET_UNIT_STATUS]({
+      input: { unitId: 'uuid-1', status: 'on_duty' },
+      correlationId: 'verify-1',
+    })).rejects.toMatchObject({
+      code: 'CAD_REJECTED',
+      details: { requestedStatus: 'on_duty', returnedStatus: 'off_duty' },
+    });
   });
 
   it('executes a dedicated backup request and records a CAD note when a call exists', async () => {

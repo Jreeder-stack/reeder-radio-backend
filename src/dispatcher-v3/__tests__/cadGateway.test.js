@@ -96,6 +96,31 @@ describe('CommandLinkGateway', () => {
       });
   });
 
+  it('rejects HTTP 200 application-level failures so V3 cannot speak false success', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(response(200, {
+      success: false,
+      code: 'INVALID_STATUS_TRANSITION',
+      error: 'status_update_rejected',
+      message: 'Unit status was not changed',
+      current_status: 'off_duty',
+    }));
+    const gateway = createCommandLinkGateway(context(), { fetchImpl, maxSafeRetries: 0 });
+
+    await expect(gateway.request('/api/radio/status', {
+      method: 'POST',
+      body: { unit_id: 'INDIANA-2', status: 'on_duty' },
+      correlationId: 'corr-status-1',
+    })).rejects.toMatchObject({
+      code: V3_ERROR_CODES.CAD_REJECTED,
+      statusCode: 200,
+      message: 'Unit status was not changed',
+      details: {
+        correlationId: 'corr-status-1',
+        cadCode: 'INVALID_STATUS_TRANSITION',
+      },
+    });
+  });
+
   it('rejects invalid non-object JSON success responses', async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
