@@ -146,6 +146,21 @@ class BackgroundAudioService : Service() {
      */
     private fun applyOutputDeviceSelection(reason: String) {
         if (!::audioManager.isInitialized) return
+        if (com.reedersystems.commandcomms.BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+            // Phones use the normal MEDIA route. Never claim a communication
+            // device here: that switches Bluetooth into HFP/SCO and makes the
+            // radio session appear to the OS/headset as a phone call.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                runCatching { audioManager.clearCommunicationDevice() }
+            } else {
+                @Suppress("DEPRECATION")
+                runCatching { audioManager.stopBluetoothSco() }
+                @Suppress("DEPRECATION")
+                runCatching { audioManager.isBluetoothScoOn = false }
+            }
+            Log.d(TAG, "{\"event\":\"PHONE_MEDIA_ROUTE_DEVICE_SELECT\",\"reason\":\"$reason\"}")
+            return
+        }
         val wiredOut = findWiredOutputDevice()
         val wiredIn = findWiredInputDevice()
         // Treat the accessory as present whenever EITHER a wired output OR
@@ -1621,6 +1636,24 @@ class BackgroundAudioService : Service() {
         }
         radioRouteActive = true
         if (!::audioManager.isInitialized) return
+        if (com.reedersystems.commandcomms.BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+            // Keep handset radio audio on Android's normal MEDIA/A2DP path.
+            // Bluetooth microphone capture would require HFP/SCO, which is the
+            // exact call-profile behavior we do not want on the phone flavor.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                runCatching { audioManager.clearCommunicationDevice() }
+            } else {
+                @Suppress("DEPRECATION")
+                runCatching { audioManager.stopBluetoothSco() }
+                @Suppress("DEPRECATION")
+                runCatching { audioManager.isBluetoothScoOn = false }
+            }
+            if (audioManager.mode != AudioManager.MODE_NORMAL) {
+                audioManager.mode = AudioManager.MODE_NORMAL
+            }
+            Log.d(TAG, "{\"event\":\"PHONE_MEDIA_ROUTE_APPLIED\",\"mode\":\"NORMAL\"}")
+            return
+        }
         if (audioManager.mode != AudioManager.MODE_IN_COMMUNICATION) {
             audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
         }
@@ -1707,6 +1740,19 @@ class BackgroundAudioService : Service() {
         if (!radioRouteActive) return
         radioRouteActive = false
         if (!::audioManager.isInitialized) return
+        if (com.reedersystems.commandcomms.BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                runCatching { audioManager.clearCommunicationDevice() }
+            } else {
+                @Suppress("DEPRECATION")
+                runCatching { audioManager.stopBluetoothSco() }
+                @Suppress("DEPRECATION")
+                runCatching { audioManager.isBluetoothScoOn = false }
+            }
+            audioManager.mode = AudioManager.MODE_NORMAL
+            Log.d(TAG, "{\"event\":\"PHONE_MEDIA_ROUTE_RELEASED\",\"mode\":\"NORMAL\"}")
+            return
+        }
         // Intentionally do NOT save/restore STREAM_VOICE_CALL volume here:
         // applyRadioAudioRoute no longer mutates it (other than the one-time
         // first-run floor nudge), so a level the operator set during the

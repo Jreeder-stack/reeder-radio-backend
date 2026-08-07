@@ -20,6 +20,7 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Build
 import android.util.Log
+import com.reedersystems.commandcomms.BuildConfig
 
 private const val TAG = "[RadioCapture]"
 private const val DIAG_TAG = "[AudioCapture]"
@@ -257,12 +258,23 @@ class AudioCapture(
 
     private fun selectAudioSource(): Int? {
         data class Candidate(val source: Int, val name: String, val priority: Int)
-        val candidates = mutableListOf(
-            Candidate(MediaRecorder.AudioSource.VOICE_COMMUNICATION, "VOICE_COMMUNICATION", 3),
-            Candidate(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION", 2),
-            Candidate(MediaRecorder.AudioSource.MIC, "MIC", 1)
-        )
-        if (Build.VERSION.SDK_INT >= 24) {
+        val candidates = if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+            // A Bluetooth headset microphone is only exposed through HFP/SCO,
+            // which Android presents as call audio. Keep phone TX on the handset
+            // mic/normal capture path so connected Bluetooth remains A2DP media.
+            mutableListOf(
+                Candidate(MediaRecorder.AudioSource.MIC, "MIC", 3),
+                Candidate(MediaRecorder.AudioSource.UNPROCESSED, "UNPROCESSED", 2),
+                Candidate(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION", 1)
+            )
+        } else {
+            mutableListOf(
+                Candidate(MediaRecorder.AudioSource.VOICE_COMMUNICATION, "VOICE_COMMUNICATION", 3),
+                Candidate(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION", 2),
+                Candidate(MediaRecorder.AudioSource.MIC, "MIC", 1)
+            )
+        }
+        if (Build.VERSION.SDK_INT >= 24 && BuildConfig.RADIO_DEVICE_TYPE != "android_phone") {
             candidates.add(Candidate(MediaRecorder.AudioSource.UNPROCESSED, "UNPROCESSED", 0))
         }
 
