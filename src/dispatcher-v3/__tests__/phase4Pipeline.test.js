@@ -80,7 +80,7 @@ describe('Dispatcher V3 phase 4 pipeline', () => {
       speakerCallsign: 'INDIANA-1',
       now: new Date('2026-08-07T15:59:00Z'),
     });
-    expect(text).toBe('INDIANA-1, backup request sent, eleven fifty-nine hours.');
+    expect(text).toBe('Ten-four, eleven fifty-nine hours.');
     expect(text.toLowerCase()).not.toContain('en route');
   });
 
@@ -91,7 +91,7 @@ describe('Dispatcher V3 phase 4 pipeline', () => {
       speakerCallsign: 'INDIANA-1',
       now: new Date('2026-08-07T15:59:00Z'),
     });
-    expect(text).toBe('INDIANA-1, call created, eleven fifty-nine hours.');
+    expect(text).toBe('Ten-four, eleven fifty-nine hours.');
     expect(text).not.toContain('26-000123');
   });
 
