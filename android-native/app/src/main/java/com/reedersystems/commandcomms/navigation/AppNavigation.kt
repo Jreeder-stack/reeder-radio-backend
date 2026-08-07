@@ -43,6 +43,7 @@ object Routes {
 }
 
 private const val TAG = "[AppNav]"
+private const val PHONE_DEVICE_TYPE = "android_phone"
 private const val PHONE_BRIDGE_DEVICE_TYPE = "android_phone_bridge"
 
 @Composable
@@ -50,7 +51,8 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
     val app = context.applicationContext as CommandCommsApp
-    val isPhoneBridge = BuildConfig.RADIO_DEVICE_TYPE == PHONE_BRIDGE_DEVICE_TYPE
+    val isAuthenticatedPhoneClient = BuildConfig.RADIO_DEVICE_TYPE == PHONE_DEVICE_TYPE ||
+        BuildConfig.RADIO_DEVICE_TYPE == PHONE_BRIDGE_DEVICE_TYPE
 
     var tokenValidated by remember { mutableStateOf(false) }
 
@@ -58,11 +60,10 @@ fun AppNavigation() {
     val radioId = app.radioTokenStore.getRadioId()
     val assignedUnitId = app.radioTokenStore.getAssignedUnitId()
 
-    val startDestination = remember(isPhoneBridge, radioToken, radioId, assignedUnitId) {
-        if (isPhoneBridge) {
-            // A phone/tablet bridge is a normal authenticated Command Comms user,
-            // not a provisioned physical T320/SD7 radio. LoginScreen restores a
-            // valid cookie session automatically and navigates to the bridge UI.
+    val startDestination = remember(isAuthenticatedPhoneClient, radioToken, radioId, assignedUnitId) {
+        if (isAuthenticatedPhoneClient) {
+            // Phone and bridge clients authenticate as normal users. LoginScreen restores
+            // an existing persisted cookie session automatically when one is available.
             Routes.LOGIN
         } else {
             val needsRegistration = radioToken == null || radioId.isNullOrBlank()
@@ -81,9 +82,9 @@ fun AppNavigation() {
         }
     }
 
-    val needsRegistration = !isPhoneBridge && (radioToken == null || radioId.isNullOrBlank())
+    val needsRegistration = !isAuthenticatedPhoneClient && (radioToken == null || radioId.isNullOrBlank())
 
-    if (!isPhoneBridge && !needsRegistration && !tokenValidated) {
+    if (!isAuthenticatedPhoneClient && !needsRegistration && !tokenValidated) {
         LaunchedEffect(Unit) {
             val localUnitBefore = app.radioTokenStore.getAssignedUnitId()
             val isValid = validateTokenWithServer(app)
@@ -114,7 +115,6 @@ fun AppNavigation() {
     }
 
     NavHost(navController = navController, startDestination = startDestination) {
-
         composable(Routes.DEVICE_REGISTRATION) {
             DeviceRegistrationScreen(
                 onRegistrationSuccess = {
@@ -145,7 +145,7 @@ fun AppNavigation() {
             })
         ) { backStackEntry ->
             val assignedUnit = backStackEntry.arguments?.getString("assignedUnit")
-            val isRadioDevice = !isPhoneBridge && app.radioTokenStore.getToken() != null
+            val isRadioDevice = !isAuthenticatedPhoneClient && app.radioTokenStore.getToken() != null
             val currentRadioId = app.radioTokenStore.getRadioId() ?: ""
             RadioFlavorScreen(
                 onLocked = if (isRadioDevice) {
