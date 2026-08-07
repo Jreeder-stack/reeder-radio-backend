@@ -79,7 +79,16 @@ router.post('/fcm-token', requireAuth, async (req, res, next) => {
 
   try {
     const radio = await ensurePhoneRadio(req.user.id, phone.deviceId);
+
+    // Repair legacy corruption from the old session-auth path, which could put
+    // the phone's FCM token onto the user's T320 row. A Firebase registration
+    // token represents one app installation and must belong to one radio row.
+    await pool.query(
+      'UPDATE radios SET fcm_token = NULL WHERE fcm_token = $1 AND radio_id <> $2',
+      [fcmToken, radio.radio_id]
+    );
     await updateRadioFcmToken(radio.radio_id, fcmToken);
+
     console.log(`[PhoneRadio] endpoint registered user=${req.user.username} radioId=${radio.radio_id} deviceId=${phone.deviceId}`);
     return res.json({
       success: true,
