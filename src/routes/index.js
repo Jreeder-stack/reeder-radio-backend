@@ -3,6 +3,7 @@ import authRouter from './authRouter.js';
 import adminRouter from './adminRouter.js';
 import channelsRouter from './channelsRouter.js';
 import zonesRouter from './zonesRouter.js';
+import phoneDispatchEndpointRouter from './phoneDispatchEndpointRouter.js';
 import dispatchRouter from './dispatchRouter.js';
 import locationRouter from './locationRouter.js';
 import messagesRouter from './messagesRouter.js';
@@ -24,6 +25,10 @@ export function setupRoutes(app) {
   app.use('/api/admin/ai-dispatchers', aiDispatcherProfilesRouter);
   app.use('/api/channels', channelsRouter);
   app.use('/api/zones', zonesRouter);
+  // Must run before the legacy dispatch router so a session-authenticated
+  // phone ACK is attributed to its physical radio endpoint, not whichever
+  // radio for the user happened to be seen most recently.
+  app.use('/api/dispatch', phoneDispatchEndpointRouter);
   app.use('/api/dispatch', dispatchRouter);
   app.use('/api/location', locationRouter);
   app.use('/api/messages', messagesRouter);
