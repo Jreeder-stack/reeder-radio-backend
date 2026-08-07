@@ -27,6 +27,18 @@ function compatibilityView(dispatcher) {
       if (!spokenText) return false;
       return dispatcher._speak(spokenText, null);
     },
+    async handlePttStart(channelId, unitId, isEmergency = false) {
+      return dispatcher.handlePttStart(channelId, unitId, isEmergency);
+    },
+    async handlePttEnd(channelId, unitId, gracePeriodMs = null) {
+      return dispatcher.handlePttEnd(channelId, unitId, gracePeriodMs);
+    },
+    async handleEmergencyStart(channelId, unitId) {
+      return dispatcher.handleEmergencyStart(channelId, unitId);
+    },
+    async handleEmergencyEnd(channelId, unitId) {
+      return dispatcher.handleEmergencyEnd(channelId, unitId);
+    },
     matchesChannel(channelId) {
       return dispatcher.matchesChannel(channelId);
     },
@@ -89,9 +101,8 @@ export async function broadcastMessage(channelName, message) {
   }
 }
 
-// Kept only as an explicit migration guard for stale imports. The legacy
-// AIDispatcher implementation has been removed; all runtime construction must
-// go through AIDispatcherRuntimeManager/V3LiveDispatcher.
+// Explicit migration guard for any stale import. The legacy dispatcher class
+// no longer exists and cannot be started.
 export class AIDispatcher {
   constructor() {
     throw new Error('Legacy AIDispatcher has been removed. Use AI Dispatcher V3.');
