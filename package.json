@@ -11,6 +11,7 @@
     "start:old": "node server.js",
     "build": "cd client && npm install && npm run build",
     "test": "vitest run",
+    "test:v3": "vitest run src/dispatcher-v3/__tests__",
     "test:watch": "vitest"
   },
   "dependencies": {
