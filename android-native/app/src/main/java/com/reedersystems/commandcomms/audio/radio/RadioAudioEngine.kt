@@ -424,30 +424,19 @@ class RadioAudioEngine(private val context: Context) {
         val deviceKey = "${Build.MANUFACTURER}/${Build.MODEL}/API${Build.VERSION.SDK_INT}"
 
         if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
-            // Phone flavor stays on the normal media/A2DP route. The actual TX
-            // engine is here, so never select VOICE_COMMUNICATION on phones;
-            // that source is tied to HFP/SCO on many Android devices and can
-            // produce silence after the call-style route is intentionally cleared.
-            val candidates = mutableListOf(
-                Pair(MediaRecorder.AudioSource.MIC, "MIC"),
-                Pair(MediaRecorder.AudioSource.VOICE_RECOGNITION, "VOICE_RECOGNITION")
-            )
-            if (Build.VERSION.SDK_INT >= 24) {
-                candidates.add(Pair(MediaRecorder.AudioSource.UNPROCESSED, "UNPROCESSED"))
-            }
-
-            Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_PROBE_BEGIN device=$deviceKey candidates=${candidates.map { it.second }}")
-            val results = candidates.map { (source, name) -> probeAudioSource(source, name) }
-            val best = results.filter { it.accepted }.maxByOrNull { it.avgRms }
-                ?: results.filter { it.reason == "rms_too_low" }.maxByOrNull { it.avgRms }
-            if (best != null) {
-                Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_SELECTED source=${best.sourceName} avgRms=${String.format("%.1f", best.avgRms)} reason=phone_media_route device=$deviceKey")
-                txSessionStats.audioSource = best.sourceName
-                return best.source
-            }
-            Log.e("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_ALL_REJECTED device=$deviceKey")
-            txSessionStats.audioSource = "NONE"
-            return null
+            // Phone PTT must be immediate. Do not open/close several temporary
+            // AudioRecord sessions on every key-down to probe sources; Samsung/
+            // MediaTek devices can take hundreds of ms per probe and may leave
+            // the final recorder in a muted/settling state. Use the handset MIC
+            // directly and keep the normal MEDIA/A2DP output route.
+            val source = MediaRecorder.AudioSource.MIC
+            val name = "MIC"
+            txSessionStats.audioSource = name
+            cachedSourceKey = deviceKey
+            cachedSourceValue = source
+            cachedSourceName = name
+            Log.d("[AudioCapture]", "PHONE_TX_AUDIO_SOURCE_SELECTED source=$name reason=direct_phone_mic_no_probe device=$deviceKey")
+            return source
         }
 
         // When a wired accessory mic is attached, vendor VOIP processing on
@@ -857,7 +846,15 @@ class RadioAudioEngine(private val context: Context) {
 
                                         applyGain(monoFrame, monoFrameSizeBytes, txMicGain)
                                         highPassFilter(monoFrame, monoFrameSizeBytes)
-                                        txNoiseGate(monoFrame, monoFrameSizeBytes)
+                                        // The phone handset mic can arrive at a much lower level than
+                                        // the dedicated-radio VOIP path. The -42 dB radio noise gate
+                                        // was zeroing valid phone speech and producing "open carrier"
+                                        // dead air. Keep the gate for T320/SD7, bypass it on phones.
+                                        if (BuildConfig.RADIO_DEVICE_TYPE != "android_phone") {
+                                            txNoiseGate(monoFrame, monoFrameSizeBytes)
+                                        } else {
+                                            txGateOpen = true
+                                        }
                                         lowPassFilter(monoFrame, monoFrameSizeBytes)
                                         softwareCompressor(monoFrame, monoFrameSizeBytes)
                                         applyGain(monoFrame, monoFrameSizeBytes, txGain)
