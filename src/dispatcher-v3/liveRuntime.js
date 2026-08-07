@@ -6,6 +6,7 @@ import { floorControlService, AI_FLOOR_IDENTITY } from '../services/floorControl
 import { buildV3RuntimeContext } from './runtimeContract.js';
 import { CommandLinkGateway } from './cadGateway.js';
 import { UnitIdentityService } from './unitIdentity.js';
+import { V3OperationalContextService } from './operationalContext.js';
 import { V3OperationalAlertService } from './operationalAlertService.js';
 import { createDefaultV3ActionHandlers } from './defaultActionHandlers.js';
 import { V3ActionExecutor } from './actionExecutor.js';
@@ -23,7 +24,7 @@ const FLOOR_WAIT_MS = 3000;
 const FLOOR_RETRY_MS = 100;
 const FLOOR_REARM_MS = 1800;
 const NUMBER_WORD_RX = /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b/i;
-const HAIL_COMMAND_RX = /\b(status|show|mark|put|set|create|start|close|clear|assign|add|note|check|time|backup|emergency|responding|en\s+route|on\s+scene|available|out\s+of\s+service|off\s+duty|on\s+duty|copy|radio\s+check)\b/i;
+const HAIL_COMMAND_RX = /\b(status|show|mark|put|set|create|start|close|clear|assign|attach|add|note|check|time|backup|emergency|responding|en\s+route|on\s+scene|available|out\s+of\s+service|off\s+duty|on\s+duty|zone|switch|move|copy|radio\s+check)\b/i;
 
 export class V3LiveDispatcher {
   constructor({
@@ -58,6 +59,7 @@ export class V3LiveDispatcher {
     this.diagnostics = diagnostics || new V3DiagnosticsJournal();
     this.gateway = new CommandLinkGateway(this.context);
     this.unitIdentityService = new UnitIdentityService({ gateway: this.gateway, context: this.context });
+    this.operationalContextService = new V3OperationalContextService({ gateway: this.gateway, unitIdentityService: this.unitIdentityService });
     this.operationalAlertService = new V3OperationalAlertService({ signalingService: this.signaling });
     this.handlers = createDefaultV3ActionHandlers({ gateway: this.gateway, unitIdentityService: this.unitIdentityService, operationalAlertService: this.operationalAlertService });
     this.executor = new V3ActionExecutor({ runtimeContext: this.context, handlers: this.handlers, diagnostics: this.diagnostics });
@@ -157,8 +159,6 @@ export class V3LiveDispatcher {
 
   async handleEmergencyStart(channelId, unitId) {
     if (!this.isRunning || !this.matchesChannel(channelId) || unitId === this.identity) return false;
-    // Native signaling has already activated a hardware-button emergency before
-    // this callback runs. V3 observes it but never creates a duplicate alert.
     this._diag('hardware_emergency_observed', createV3CorrelationId(this.context.runtimeId), true, { unitId, channelId });
     return true;
   }
@@ -172,18 +172,43 @@ export class V3LiveDispatcher {
     this._diag('transcript_received', correlationId, true, { speakerCallsign, transcript });
     let plan;
     let result = null;
+    let operationalContext = null;
     try {
-      plan = await this.planner.plan({ transcript, speakerCallsign, runtimeContext: this.context, correlationId, recentContext: this._recentContext });
+      try {
+        operationalContext = await this.operationalContextService.snapshot({ speakerCallsign, correlationId });
+        this._diag('operational_context_resolved', correlationId, true, {
+          speakerCallsign,
+          activeCallCount: operationalContext.activeCalls.length,
+          currentCallId: operationalContext.currentCall?.id || null,
+        });
+      } catch (contextError) {
+        this._diag('operational_context_failed', correlationId, false, { speakerCallsign, message: contextError.message, code: contextError.code || null });
+      }
+
+      plan = await this.planner.plan({
+        transcript,
+        speakerCallsign,
+        runtimeContext: this.context,
+        correlationId,
+        recentContext: this._recentContext,
+        operationalContext,
+      });
       if (plan.action !== 'NO_ACTION' && plan.action !== 'CLARIFY' && plan.confidence < MIN_EXECUTION_CONFIDENCE) {
         plan = { action: 'CLARIFY', input: plan.input || {}, confidence: plan.confidence, clarification: 'Repeat your request.', reason: 'low_confidence' };
       }
       if (plan.action !== 'NO_ACTION' && plan.action !== 'CLARIFY') {
-        plan = await materializeV3Plan(plan, { speakerCallsign, unitIdentityService: this.unitIdentityService, correlationId });
+        plan = await materializeV3Plan(plan, {
+          speakerCallsign,
+          unitIdentityService: this.unitIdentityService,
+          operationalContextService: this.operationalContextService,
+          operationalContext,
+          correlationId,
+        });
         result = await this.executor.execute({ action: plan.action, input: plan.input }, { correlationId });
       }
     } catch (error) {
       result = { success: false, error: { code: error.code || 'CAD_UNAVAILABLE', message: error.message } };
-      plan = { action: 'CLARIFY', input: {}, confidence: 0, clarification: 'Dispatcher is unable to process that request. Repeat shortly.', reason: 'processing_failure' };
+      plan = { action: 'CLARIFY', input: {}, confidence: 0, clarification: responseForResolutionError(error, speakerCallsign), reason: 'processing_failure' };
       this._diag('transcript_processing_failed', correlationId, false, { speakerCallsign, message: error.message, code: error.code || null });
     }
 
@@ -274,6 +299,14 @@ export function normalizeV3RadioHail(value) {
   if (!/^[a-z0-9'’.-]+(?:\s+[a-z0-9'’.-]+){0,3}$/i.test(text)) return null;
   if (!/\d/.test(text) && !NUMBER_WORD_RX.test(text)) return null;
   return text.replace(/\s*-\s*/g, '-');
+}
+
+function responseForResolutionError(error, speakerCallsign) {
+  const unit = String(speakerCallsign || 'unit').trim();
+  if (error?.code === 'CALL_AMBIGUOUS') return `${unit}, which call?`;
+  if (error?.code === 'CALL_NOT_FOUND') return `${unit}, I don't have an active call matching that.`;
+  if (error?.code === 'UNIT_AMBIGUOUS') return `${unit}, repeat the unit callsign.`;
+  return 'Dispatcher is unable to process that request. Repeat shortly.';
 }
 
 function sleep(ms) {

@@ -39,6 +39,7 @@ export {
 } from './cadGateway.js';
 
 export { UnitIdentityService } from './unitIdentity.js';
+export { V3OperationalContextService, sanitizeV3OperationalContext } from './operationalContext.js';
 export { V3OperationalAlertService } from './operationalAlertService.js';
 
 export {

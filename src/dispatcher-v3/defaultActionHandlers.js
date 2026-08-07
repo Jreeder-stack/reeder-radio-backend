@@ -45,6 +45,11 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
       return gateway.post('/api/radio/status', { unit_id: callsign, status: input.status, note: input.note || undefined }, { correlationId });
     },
 
+    [V3_ACTIONS.CHANGE_UNIT_ZONE]: async ({ input, correlationId }) => {
+      const callsign = await resolveSafeCallsign(input.unitId, correlationId);
+      return gateway.post('/api/radio/zone', { unit_id: callsign, zone: input.zone }, { correlationId });
+    },
+
     [V3_ACTIONS.GET_CURRENT_CALL]: async ({ input, correlationId }) => {
       const callsign = await resolveSafeCallsign(input.unitId, correlationId);
       return gateway.get(`/api/radio/unit/${encodeURIComponent(callsign)}/call`, { correlationId });
