@@ -35,7 +35,21 @@ const STATUS_PATTERNS = Object.freeze([
   ['on_call', /^(?:show|mark|put|set)?\s*(?:me\s+)?(?:on\s+call)\s*[?.!]*$/i],
 ]);
 
-export function planDeterministicV3Intent({ transcript, speakerCallsign } = {}) {
+const NAMED_UNIT_STATUS_PATTERNS = Object.freeze([
+  ['out_of_service', /\b(?:out\s+of\s+service|oos)\b/i],
+  ['off_duty', /\b(?:off\s+duty|end\s+of\s+tour)\b/i],
+  ['on_duty', /\b(?:on\s+duty|in\s+service)\b/i],
+  ['on_scene', /\b(?:on\s+scene|on\s+location|arrived)\b/i],
+  ['en_route', /\b(?:en\s+route|responding)\b/i],
+  ['available', /\b(?:available|back\s+in\s+service)\b/i],
+  ['busy', /\bbusy\b/i],
+  ['training', /\b(?:training|in\s+training)\b/i],
+  ['court', /\b(?:court|in\s+court)\b/i],
+  ['detail', /\b(?:detail|on\s+detail)\b/i],
+  ['special_duty', /\b(?:special\s+duty|on\s+special\s+duty)\b/i],
+]);
+
+export function planDeterministicV3Intent({ transcript, speakerCallsign, operationalContext = null } = {}) {
   const text = stripSpeakerPrefix(normalize(transcript), speakerCallsign);
   if (!text) return null;
 
@@ -45,6 +59,9 @@ export function planDeterministicV3Intent({ transcript, speakerCallsign } = {}) 
   if (STATUS_CHECK_RX.test(text)) return plan(V3_ACTIONS.STATUS_CHECK, { unitRef: speakerCallsign }, 'deterministic_status_check');
   if (BACKUP_RX.test(text)) return plan(V3_ACTIONS.REQUEST_BACKUP, { unitRef: speakerCallsign, reason: text, priority: 'urgent' }, 'deterministic_backup');
   if (CLEAR_CALL_RX.test(text)) return plan(V3_ACTIONS.CLEAR_UNIT, { unitRef: speakerCallsign }, 'deterministic_clear_current_call');
+
+  const namedUnitStatus = planNamedUnitStatus(text, speakerCallsign, operationalContext);
+  if (namedUnitStatus) return namedUnitStatus;
 
   if (ZONE_CHANGE_RX.test(text)) {
     const zone = extractZone(text);
@@ -56,6 +73,33 @@ export function planDeterministicV3Intent({ transcript, speakerCallsign } = {}) 
   }
 
   return null;
+}
+
+function planNamedUnitStatus(text, speakerCallsign, operationalContext) {
+  const units = Array.isArray(operationalContext?.units) ? operationalContext.units : [];
+  if (units.length === 0) return null;
+
+  const command = canonicalTokens(text);
+  const speaker = canonicalTokens(speakerCallsign);
+  const mentioned = units
+    .map((unit) => String(unit?.callsign || unit?.unit_id || '').trim())
+    .filter(Boolean)
+    .filter((callsign) => {
+      const canonical = canonicalTokens(callsign);
+      return canonical && canonical !== speaker && containsTokenSequence(command, canonical);
+    });
+
+  if (mentioned.length !== 1) return null;
+  for (const [status, rx] of NAMED_UNIT_STATUS_PATTERNS) {
+    if (rx.test(text)) {
+      return plan(V3_ACTIONS.SET_UNIT_STATUS, { unitRef: mentioned[0], status }, `deterministic_named_unit_status_${status}`);
+    }
+  }
+  return null;
+}
+
+function containsTokenSequence(haystack, needle) {
+  return (` ${haystack} `).includes(` ${needle} `);
 }
 
 function extractZone(text) {
