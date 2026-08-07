@@ -106,17 +106,14 @@ class FloorControlService {
   getActiveFloors() {
     const floors = {};
     for (const [key, holder] of this.floorHolders) {
-      floors[key] = { floorKey: holder.floorKey, unitId: holder.floorKey, grantedAt: holder.grantedAt };
+      floors[key] = { floorKey: holder.floorKey, unitId: holder.unitId, grantedAt: holder.grantedAt };
     }
     return floors;
   }
 
   getFloorHolder(channelId) {
     const key = canonicalChannelKey(channelId);
-    const holder = this.floorHolders.get(key);
-    if (!holder) return null;
-    // Keep unitId as a compatibility alias while callers migrate to floorKey.
-    return { ...holder, unitId: holder.floorKey };
+    return this.floorHolders.get(key) || null;
   }
 
   releaseAllForFloorKey(floorKey) {
@@ -144,6 +141,9 @@ class FloorControlService {
   _setFloor(key, floorKey, isEmergency, isClearAir = false) {
     this.floorHolders.set(key, {
       floorKey,
+      // Legacy compatibility: historically this property contained the same
+      // opaque floor/device identity. Keep it until every caller uses floorKey.
+      unitId: floorKey,
       isEmergency,
       isClearAir,
       grantedAt: Date.now(),
