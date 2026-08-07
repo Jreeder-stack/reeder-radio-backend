@@ -1,0 +1,25 @@
+name: AI Dispatcher V3 CI
+
+on:
+  pull_request:
+    paths:
+      - 'src/dispatcher-v3/**'
+      - 'src/services/aiDispatcherV3RuntimeInstaller.js'
+      - 'src/services/strictCenterIsolationBootstrap.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ai-dispatcher-v3-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  test-v3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:v3
