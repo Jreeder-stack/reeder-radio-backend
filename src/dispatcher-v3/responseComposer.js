@@ -56,7 +56,9 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
       response = currentCallResponse(unit, data);
       break;
     case V3_ACTIONS.CREATE_CALL:
-      response = `${unit}, call created${callNumber(data) ? `, ${callNumber(data)}` : ''}.`;
+      // Keep routine air traffic concise. The CAD keeps the generated call number,
+      // but the dispatcher does not read it back unless a future explicit lookup asks for it.
+      response = `${unit}, call created.`;
       break;
     case V3_ACTIONS.ADD_CALL_NOTE:
       response = `${unit}, note added.`;
