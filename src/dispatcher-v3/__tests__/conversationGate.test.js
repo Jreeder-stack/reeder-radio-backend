@@ -81,6 +81,23 @@ describe('V3ConversationGate', () => {
     expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'another location' })).toMatchObject({ allowed: false, reason: 'not_addressed' });
   });
 
+  it('explicit wake word cancels a stale clarification and starts a fresh request', () => {
+    const gate = new V3ConversationGate({ wakeWords: ['central'] });
+    gate.expectFollowUp('INDIANA-1', { clarification: 'Which call?' });
+
+    expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'Central, start a building check at 1950 Dug Hill Road' })).toMatchObject({
+      allowed: true,
+      reason: 'wake_word',
+      transcript: 'start a building check at 1950 Dug Hill Road',
+      freshRequest: true,
+    });
+
+    expect(gate.shouldProcess({ unitId: 'INDIANA-1', transcript: 'that call' })).toMatchObject({
+      allowed: false,
+      reason: 'not_addressed',
+    });
+  });
+
   it('cancels a radio-hail follow-up when the unit addresses another callsign', () => {
     const gate = new V3ConversationGate({ wakeWords: ['central'] });
     gate.expectFollowUp('INDIANA-1', { kind: 'radio_hail', callsign: 'INDIANA-1' });

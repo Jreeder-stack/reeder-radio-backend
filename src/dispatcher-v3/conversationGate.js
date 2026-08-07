@@ -22,6 +22,26 @@ export class V3ConversationGate {
     if (!unit || !text) return { allowed: false, reason: 'empty' };
     if (EMERGENCY_RX.test(text)) return { allowed: true, reason: 'emergency', transcript: text };
 
+    // An explicit wake word always starts a fresh dispatcher turn. This check
+    // must run BEFORE pending-follow-up handling; otherwise a stale CLARIFY
+    // window can hijack "Central, ..." and keep asking the same old question.
+    const matched = this.wakeWords.find((word) => new RegExp(`^\\s*${escapeRx(word)}(?:\\b|[,.:;-])`, 'i').test(text));
+    if (matched) {
+      this.pending.delete(unit);
+      const remainder = stripLeadingWake(text, matched);
+      if (looksLikeSpeakerHail(remainder, unit)) {
+        return {
+          allowed: true,
+          reason: 'wake_word',
+          transcript: unit,
+          hailSource: 'signaling_identity',
+          heardTranscript: remainder || null,
+          freshRequest: true,
+        };
+      }
+      return { allowed: true, reason: 'wake_word', transcript: remainder || text, freshRequest: true };
+    }
+
     const pending = this.pending.get(unit);
     if (pending && pending.expiresAt >= this.now()) {
       if (looksLikeUnitToUnitTraffic(text, unit, pending)) {
@@ -32,23 +52,7 @@ export class V3ConversationGate {
     }
     if (pending) this.pending.delete(unit);
 
-    // A wake word must open the transmission. Do not trigger on casual mentions
-    // of "central", "dispatch", or "dispatcher" later in unit-to-unit traffic.
-    const matched = this.wakeWords.find((word) => new RegExp(`^\\s*${escapeRx(word)}(?:\\b|[,.:;-])`, 'i').test(text));
-    if (!matched) return { allowed: false, reason: 'not_addressed' };
-
-    const remainder = stripLeadingWake(text, matched);
-    if (looksLikeSpeakerHail(remainder, unit)) {
-      return {
-        allowed: true,
-        reason: 'wake_word',
-        transcript: unit,
-        hailSource: 'signaling_identity',
-        heardTranscript: remainder || null,
-      };
-    }
-
-    return { allowed: true, reason: 'wake_word', transcript: remainder || text };
+    return { allowed: false, reason: 'not_addressed' };
   }
 
   expectFollowUp(unitId, context = {}) {
@@ -68,7 +72,7 @@ export class V3ConversationGate {
 
 function normalizeWakeWords(value) {
   const configured = value ?? process.env.AI_DISPATCHER_WAKE_WORDS ?? 'central,dispatch,dispatcher';
-  const words = Array.isArray(configured) ? configured : String(configured).split(',');
+  const words = Array.isArray(configured) ? value : String(configured).split(',');
   return words.map((word) => clean(word)?.toLowerCase()).filter(Boolean);
 }
 
@@ -100,10 +104,6 @@ function looksLikeUnitToUnitTraffic(text, speakerUnitId, pending) {
     const familyRx = new RegExp(`^${escapeRx(family)}\\s+(\\d+)(?:\\b|$)`, 'i');
     const addressed = normalizedText.match(familyRx);
     if (addressed && addressed[1] !== ownNumber) {
-      // A radio-hail follow-up is especially easy to hijack: even a bare
-      // "INDIANA-2" is plainly another-unit traffic. For other clarification
-      // turns, require something after the callsign so a bare callsign can still
-      // answer a legitimate "which unit?" question.
       if (pending?.kind === 'radio_hail') return true;
       return normalizedText.length > addressed[0].length;
     }
