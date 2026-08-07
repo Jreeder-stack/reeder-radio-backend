@@ -24,11 +24,17 @@ export class V3ConversationGate {
 
     const pending = this.pending.get(unit);
     if (pending && pending.expiresAt >= this.now()) {
+      if (looksLikeUnitToUnitTraffic(text, unit, pending)) {
+        this.pending.delete(unit);
+        return { allowed: false, reason: 'unit_to_unit', transcript: text };
+      }
       return { allowed: true, reason: 'follow_up', transcript: text, pending };
     }
     if (pending) this.pending.delete(unit);
 
-    const matched = this.wakeWords.find((word) => new RegExp(`(^|\\b)${escapeRx(word)}(?:\\b|[,.:;-])`, 'i').test(text));
+    // A wake word must open the transmission. Do not trigger on casual mentions
+    // of "central", "dispatch", or "dispatcher" later in unit-to-unit traffic.
+    const matched = this.wakeWords.find((word) => new RegExp(`^\\s*${escapeRx(word)}(?:\\b|[,.:;-])`, 'i').test(text));
     if (!matched) return { allowed: false, reason: 'not_addressed' };
 
     const remainder = stripLeadingWake(text, matched);
@@ -81,6 +87,32 @@ function looksLikeSpeakerHail(remainder, unitId) {
   if (alphaPrefix && heard === alphaPrefix) return true;
 
   return false;
+}
+
+function looksLikeUnitToUnitTraffic(text, speakerUnitId, pending) {
+  const normalizedText = normalizeCallsign(text);
+  const speaker = normalizeCallsign(speakerUnitId);
+  if (!normalizedText || !speaker) return false;
+
+  const speakerMatch = speaker.match(/^(.*?)(?:\s+)(\d+)$/);
+  if (speakerMatch) {
+    const [, family, ownNumber] = speakerMatch;
+    const familyRx = new RegExp(`^${escapeRx(family)}\\s+(\\d+)(?:\\b|$)`, 'i');
+    const addressed = normalizedText.match(familyRx);
+    if (addressed && addressed[1] !== ownNumber) {
+      // A radio-hail follow-up is especially easy to hijack: even a bare
+      // "INDIANA-2" is plainly another-unit traffic. For other clarification
+      // turns, require something after the callsign so a bare callsign can still
+      // answer a legitimate "which unit?" question.
+      if (pending?.kind === 'radio_hail') return true;
+      return normalizedText.length > addressed[0].length;
+    }
+  }
+
+  const genericAddress = normalizedText.match(/^(?:unit|car|officer|patrol|security|radio)\s+\d+(?:\b|$)/i);
+  if (!genericAddress) return false;
+  if (pending?.kind === 'radio_hail') return true;
+  return normalizedText.length > genericAddress[0].length;
 }
 
 function normalizeCallsign(value) {
