@@ -5,26 +5,26 @@ const now = new Date('2026-08-07T15:59:00Z');
 
 describe('Dispatcher V3 military-time acknowledgements', () => {
   it.each([
-    ['en_route', 'INDIANA-1, showing en route, eleven fifty-nine hours.'],
-    ['available', 'INDIANA-1, showing available, eleven fifty-nine hours.'],
-    ['on_scene', 'INDIANA-1, showing on scene, eleven fifty-nine hours.'],
-    ['out_of_service', 'INDIANA-1, showing out of service, eleven fifty-nine hours.'],
-  ])('appends current military time to %s acknowledgements', (status, expected) => {
+    'en_route',
+    'available',
+    'on_scene',
+    'out_of_service',
+  ])('uses ten-four plus current military time for %s acknowledgements', (status) => {
     expect(composeV3Response({
       plan: { action: 'SET_UNIT_STATUS', input: { status } },
       result: { success: true, data: {} },
       speakerCallsign: 'INDIANA-1',
       now,
-    })).toBe(expected);
+    })).toBe('Ten-four, eleven fifty-nine hours.');
   });
 
-  it('adds spoken military time to routine CAD acknowledgements', () => {
+  it('uses ten-four plus spoken military time for routine CAD acknowledgements', () => {
     expect(composeV3Response({
       plan: { action: 'ADD_CALL_NOTE', input: {} },
       result: { success: true, data: {} },
       speakerCallsign: 'INDIANA-1',
       now,
-    })).toBe('INDIANA-1, note added, eleven fifty-nine hours.');
+    })).toBe('Ten-four, eleven fifty-nine hours.');
   });
 
   it('does not add a second timestamp to a direct time check', () => {
