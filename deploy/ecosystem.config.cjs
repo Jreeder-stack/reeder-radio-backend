@@ -5,7 +5,7 @@ module.exports = {
     {
       name: "command-comms",
       script: "src/server.js",
-      node_args: "--import dotenv/config --import ./src/services/strictCenterIsolationBootstrap.js",
+      node_args: "--import dotenv/config",
       cwd: path.resolve(__dirname, ".."),
       instances: 1,
       autorestart: true,
@@ -16,7 +16,6 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: 3001,
-        AI_DISPATCHER_V2_ENABLED: "true",
       },
     },
   ],
