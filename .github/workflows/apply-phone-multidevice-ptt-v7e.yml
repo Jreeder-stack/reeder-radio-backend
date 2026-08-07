@@ -1,0 +1,61 @@
+name: Apply phone multi-device PTT v7
+
+on:
+  push:
+    branches:
+      - fix/phone-multidevice-ptt-v7
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build:
+    if: ${{ !contains(github.event.head_commit.message, '[generated phone ptt v7]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: fix/phone-multidevice-ptt-v7
+          fetch-depth: 0
+
+      - name: Apply patch
+        run: python .github/scripts/apply_phone_ptt_v7.py
+
+      - name: Validate server source
+        run: |
+          node --check src/services/signalingService.js
+          node --check src/services/audioRelayService.js
+          grep -q 'requestId: data.requestId || null' src/services/signalingService.js
+          grep -q 'senderDeviceId' src/services/audioRelayService.js
+          grep -q 'PACKET_VERSION_DEVICE' android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/UdpAudioTransport.kt
+
+      - name: Commit repaired source
+        run: |
+          git config user.name "Jreeder-stack"
+          git config user.email "227722155+Jreeder-stack@users.noreply.github.com"
+          git add src/services/signalingService.js src/services/audioRelayService.js android-native/app/src/main/java/com/reedersystems/commandcomms/ui/radio/RadioViewModel.kt android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/UdpAudioTransport.kt android-native/app/src/main/java/com/reedersystems/commandcomms/audio/BackgroundAudioService.kt android-native/app/build.gradle.kts
+          git commit -m "Fix phone multi-device PTT and audio identity [generated phone ptt v7]"
+          git push origin HEAD:fix/phone-multidevice-ptt-v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.6
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.6'
+
+      - name: Build phone v7
+        run: gradle -p android-native :app:assemblePhoneDebug --stacktrace
+
+      - name: Upload phone v7 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: command-comms-phone-v7-debug
+          path: android-native/app/build/outputs/apk/phone/debug/app-phone-debug.apk
+          if-no-files-found: error
