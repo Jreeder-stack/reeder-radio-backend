@@ -32,7 +32,7 @@ function makeService(overrides = {}) {
 }
 
 afterEach(() => {
-  vi.useRealTimers();
+  vi.restoreAllMocks();
   for (const channelId of Object.keys(floorControlService.getActiveFloors())) {
     floorControlService.forceRelease(channelId);
   }
@@ -40,10 +40,16 @@ afterEach(() => {
 
 describe('signaling floor identity hardening', () => {
   it('keeps an active transmission when its device floor key owns the floor', () => {
-    vi.useFakeTimers();
     const service = makeService();
     const channelId = 'OPS__1';
     const floorKey = 'device-uuid-1';
+    let sweep = null;
+    const timerHandle = { unref: vi.fn() };
+
+    vi.spyOn(global, 'setInterval').mockImplementation((callback) => {
+      sweep = callback;
+      return timerHandle;
+    });
 
     floorControlService.requestFloor(channelId, floorKey);
     service.activeTransmissions.set(channelId, {
@@ -55,11 +61,11 @@ describe('signaling floor identity hardening', () => {
 
     installFloorIdentityHardening(service);
     service._startActiveTransmissionsSweep();
-    vi.advanceTimersByTime(30000);
+    expect(sweep).toBeTypeOf('function');
+    sweep();
 
     expect(service.activeTransmissions.has(channelId)).toBe(true);
     expect(floorControlService.getFloorHolder(channelId)?.floorKey).toBe(floorKey);
-    clearInterval(service._transmissionSweepTimer);
   });
 
   it('normalizes a joined floor holder from device key to human unit id', async () => {
