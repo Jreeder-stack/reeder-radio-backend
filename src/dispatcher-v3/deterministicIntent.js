@@ -6,6 +6,7 @@ const CURRENT_CALL_RX = /^(?:what(?:'s|\s+is)\s+(?:my|our)\s+(?:current\s+)?call
 const STATUS_CHECK_RX = /^(?:what(?:'s|\s+is)\s+my\s+status|what\s+status\s+do\s+you\s+have\s+me|status\s+check|check\s+my\s+status)\s*[?.!]*$/i;
 const BACKUP_RX = /^(?:send\s+(?:me\s+)?backup|send\s+(?:me\s+)?another\s+unit|i\s+need\s+backup|need\s+backup|i\s+need\s+another\s+unit|need\s+another\s+unit|requesting\s+backup|start\s+(?:me\s+)?backup)\s*[?.!]*$/i;
 const ZONE_CHANGE_RX = /^(?:(?:change|switch|move|put)\s+(?:me\s+)?(?:to|on)?\s*zone\s+[a-z0-9-]+|(?:change|switch|move)\s+zone\s+(?:to\s+)?[a-z0-9-]+)\s*[?.!]*$/i;
+const CLEAR_CALL_RX = /^(?:(?:i(?:'m|\s+am)\s+)?clear(?:\s+of|\s+from)?\s+(?:(?:the|my|that)\s+)?call(?:\s+i\s+was\s+on)?|clear\s+me(?:\s+of|\s+from)?\s+(?:(?:the|my|that)\s+)?call|show\s+me\s+clear(?:\s+of|\s+from)?\s+(?:(?:the|my|that)\s+)?call)\s*[?.!]*$/i;
 
 const NUMBER_WORDS = Object.freeze({
   zero: '0', oh: '0', one: '1', won: '1', two: '2', too: '2', three: '3', four: '4', for: '4',
@@ -43,6 +44,7 @@ export function planDeterministicV3Intent({ transcript, speakerCallsign } = {}) 
   if (CURRENT_CALL_RX.test(text)) return plan(V3_ACTIONS.GET_CURRENT_CALL, { unitRef: speakerCallsign }, 'deterministic_current_call');
   if (STATUS_CHECK_RX.test(text)) return plan(V3_ACTIONS.STATUS_CHECK, { unitRef: speakerCallsign }, 'deterministic_status_check');
   if (BACKUP_RX.test(text)) return plan(V3_ACTIONS.REQUEST_BACKUP, { unitRef: speakerCallsign, reason: text, priority: 'urgent' }, 'deterministic_backup');
+  if (CLEAR_CALL_RX.test(text)) return plan(V3_ACTIONS.CLEAR_UNIT, { unitRef: speakerCallsign }, 'deterministic_clear_current_call');
 
   if (ZONE_CHANGE_RX.test(text)) {
     const zone = extractZone(text);

@@ -82,7 +82,30 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
     },
 
     [V3_ACTIONS.CLEAR_UNIT]: async ({ input, correlationId }) => {
-      const callsign = await resolveSafeCallsign(input.unitId, correlationId);
+      const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      const callsign = identity.callsign;
+
+      // Clearing a unit from a call is a lifecycle operation, not just a status change.
+      // If this unit is the only active unit left, dispose the call in one authoritative
+      // CAD operation. If other units remain (or the assignment shape is unknown), only
+      // clear this unit and leave the call open.
+      let callDetails = null;
+      try {
+        callDetails = await gateway.get(`/api/radio/call/${encodeURIComponent(input.callId)}`, { correlationId });
+      } catch {
+        callDetails = null;
+      }
+
+      const activeUnits = extractActiveCallUnits(callDetails);
+      const isOnlyActiveUnit = activeUnits.length === 1 && activeUnits.some((unit) => unitMatches(unit, identity));
+      if (isOnlyActiveUnit) {
+        return gateway.post('/api/radio/dispose', {
+          call_id: input.callId,
+          disposition: input.disposition || 'CLEARED',
+          unit_ids: [callsign],
+        }, { correlationId });
+      }
+
       return gateway.post('/api/radio/clear', { call_id: input.callId, unit_id: callsign, disposition: input.disposition || undefined }, { correlationId });
     },
 
@@ -115,4 +138,37 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
       return { ...emergencyResult, cadNote: note };
     },
   };
+}
+
+function extractActiveCallUnits(payload) {
+  const root = payload?.call || payload?.data?.call || payload?.data || payload || {};
+  const candidates = root.assignments || root.active_assignments || root.activeAssignments || root.assigned_units || root.assignedUnits || root.units;
+  if (!Array.isArray(candidates)) return [];
+  return candidates.filter((unit) => {
+    if (!unit || typeof unit !== 'object') return Boolean(unit);
+    return !(unit.unassigned_at || unit.unassignedAt || unit.cleared_at || unit.clearedAt || unit.active === false);
+  });
+}
+
+function unitMatches(candidate, identity) {
+  if (candidate === undefined || candidate === null) return false;
+  if (typeof candidate === 'string' || typeof candidate === 'number') {
+    const value = normalizeIdentity(candidate);
+    return value === normalizeIdentity(identity.unitId) || value === normalizeIdentity(identity.callsign);
+  }
+  const values = [
+    candidate.unit_id,
+    candidate.unitId,
+    candidate.user_id,
+    candidate.userId,
+    candidate.id,
+    candidate.unit_number,
+    candidate.unitNumber,
+    candidate.callsign,
+  ].map(normalizeIdentity).filter(Boolean);
+  return values.includes(normalizeIdentity(identity.unitId)) || values.includes(normalizeIdentity(identity.callsign));
+}
+
+function normalizeIdentity(value) {
+  return value === undefined || value === null ? '' : String(value).trim().toUpperCase();
 }
