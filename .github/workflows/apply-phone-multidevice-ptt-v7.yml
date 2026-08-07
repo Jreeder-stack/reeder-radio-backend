@@ -1,0 +1,445 @@
+name: Apply phone multi-device PTT v7
+
+on:
+  push:
+    branches:
+      - fix/phone-multidevice-ptt-v7
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build:
+    if: ${{ !contains(github.event.head_commit.message, '[generated phone ptt v7]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/phone-multidevice-ptt-v7
+          fetch-depth: 0
+
+      - name: Apply multi-device PTT repair
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          def replace_once(path, old, new, label):
+              p = Path(path)
+              s = p.read_text()
+              if old not in s:
+                  raise SystemExit(f'{label}: anchor not found in {path}')
+              s = s.replace(old, new, 1)
+              p.write_text(s)
+
+          # 1) Phone UI/ViewModel must not pre-key signaling or claim TX itself.
+          # BackgroundAudioService is the single owner of the PTT transaction.
+          replace_once(
+              'android-native/app/src/main/java/com/reedersystems/commandcomms/ui/radio/RadioViewModel.kt',
+              '''        Log.d(TAG, "onPttDown roomKey=${channel.roomKey}")
+          app.signalingRepository.transmitPre(channel.roomKey)
+          _uiState.update { it.copy(pttState = PttState.TRANSMITTING) }
+          app.toneEngine.playTalkPermitTone()
+          pttStartJob = viewModelScope.launch {
+              sendServiceIntent(BackgroundAudioService.ACTION_PTT_DOWN)
+          }
+          ''',
+              '''        Log.d(TAG, "onPttDown roomKey=${channel.roomKey}")
+          // The background audio service owns the complete PTT transaction:
+          // permit tone -> pre-capture -> single pre-key -> floor request -> live TX.
+          // The UI only marks CONNECTING so one touch cannot create a second PTT path.
+          _uiState.update { it.copy(pttState = PttState.CONNECTING) }
+          pttStartJob = viewModelScope.launch {
+              sendServiceIntent(BackgroundAudioService.ACTION_PTT_DOWN)
+          }
+          ''',
+              'single-owner phone PTT'
+          )
+
+          # 2) Canonicalize login-authenticated native identities against the DB.
+          sig = Path('src/services/signalingService.js')
+          s = sig.read_text()
+          auth_old = '''    if (sessionUser) {
+                validatedUnitId = sessionUser.unit_id || sessionUser.username || unitId;
+                validatedUsername = sessionUser.username || username;
+                validatedIsDispatcher = sessionUser.role === 'admin' || sessionUser.role === 'dispatcher' || false;
+              }
+
+              socket.unitId = validatedUnitId;'''
+          auth_new = '''    if (sessionUser) {
+                validatedUnitId = sessionUser.unit_id || sessionUser.username || unitId;
+                validatedUsername = sessionUser.username || username;
+                validatedIsDispatcher = sessionUser.role === 'admin' || sessionUser.role === 'dispatcher' || false;
+              } else {
+                // Native Socket.IO does not reliably share the REST cookie jar. Resolve
+                // the claimed login identity to the canonical database unit so a phone
+                // and an assigned T320 are recognized as sibling endpoints of one unit.
+                try {
+                  const userResult = await pool.query(
+                    `SELECT id, username, unit_id, role
+                       FROM users
+                      WHERE username = $1 OR unit_id = $1 OR username = $2 OR unit_id = $2
+                      LIMIT 1`,
+                    [username, unitId]
+                  );
+                  if (userResult.rows.length > 0) {
+                    const canonicalUser = userResult.rows[0];
+                    validatedUnitId = canonicalUser.unit_id || canonicalUser.username || unitId;
+                    validatedUsername = canonicalUser.username || username;
+                    validatedIsDispatcher = canonicalUser.role === 'admin' || canonicalUser.role === 'dispatcher' || false;
+                    sessionUser = canonicalUser;
+                  }
+                } catch (identityErr) {
+                  console.warn('[Signaling] Canonical native identity lookup failed:', identityErr.message);
+                }
+              }
+
+              socket.unitId = validatedUnitId;'''
+          if auth_old not in s:
+              raise SystemExit('canonical auth anchor not found')
+          s = s.replace(auth_old, auth_new, 1)
+
+          grant_old = '''      socket.emit(RADIO_EVENTS.PTT_GRANTED, {
+                  channelId,
+                  senderUnitId: socket.unitId,
+                  timestamp: Date.now(),
+                });'''
+          grant_new = '''      socket.emit(RADIO_EVENTS.PTT_GRANTED, {
+                  channelId,
+                  senderUnitId: socket.unitId,
+                  requestId: data.requestId || null,
+                  targetDeviceId: socket.deviceId || null,
+                  originSocketId: socket.id,
+                  timestamp: Date.now(),
+                });'''
+          if grant_old not in s:
+              raise SystemExit('device-targeted PTT grant anchor not found')
+          s = s.replace(grant_old, grant_new, 1)
+
+          # Signaling-side UDP subscriber lifecycle becomes device-specific.
+          s = s.replace('audioRelayService.refreshSubscriber(ch, socket.unitId)',
+                        'audioRelayService.refreshSubscriber(ch, socket.deviceId || socket.unitId)')
+          s = s.replace('audioRelayService.removeSubscriber(channelId, socket.unitId);\n      audioRelayService.addSubscriber(channelId, socket.unitId, subscriberAddress, subscriberPort);',
+                        'audioRelayService.removeSubscriber(channelId, socket.deviceId || socket.unitId);\n      audioRelayService.addSubscriber(channelId, socket.unitId, subscriberAddress, subscriberPort, socket.deviceId || null, socket.isRadioDevice ? \'radio\' : (socket.deviceType || \'native\'));')
+          # Remaining per-socket removals should remove only this physical endpoint.
+          s = s.replace('audioRelayService.removeSubscriber(channelId, socket.unitId);',
+                        'audioRelayService.removeSubscriber(channelId, socket.deviceId || socket.unitId);')
+          s = s.replace('const subscribedChannels = audioRelayService.getChannelsForSubscriber(socket.unitId);',
+                        'const subscribedChannels = audioRelayService.getChannelsForSubscriber(socket.deviceId || socket.unitId);')
+          # The old same-unit guard was necessary only because relay entries were unit-keyed.
+          old_guard = '''    for (const channelId of subscribedChannels) {
+                if (this._isUnitStillInChannel(socket.unitId, channelId, socket)) {
+                  console.log(`[Signaling] Skipping audio relay removal for ${socket.unitId} on ${channelId}: another device for the same unit is still present`);
+                  continue;
+                }
+                audioRelayService.removeSubscriber(channelId, socket.deviceId || socket.unitId);
+              }'''
+          new_guard = '''    for (const channelId of subscribedChannels) {
+                audioRelayService.removeSubscriber(channelId, socket.deviceId || socket.unitId);
+              }'''
+          if old_guard in s:
+              s = s.replace(old_guard, new_guard, 1)
+          sig.write_text(s)
+
+          # 3) Audio relay: key UDP subscribers by physical device, retain unit identity
+          # for display and sibling-echo suppression. V1 packets remain supported.
+          relay = Path('src/services/audioRelayService.js')
+          r = relay.read_text()
+          start = r.index('  addSubscriber(channelId, unitId, address, port) {')
+          end = r.index('  setSignalingService(signalingService) {', start)
+          replacement = '''  addSubscriber(channelId, unitId, address, port, deviceId = null, deviceType = null) {
+              const key = canonicalChannelKey(channelId);
+              if (!this.subscribers.has(key)) this.subscribers.set(key, new Map());
+              const subs = this.subscribers.get(key);
+
+              // V2 phone packets carry deviceId. Legacy V1 radios do not, so first
+              // try to match an already-registered device by its observed endpoint.
+              let subscriberKey = deviceId || null;
+              if (!subscriberKey) {
+                for (const [candidateKey, candidate] of subs) {
+                  if (candidate.unitId === unitId && candidate.address === address && candidate.port === port) {
+                    subscriberKey = candidateKey;
+                    break;
+                  }
+                }
+              }
+              if (!subscriberKey) {
+                subscriberKey = `legacy:${unitId}:${address}:${port}`;
+              }
+
+              const existingSub = subs.get(subscriberKey);
+              if (existingSub && (existingSub.address !== address || existingSub.port !== port)) {
+                console.log(`[AudioRelay] SUBSCRIBER_NAT_CHANGE key=${subscriberKey} unitId=${unitId} channelId=${key} oldAddr=${existingSub.address}:${existingSub.port} newAddr=${address}:${port}`);
+              }
+              subs.set(subscriberKey, {
+                unitId,
+                deviceId: deviceId || existingSub?.deviceId || null,
+                deviceType: deviceType || existingSub?.deviceType || null,
+                address,
+                port,
+                lastSeen: Date.now(),
+              });
+              if (!existingSub) {
+                console.log(`[AudioRelay] SUBSCRIBER_ADDED key=${subscriberKey} unitId=${unitId} deviceId=${deviceId || 'legacy'} channelId=${key} addr=${address}:${port}`);
+              }
+            }
+
+            refreshSubscriber(channelId, identifier) {
+              const key = canonicalChannelKey(channelId);
+              const subs = this.subscribers.get(key);
+              if (!subs) return false;
+              const exact = subs.get(identifier);
+              if (exact) {
+                exact.lastSeen = Date.now();
+                return true;
+              }
+              let refreshed = false;
+              for (const sub of subs.values()) {
+                if (sub.unitId === identifier) {
+                  sub.lastSeen = Date.now();
+                  refreshed = true;
+                }
+              }
+              return refreshed;
+            }
+
+            removeSubscriber(channelId, identifier) {
+              const key = canonicalChannelKey(channelId);
+              const subs = this.subscribers.get(key);
+              if (!subs) return;
+              if (subs.delete(identifier)) {
+                console.log(`[AudioRelay] SUBSCRIBER_REMOVED key=${identifier} channelId=${key}`);
+              } else {
+                // Backward-compatible unit removal for legacy callers only.
+                for (const [subKey, sub] of [...subs]) {
+                  if (sub.unitId === identifier) {
+                    subs.delete(subKey);
+                    console.log(`[AudioRelay] SUBSCRIBER_REMOVED key=${subKey} unitId=${identifier} channelId=${key} legacyMatch=true`);
+                  }
+                }
+              }
+              if (subs.size === 0) this.subscribers.delete(key);
+            }
+
+            getChannelsForSubscriber(identifier) {
+              const channels = [];
+              for (const [channelId, subs] of this.subscribers) {
+                if (subs.has(identifier) || [...subs.values()].some((sub) => sub.unitId === identifier)) {
+                  channels.push(channelId);
+                }
+              }
+              return channels;
+            }
+
+            removeAllSubscriptions(identifier) {
+              for (const [channelId, subs] of this.subscribers) {
+                if (subs.has(identifier)) {
+                  subs.delete(identifier);
+                } else {
+                  for (const [subKey, sub] of [...subs]) {
+                    if (sub.unitId === identifier) subs.delete(subKey);
+                  }
+                }
+                if (subs.size === 0) this.subscribers.delete(channelId);
+              }
+            }
+
+          '''
+          r = r[:start] + replacement + r[end:]
+
+          # UDP delivery must suppress every sibling endpoint of the transmitting
+          # unit, while still allowing multiple devices of other units to receive.
+          udp_old = '''      for (const [subUnitId, subInfo] of udpSubs) {
+                  if (subUnitId === senderUnitId) continue;
+                  try {
+                    this.socket.send(rxPayload, 0, rxPayload.length, subInfo.port, subInfo.address);
+                    udpSendCount++;
+                  } catch (err) {
+                    udpSendErrors++;
+                    console.error(`[AudioRelay] Send error to ${subUnitId}:`, err.message);
+                  }
+                }'''
+          udp_new = '''      const sentEndpoints = new Set();
+                for (const [subKey, subInfo] of udpSubs) {
+                  if (subInfo.unitId === senderUnitId) continue;
+                  const endpointKey = `${subInfo.address}:${subInfo.port}`;
+                  if (sentEndpoints.has(endpointKey)) continue;
+                  sentEndpoints.add(endpointKey);
+                  try {
+                    this.socket.send(rxPayload, 0, rxPayload.length, subInfo.port, subInfo.address);
+                    udpSendCount++;
+                  } catch (err) {
+                    udpSendErrors++;
+                    console.error(`[AudioRelay] Send error to ${subKey} unitId=${subInfo.unitId}:`, err.message);
+                  }
+                }'''
+          if udp_old not in r:
+              raise SystemExit('UDP broadcast loop anchor not found')
+          r = r.replace(udp_old, udp_new, 1)
+
+          # Incoming packet registration uses V2 deviceId when present.
+          destruct_old = '    const { channelId: channelIdNumeric, sequence, opusPayload, flags, timestampMs, senderUnitId } = parsed;'
+          destruct_new = '    const { channelId: channelIdNumeric, sequence, opusPayload, flags, timestampMs, senderUnitId, senderDeviceId } = parsed;'
+          if destruct_old not in r:
+              raise SystemExit('relay packet destructure anchor not found')
+          r = r.replace(destruct_old, destruct_new, 1)
+          r = r.replace('    this.addSubscriber(channelKey, senderUnitId, rinfo.address, rinfo.port);',
+                        '    this.addSubscriber(channelKey, senderUnitId, rinfo.address, rinfo.port, senderDeviceId || null);', 1)
+
+          # Parser accepts both legacy V1 and device-aware V2 packets.
+          parser_old = '''    const version = msg.readUInt8(offset); offset += VERSION_LEN;
+              if (version !== PACKET_VERSION) return null;
+              const flags = msg.readUInt8(offset); offset += FLAGS_LEN;
+              const channelId = msg.readUInt16BE(offset); offset += CHANNEL_ID_LEN;
+              const sequence = msg.readUInt16BE(offset); offset += SEQUENCE_LEN;
+              const timestampMs = msg.readUInt32BE(offset); offset += TIMESTAMP_LEN;
+              const senderLen = msg.readUInt8(offset); offset += SENDER_LEN_LEN;
+              if (msg.length < offset + senderLen + PAYLOAD_LEN_LEN) return null;
+              const senderUnitId = msg.subarray(offset, offset + senderLen).toString('utf8');
+              offset += senderLen;
+              const payloadLength = msg.readUInt16BE(offset); offset += PAYLOAD_LEN_LEN;
+              if (payloadLength < 0 || msg.length < offset + payloadLength) return null;
+              const opusPayload = payloadLength > 0 ? msg.subarray(offset, offset + payloadLength) : Buffer.alloc(0);
+              return { channelId, sequence, timestampMs, flags, senderUnitId, opusPayload };'''
+          parser_new = '''    const version = msg.readUInt8(offset); offset += VERSION_LEN;
+              if (version !== 1 && version !== 2) return null;
+              const flags = msg.readUInt8(offset); offset += FLAGS_LEN;
+              const channelId = msg.readUInt16BE(offset); offset += CHANNEL_ID_LEN;
+              const sequence = msg.readUInt16BE(offset); offset += SEQUENCE_LEN;
+              const timestampMs = msg.readUInt32BE(offset); offset += TIMESTAMP_LEN;
+              const senderLen = msg.readUInt8(offset); offset += SENDER_LEN_LEN;
+              if (msg.length < offset + senderLen + PAYLOAD_LEN_LEN) return null;
+              const senderUnitId = msg.subarray(offset, offset + senderLen).toString('utf8');
+              offset += senderLen;
+              let senderDeviceId = null;
+              if (version >= 2) {
+                if (msg.length < offset + 1 + PAYLOAD_LEN_LEN) return null;
+                const deviceLen = msg.readUInt8(offset); offset += 1;
+                if (msg.length < offset + deviceLen + PAYLOAD_LEN_LEN) return null;
+                senderDeviceId = deviceLen > 0 ? msg.subarray(offset, offset + deviceLen).toString('utf8') : null;
+                offset += deviceLen;
+              }
+              const payloadLength = msg.readUInt16BE(offset); offset += PAYLOAD_LEN_LEN;
+              if (payloadLength < 0 || msg.length < offset + payloadLength) return null;
+              const opusPayload = payloadLength > 0 ? msg.subarray(offset, offset + payloadLength) : Buffer.alloc(0);
+              return { channelId, sequence, timestampMs, flags, senderUnitId, senderDeviceId, opusPayload };'''
+          if parser_old not in r:
+              raise SystemExit('relay parser anchor not found')
+          r = r.replace(parser_old, parser_new, 1)
+          relay.write_text(r)
+
+          # 4) Phone emits packet V2 with its persistent device UUID; every other
+          # flavor remains byte-for-byte V1 unless explicitly enabled later.
+          udp = Path('android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/UdpAudioTransport.kt')
+          u = udp.read_text()
+          u = u.replace('private const val PACKET_VERSION: Byte = 1',
+                        'private const val PACKET_VERSION: Byte = 1\nprivate const val PACKET_VERSION_DEVICE: Byte = 2', 1)
+          u = u.replace('    var unitId: String = ""\n    var onPacketReceived:',
+                        '    var unitId: String = ""\n    var deviceId: String = ""\n    var onPacketReceived:', 1)
+          frame_start = u.index('    private fun framePacket(audioData: ByteArray): ByteArray {')
+          frame_end = u.index('    private fun startReceiveLoop()', frame_start)
+          new_frame = '''    private fun framePacket(audioData: ByteArray): ByteArray {
+              val seq = sequenceNumber++
+              val senderBytes = unitId.toByteArray(Charsets.UTF_8)
+              val senderLen = senderBytes.size.coerceAtMost(255)
+              val deviceBytes = deviceId.toByteArray(Charsets.UTF_8)
+              val deviceLen = deviceBytes.size.coerceAtMost(255)
+              val useDeviceVersion = deviceLen > 0
+              val channelNumeric = channelIndex
+              val timestampMs = (System.currentTimeMillis() and 0xFFFFFFFFL).toInt()
+              val extraDeviceBytes = if (useDeviceVersion) 1 + deviceLen else 0
+              val frame = ByteArray(RADIO_HEADER_FIXED_LEN + senderLen + extraDeviceBytes + audioData.size)
+              var offset = 0
+              frame[offset++] = if (useDeviceVersion) PACKET_VERSION_DEVICE else PACKET_VERSION
+              frame[offset++] = FLAG_FEC_HINT.toByte()
+              frame[offset++] = ((channelNumeric shr 8) and 0xFF).toByte()
+              frame[offset++] = (channelNumeric and 0xFF).toByte()
+              frame[offset++] = ((seq shr 8) and 0xFF).toByte()
+              frame[offset++] = (seq and 0xFF).toByte()
+              frame[offset++] = ((timestampMs shr 24) and 0xFF).toByte()
+              frame[offset++] = ((timestampMs shr 16) and 0xFF).toByte()
+              frame[offset++] = ((timestampMs shr 8) and 0xFF).toByte()
+              frame[offset++] = (timestampMs and 0xFF).toByte()
+              frame[offset++] = senderLen.toByte()
+              System.arraycopy(senderBytes, 0, frame, offset, senderLen)
+              offset += senderLen
+              if (useDeviceVersion) {
+                  frame[offset++] = deviceLen.toByte()
+                  System.arraycopy(deviceBytes, 0, frame, offset, deviceLen)
+                  offset += deviceLen
+              }
+              frame[offset++] = ((audioData.size shr 8) and 0xFF).toByte()
+              frame[offset++] = (audioData.size and 0xFF).toByte()
+              System.arraycopy(audioData, 0, frame, offset, audioData.size)
+              return frame
+          }
+
+          '''
+          u = u[:frame_start] + new_frame + u[frame_end:]
+          udp.write_text(u)
+
+          # Phone-only activation of V2 device-aware UDP. T320 remains V1.
+          bg = Path('android-native/app/src/main/java/com/reedersystems/commandcomms/audio/BackgroundAudioService.kt')
+          b = bg.read_text()
+          unit_anchor = '        engine.udpTransport.unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: ""\n'
+          if unit_anchor not in b:
+              raise SystemExit('BackgroundAudioService UDP identity anchor not found')
+          b = b.replace(unit_anchor, unit_anchor + '''        engine.udpTransport.deviceId = if (com.reedersystems.commandcomms.BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+                    app.signalingClient.deviceId.orEmpty()
+                } else {
+                    ""
+                }
+                Log.d(TAG, "UDP sender identity unitId=${engine.udpTransport.unitId} deviceAware=${engine.udpTransport.deviceId.isNotBlank()} type=${com.reedersystems.commandcomms.BuildConfig.RADIO_DEVICE_TYPE}")
+          ''', 1)
+          bg.write_text(b)
+
+          # 5) Phone version bump only.
+          gradle = Path('android-native/app/build.gradle.kts')
+          g = gradle.read_text()
+          g = g.replace('            versionCode = 6\n            versionNameSuffix = "-phone-v6"',
+                        '            versionCode = 7\n            versionNameSuffix = "-phone-v7"', 1)
+          gradle.write_text(g)
+
+      - name: Static assertions
+        run: |
+          node --check src/services/signalingService.js
+          node --check src/services/audioRelayService.js
+          python - <<'PY'
+          from pathlib import Path
+          vm = Path('android-native/app/src/main/java/com/reedersystems/commandcomms/ui/radio/RadioViewModel.kt').read_text()
+          assert 'app.signalingRepository.transmitPre(channel.roomKey)' not in vm
+          assert 'pttState = PttState.CONNECTING' in vm
+          sig = Path('src/services/signalingService.js').read_text()
+          assert 'requestId: data.requestId || null' in sig
+          assert 'targetDeviceId: socket.deviceId || null' in sig
+          assert 'Canonical native identity lookup failed' in sig
+          relay = Path('src/services/audioRelayService.js').read_text()
+          assert 'senderDeviceId' in relay
+          assert 'subInfo.unitId === senderUnitId' in relay
+          udp = Path('android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/UdpAudioTransport.kt').read_text()
+          assert 'PACKET_VERSION_DEVICE' in udp
+          assert 'var deviceId: String = ""' in udp
+          bg = Path('android-native/app/src/main/java/com/reedersystems/commandcomms/audio/BackgroundAudioService.kt').read_text()
+          assert 'RADIO_DEVICE_TYPE == "android_phone"' in bg
+          PY
+
+      - name: Build phone APK
+        working-directory: android-native
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assemblePhoneDebug --no-daemon
+
+      - name: Upload phone APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: command-comms-phone-v7-debug
+          path: android-native/app/build/outputs/apk/phone/debug/app-phone-debug.apk
+          if-no-files-found: error
+
+      - name: Commit generated repair
+        run: |
+          git config user.name "Jreeder-stack"
+          git config user.email "227722155+Jreeder-stack@users.noreply.github.com"
+          git add src/services/signalingService.js src/services/audioRelayService.js android-native/app/src/main/java/com/reedersystems/commandcomms/ui/radio/RadioViewModel.kt android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/UdpAudioTransport.kt android-native/app/src/main/java/com/reedersystems/commandcomms/audio/BackgroundAudioService.kt android-native/app/build.gradle.kts
+          git commit -m "Fix phone multi-device PTT and audio identity [generated phone ptt v7]"
+          git push origin HEAD:fix/phone-multidevice-ptt-v7
