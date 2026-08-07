@@ -4,8 +4,14 @@ on:
   pull_request:
     paths:
       - 'src/dispatcher-v3/**'
-      - 'src/services/aiDispatcherV3RuntimeInstaller.js'
-      - 'src/services/strictCenterIsolationBootstrap.js'
+      - 'src/services/aiDispatcherRuntimeManager.js'
+      - 'src/services/aiDispatchService.js'
+      - 'src/services/aiDispatcherSignaling.js'
+      - 'src/services/cadService.js'
+      - 'src/services/azureSpeechService.js'
+      - 'src/services/audioRelayService.js'
+      - 'src/services/floorControlService.js'
+      - 'src/services/signalingService.js'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/ai-dispatcher-v3-ci.yml'
@@ -22,4 +28,22 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Syntax-check V3 runtime boundary
+        run: |
+          node --check src/services/aiDispatcherRuntimeManager.js
+          node --check src/services/aiDispatchService.js
+          node --check src/services/aiDispatcherSignaling.js
+          node --check src/dispatcher-v3/liveRuntime.js
+          node --check src/dispatcher-v3/intentPlanner.js
+      - name: Verify legacy dispatcher engine is absent
+        run: |
+          test ! -e src/services/commandMatcher.js
+          test ! -e src/services/dispatcherV2Planner.js
+          test ! -e src/services/dispatcherToolPlanner.js
+          test ! -e src/services/dispatcherToolRegistry.js
+          test ! -e src/services/llmIntentService.js
+          test ! -e src/services/llmIntentService.legacy.js
+          test ! -e src/services/strictCenterIsolationBootstrap.js
+          test ! -e src/services/aiDispatcherV3RuntimeInstaller.js
+          ! grep -R "AI_DISPATCHER_RUNTIME.*legacy" src package.json
       - run: npm run test:v3
