@@ -36,6 +36,14 @@ export {
 export { UnitIdentityService } from './unitIdentity.js';
 
 export {
+  V3_ACTIONS,
+  V3_UNIT_STATUSES,
+  getV3ActionDefinition,
+  listV3Actions,
+  validateV3ActionRequest,
+} from './actionContracts.js';
+
+export {
   DISPATCHER_RUNTIME,
   getConfiguredDispatcherRuntime,
   isDispatcherV3Selected,
