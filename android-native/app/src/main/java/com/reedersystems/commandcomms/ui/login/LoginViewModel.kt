@@ -37,9 +37,18 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun checkExistingSession() {
         viewModelScope.launch {
+            val hadStoredSession = app.sessionPrefs.hasSession
+            val hadCookies = app.apiClient.cookieJar.hasCookies()
             Log.d(STARTUP_TAG, "SESSION_CHECK_START")
-            Log.d(STARTUP_TAG, "AUTH_RESTORE_START hasSession=${app.sessionPrefs.hasSession} hasCookies=${app.apiClient.cookieJar.hasCookies()}")
+            Log.d(STARTUP_TAG, "AUTH_RESTORE_START hasSession=$hadStoredSession hasCookies=$hadCookies")
             _uiState.value = LoginUiState.CheckingSession
+
+            if (!hadStoredSession && !hadCookies) {
+                _uiState.value = LoginUiState.Idle
+                logFormState("no_saved_session")
+                return@launch
+            }
+
             val result = app.authRepository.me()
             if (result.isSuccess) {
                 val user = result.getOrThrow()
@@ -50,11 +59,21 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 fetchAndStoreRadioConfig()
                 _uiState.value = LoginUiState.Success(user)
             } else {
-                Log.w(STARTUP_TAG, "AUTH_RESTORE_RESULT success=false reason=${result.exceptionOrNull()?.message}")
-                Log.w(STARTUP_TAG, "SESSION_CHECK_RESULT hasSession=false reason=${result.exceptionOrNull()?.message}")
-                clearStaleSession("session_check_failed")
-                Log.d(LOGIN_TAG, "SESSION_STATE_CHANGED state=unauthenticated source=session_check_failed")
-                _uiState.value = LoginUiState.Idle
+                val reason = result.exceptionOrNull()?.message.orEmpty()
+                val explicitlyRejected = reason.contains("Not authenticated (401)") || reason.contains("Not authenticated (403)")
+                Log.w(STARTUP_TAG, "AUTH_RESTORE_RESULT success=false reason=$reason explicitReject=$explicitlyRejected")
+
+                if (explicitlyRejected) {
+                    clearStaleSession("server_rejected_saved_session")
+                    Log.d(LOGIN_TAG, "SESSION_STATE_CHANGED state=unauthenticated source=server_rejected_saved_session")
+                    _uiState.value = LoginUiState.Idle
+                } else {
+                    // A timeout, DNS failure, temporary server outage, or other network problem
+                    // must NOT turn into a logout. Keep the persisted cookie + user identity so
+                    // the foreground/background radio can reconnect when connectivity returns.
+                    Log.w(LOGIN_TAG, "SESSION_RESTORE_DEFERRED preserving stored session after transient failure")
+                    _uiState.value = LoginUiState.Error("Unable to verify the saved session right now. Your login has been kept; check the connection and reopen Command Comms.")
+                }
             }
             logFormState("session_check_completed")
         }
@@ -79,11 +98,12 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.value = LoginUiState.Success(user)
             } else {
                 Log.e(STARTUP_TAG, "AUTH_FAILED method=manual_login reason=${result.exceptionOrNull()?.message}")
+                // A failed manual login may replace a previous user, so clear only the user
+                // session/cookies. The permanent installation/device UUID is stored separately
+                // in commandcomms_device and is intentionally never touched here.
                 clearStaleSession("manual_login_failed")
                 Log.d(LOGIN_TAG, "SESSION_STATE_CHANGED state=unauthenticated source=manual_login_failed")
-                _uiState.value = LoginUiState.Error(
-                    result.exceptionOrNull()?.message ?: "Login failed"
-                )
+                _uiState.value = LoginUiState.Error(result.exceptionOrNull()?.message ?: "Login failed")
             }
             logFormState("manual_login_completed")
         }
@@ -98,9 +118,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onManualInputChanged(field: String, value: String) {
         Log.d(LOGIN_TAG, "LOGIN_INPUT_CHANGED field=$field length=${value.length}")
-        if (!_manualInputDetected.value) {
-            _manualInputDetected.value = true
-        }
+        if (!_manualInputDetected.value) _manualInputDetected.value = true
         logFormState("manual_input")
     }
 
@@ -118,10 +136,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun logFormState(source: String) {
-        Log.d(
-            LOGIN_TAG,
-            "LOGIN_FORM_STATE source=$source uiState=${_uiState.value::class.simpleName} manualInputDetected=${_manualInputDetected.value}"
-        )
+        Log.d(LOGIN_TAG, "LOGIN_FORM_STATE source=$source uiState=${_uiState.value::class.simpleName} manualInputDetected=${_manualInputDetected.value}")
     }
 
     private suspend fun fetchAndStoreRadioConfig() {
