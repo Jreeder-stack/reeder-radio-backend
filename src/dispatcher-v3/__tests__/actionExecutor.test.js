@@ -24,10 +24,12 @@ function makeIdentityService() {
 
 function makeGateway() {
   return {
-    get: vi.fn(async () => ({ success: true })),
-    post: vi.fn(async (path, body) => path === '/api/radio/status'
-      ? { success: true, unit_id: body.unit_id, status: body.status }
-      : { success: true }),
+    get: vi.fn(async (path) => {
+      if (path === '/api/radio/status-check') return { success: true, units: [{ unit_id: 'INDIANA-1', status: 'en_route', zone: 'OPS1' }] };
+      if (path.includes('/api/radio/v3/cad/calls/')) return { success: true, call: { call_id: 'call-1', call_notes: [{ text: 'BACKUP REQUESTED by INDIANA-1 at 100 Main St — fight' }] } };
+      return { success: true };
+    }),
+    post: vi.fn(async () => ({ success: true })),
     patch: vi.fn(async () => ({ success: true })),
   };
 }
@@ -58,16 +60,16 @@ describe('V3ActionExecutor', () => {
 });
 
 describe('default V3 handlers', () => {
-  it('uses a resolved callsign only after UUID/callsign identity agrees', async () => {
+  it('uses a resolved callsign and verifies status from an authoritative follow-up read', async () => {
     const gateway = makeGateway();
     const identities = makeIdentityService();
     const handlers = createDefaultV3ActionHandlers({ gateway, unitIdentityService: identities });
     const result = await handlers[V3_ACTIONS.SET_UNIT_STATUS]({ input: { unitId: 'uuid-1', status: 'en_route', note: null }, correlationId: 'c1' });
-    expect(result.success).toBe(true);
-    expect(result.status).toBe('en_route');
+    expect(result).toMatchObject({ success: true, verified: true, unit: { unit_id: 'INDIANA-1', status: 'en_route' } });
     expect(identities.resolve).toHaveBeenNthCalledWith(1, 'uuid-1', { correlationId: 'c1' });
     expect(identities.resolve).toHaveBeenNthCalledWith(2, 'INDIANA-1', { correlationId: 'c1' });
     expect(gateway.post).toHaveBeenCalledWith('/api/radio/status', expect.objectContaining({ unit_id: 'INDIANA-1', status: 'en_route' }), { correlationId: 'c1' });
+    expect(gateway.get).toHaveBeenCalledWith('/api/radio/status-check', { correlationId: 'c1' });
   });
 
   it('refuses callsign execution if the second resolution maps elsewhere', async () => {
@@ -83,21 +85,18 @@ describe('default V3 handlers', () => {
     expect(gateway.post).not.toHaveBeenCalled();
   });
 
-  it('fails if CAD success does not confirm the requested status', async () => {
+  it('fails if follow-up CAD state does not match the requested status', async () => {
     const gateway = makeGateway();
-    gateway.post.mockResolvedValueOnce({ success: true, unit_id: 'INDIANA-1', status: 'off_duty' });
+    gateway.get.mockResolvedValueOnce({ success: true, units: [{ unit_id: 'INDIANA-1', status: 'off_duty' }] });
     const handlers = createDefaultV3ActionHandlers({ gateway, unitIdentityService: makeIdentityService() });
 
     await expect(handlers[V3_ACTIONS.SET_UNIT_STATUS]({
       input: { unitId: 'uuid-1', status: 'on_duty' },
       correlationId: 'verify-1',
-    })).rejects.toMatchObject({
-      code: 'CAD_REJECTED',
-      details: { requestedStatus: 'on_duty', returnedStatus: 'off_duty' },
-    });
+    })).rejects.toMatchObject({ code: 'CAD_REJECTED', details: { expected: 'on_duty', actual: 'off_duty' } });
   });
 
-  it('executes a dedicated backup request and records a CAD note when a call exists', async () => {
+  it('executes a dedicated backup request and verifies the CAD note when a call exists', async () => {
     const gateway = makeGateway();
     const operationalAlertService = { requestBackup: vi.fn(() => ({ requested: true, backup: { unitId: 'INDIANA-1' } })) };
     const handlers = createDefaultV3ActionHandlers({ gateway, unitIdentityService: makeIdentityService(), operationalAlertService });
@@ -109,7 +108,7 @@ describe('default V3 handlers', () => {
     expect(result.requested).toBe(true);
     expect(operationalAlertService.requestBackup).toHaveBeenCalledWith(expect.objectContaining({ runtimeContext: runtime, correlationId: 'backup-1', callId: 'call-1', location: '100 Main St', reason: 'fight', priority: 'urgent' }));
     expect(gateway.post).toHaveBeenCalledWith('/api/radio/note', expect.any(Object), { correlationId: 'backup-1' });
-    expect(result.cadNote.recorded).toBe(true);
+    expect(result.cadNote).toMatchObject({ recorded: true, verified: true });
   });
 
   it('activates native emergency even if recording the CAD note fails', async () => {
