@@ -33,10 +33,11 @@ describe('createResolvedCallHandler', () => {
       correlationId: 'corr-1',
       query: { q: 'Fayette County Fair, Dunbar' },
     });
-    expect(gateway.post).toHaveBeenCalledWith('/api/radio/call', expect.objectContaining({
+    expect(gateway.post).toHaveBeenCalledWith('/api/radio/v3/cad/calls', expect.objectContaining({
       type: 'BUILDING CHECK',
       location: '132 Pechin Rd',
       city: 'Dunbar',
+      state: 'PA',
       units: ['INDIANA-1'],
     }), { correlationId: 'corr-1', timeoutMs: 20000 });
 
@@ -77,6 +78,20 @@ describe('createResolvedCallHandler', () => {
       city: 'ROSSITER',
       municipality: 'CANOE TOWNSHIP',
     });
+  });
+
+  it('supports creating a resolved call with no assigned units', async () => {
+    const gateway = {
+      get: vi.fn().mockResolvedValue({ success: true, source: 'MAI', location: { address: '100 MAIN ST', city: 'ROSSITER' } }),
+      post: vi.fn().mockResolvedValue({ success: true }),
+    };
+    const resolveSafeCallsign = vi.fn();
+    const handler = createResolvedCallHandler({ gateway, resolveSafeCallsign });
+
+    await handler({ input: { type: 'ALARM', location: '100 Main St', unitIds: [] }, correlationId: 'corr-zero' });
+
+    expect(resolveSafeCallsign).not.toHaveBeenCalled();
+    expect(gateway.post.mock.calls[0][1].units).toEqual([]);
   });
 
   it('fails closed when Command Link cannot verify the location', async () => {
