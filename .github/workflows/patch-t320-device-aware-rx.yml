@@ -1,0 +1,68 @@
+name: Patch T320 device-aware RX
+
+on:
+  push:
+    branches:
+      - fix/t320-device-aware-rx
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/t320-device-aware-rx
+          fetch-depth: 0
+
+      - name: Apply device-aware UDP RX patch
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/UdpAudioTransport.kt')
+          s = p.read_text()
+
+          old = '''data class OpusRadioPacket(\n    val channelIndex: Int,\n    val senderUnitId: String,\n    val sequence: Int,\n'''
+          new = '''data class OpusRadioPacket(\n    val channelIndex: Int,\n    val senderUnitId: String,\n    val senderDeviceId: String,\n    val sequence: Int,\n'''
+          if old not in s: raise SystemExit('packet data class anchor missing')
+          s = s.replace(old, new, 1)
+
+          old = '''                        if (parsed != null) {\n                            if (parsed.senderUnitId == unitId) {\n                                Log.d(TAG, "SELF_AUDIO_SUPPRESSED senderUnitId=${parsed.senderUnitId} seq=${parsed.sequence}")\n                            } else {\n                                rxPacketCount++\n                                rxSummaryBytes += packet.length\n\n                                val lastSeq = rxSeqTracker[parsed.senderUnitId]\n                                rxSeqTracker[parsed.senderUnitId] = parsed.sequence\n'''
+          new = '''                        if (parsed != null) {\n                            val sameUnit = parsed.senderUnitId == unitId\n                            val samePhysicalDevice = parsed.senderDeviceId.isNotBlank() &&\n                                deviceId.isNotBlank() && parsed.senderDeviceId == deviceId\n                            val legacySelfPacket = parsed.senderDeviceId.isBlank() && sameUnit\n                            if (samePhysicalDevice || legacySelfPacket) {\n                                Log.d(TAG, "SELF_AUDIO_SUPPRESSED senderUnitId=${parsed.senderUnitId} senderDeviceId=${parsed.senderDeviceId.ifBlank { "legacy" }} localDeviceId=${deviceId.ifBlank { "none" }} seq=${parsed.sequence}")\n                            } else {\n                                rxPacketCount++\n                                rxSummaryBytes += packet.length\n\n                                val senderKey = if (parsed.senderDeviceId.isNotBlank()) "${parsed.senderUnitId}@${parsed.senderDeviceId}" else parsed.senderUnitId\n                                val lastSeq = rxSeqTracker[senderKey]\n                                rxSeqTracker[senderKey] = parsed.sequence\n'''
+          if old not in s: raise SystemExit('receive suppression anchor missing')
+          s = s.replace(old, new, 1)
+
+          old = '''                                    Log.d(TAG, "RX_PACKET seq=${parsed.sequence} sender=${parsed.senderUnitId} payload=${parsed.opusPayload.size} ch=${parsed.channelIndex} localCh=$channelIndex channelMatch=$channelMatch accept=$acceptReason ${RadioDiagLog.elapsedTag()}")\n'''
+          new = '''                                    Log.d(TAG, "RX_PACKET seq=${parsed.sequence} sender=${parsed.senderUnitId} senderDeviceId=${parsed.senderDeviceId.ifBlank { "legacy" }} payload=${parsed.opusPayload.size} ch=${parsed.channelIndex} localCh=$channelIndex channelMatch=$channelMatch accept=$acceptReason ${RadioDiagLog.elapsedTag()}")\n'''
+          if old not in s: raise SystemExit('rx log anchor missing')
+          s = s.replace(old, new, 1)
+
+          old = '''        val version = buffer[offset++].toInt() and 0xFF\n        if (version != PACKET_VERSION.toInt()) {\n            Log.w("[RadioError]", "Unsupported relay packet version=$version expected=${PACKET_VERSION.toInt()} method=parseRelayPacket")\n            return null\n        }\n'''
+          new = '''        val version = buffer[offset++].toInt() and 0xFF\n        val isDeviceVersion = version == PACKET_VERSION_DEVICE.toInt()\n        if (version != PACKET_VERSION.toInt() && !isDeviceVersion) {\n            Log.w("[RadioError]", "Unsupported relay packet version=$version expected=${PACKET_VERSION.toInt()} or ${PACKET_VERSION_DEVICE.toInt()} method=parseRelayPacket")\n            return null\n        }\n'''
+          if old not in s: raise SystemExit('version parser anchor missing')
+          s = s.replace(old, new, 1)
+
+          old = '''        offset += senderLen\n        if (packetLength < offset + 2) {\n            Log.w("[RadioError]", "Truncated packet: missing payload length totalLen=$packetLength method=parseRelayPacket")\n            return null\n        }\n        val payloadLength = ((buffer[offset++].toInt() and 0xFF) shl 8) or (buffer[offset++].toInt() and 0xFF)\n'''
+          new = '''        offset += senderLen\n\n        var senderDeviceId = ""\n        if (isDeviceVersion) {\n            if (packetLength < offset + 1) {\n                Log.w("[RadioError]", "Truncated v2 packet: missing device length totalLen=$packetLength method=parseRelayPacket")\n                return null\n            }\n            val deviceLen = buffer[offset++].toInt() and 0xFF\n            if (packetLength < offset + deviceLen + 2) {\n                Log.w("[RadioError]", "Truncated v2 packet: deviceLen=$deviceLen available=${packetLength - offset} method=parseRelayPacket")\n                return null\n            }\n            senderDeviceId = if (deviceLen > 0) String(buffer, offset, deviceLen, Charsets.UTF_8) else ""\n            offset += deviceLen\n        }\n\n        if (packetLength < offset + 2) {\n            Log.w("[RadioError]", "Truncated packet: missing payload length totalLen=$packetLength method=parseRelayPacket")\n            return null\n        }\n        val payloadLength = ((buffer[offset++].toInt() and 0xFF) shl 8) or (buffer[offset++].toInt() and 0xFF)\n'''
+          if old not in s: raise SystemExit('device parser insertion anchor missing')
+          s = s.replace(old, new, 1)
+
+          old = '''            channelIndex = channelNumeric,\n            senderUnitId = sender,\n            sequence = sequence,\n'''
+          new = '''            channelIndex = channelNumeric,\n            senderUnitId = sender,\n            senderDeviceId = senderDeviceId,\n            sequence = sequence,\n'''
+          if old not in s: raise SystemExit('packet construction anchor missing')
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/UdpAudioTransport.kt
+          git diff --cached --check
+          git commit -m "Accept device-aware audio packets on Android radios"
+          git push origin HEAD:fix/t320-device-aware-rx
