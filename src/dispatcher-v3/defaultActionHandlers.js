@@ -1,6 +1,18 @@
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { V3_ACTIONS } from './actionContracts.js';
 import { createResolvedCallHandler } from './createCallHandler.js';
+import {
+  readCallForVerification,
+  readUnitForVerification,
+  verifyAssignmentTimes,
+  verifyCallClosed,
+  verifyCallMutation,
+  verifyCallNote,
+  verifyPrimaryUnit,
+  verifyUnitAssigned,
+  verifyUnitStatus,
+  verifyUnitZone,
+} from './cadMutationVerifier.js';
 
 const CAD_PARITY_PREFIX = '/api/radio/v3/cad';
 
@@ -29,7 +41,9 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
     if (!callId) return { recorded: false, skipped: true };
     try {
       await gateway.post('/api/radio/note', { call_id: callId, note }, { correlationId });
-      return { recorded: true, skipped: false };
+      const call = await readCallForVerification(gateway, callId, correlationId);
+      verifyCallNote(call, note, { correlationId, callId });
+      return { recorded: true, skipped: false, verified: true };
     } catch (error) {
       return { recorded: false, skipped: false, error: { code: error?.code || V3_ERROR_CODES.CAD_REJECTED, message: error?.message || 'Failed to record operational alert note' } };
     }
@@ -42,21 +56,19 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
     [V3_ACTIONS.TIME_CHECK]: async ({ input }) => ({ unitId: input.unitId || null, timestamp: now().toISOString() }),
 
     [V3_ACTIONS.SET_UNIT_STATUS]: async ({ input, correlationId }) => {
-      const callsign = await resolveSafeCallsign(input.unitId, correlationId);
-      const result = await gateway.post('/api/radio/status', { unit_id: callsign, status: input.status, note: input.note || undefined }, { correlationId });
-      const returnedStatus = normalizeStatus(result?.status || result?.current_status || result?.currentStatus);
-      const requestedStatus = normalizeStatus(input.status);
-      if (!returnedStatus || returnedStatus !== requestedStatus) {
-        throw new DispatcherV3Error(V3_ERROR_CODES.CAD_REJECTED, `Command Link did not confirm ${callsign} changed to ${requestedStatus}`, {
-          statusCode: 502, retryable: false, details: { correlationId, callsign, requestedStatus, returnedStatus, response: result || null },
-        });
-      }
-      return result;
+      const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      await gateway.post('/api/radio/status', { unit_id: identity.callsign, status: input.status, note: input.note || undefined }, { correlationId });
+      const unit = await readUnitForVerification(gateway, identity.callsign, correlationId);
+      verifyUnitStatus(unit, input.status, { correlationId, unitId: identity.unitId, callsign: identity.callsign });
+      return { success: true, verified: true, unit };
     },
 
     [V3_ACTIONS.CHANGE_UNIT_ZONE]: async ({ input, correlationId }) => {
-      const callsign = await resolveSafeCallsign(input.unitId, correlationId);
-      return gateway.post('/api/radio/zone', { unit_id: callsign, zone: input.zone }, { correlationId });
+      const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      await gateway.post('/api/radio/zone', { unit_id: identity.callsign, zone: input.zone }, { correlationId });
+      const unit = await readUnitForVerification(gateway, identity.callsign, correlationId);
+      verifyUnitZone(unit, input.zone, { correlationId, unitId: identity.unitId, callsign: identity.callsign });
+      return { success: true, verified: true, unit };
     },
 
     [V3_ACTIONS.GET_CURRENT_CALL]: async ({ input, correlationId }) => {
@@ -87,37 +99,55 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
 
     [V3_ACTIONS.UPDATE_CALL]: async ({ input, correlationId }) => {
       const body = toCadCallMutation(input);
-      return gateway.patch(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}`, body, { correlationId });
+      await gateway.patch(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}`, body, { correlationId });
+      const call = await readCallForVerification(gateway, input.callId, correlationId);
+      verifyCallMutation(call, input, { correlationId, callId: input.callId });
+      return { success: true, verified: true, call };
     },
 
-    [V3_ACTIONS.ADD_CALL_NOTE]: async ({ input, correlationId }) => gateway.post('/api/radio/note', {
-      call_id: input.callId, note: input.note, unit_id: input.unitId || undefined,
-    }, { correlationId }),
+    [V3_ACTIONS.ADD_CALL_NOTE]: async ({ input, correlationId }) => {
+      await gateway.post('/api/radio/note', { call_id: input.callId, note: input.note, unit_id: input.unitId || undefined }, { correlationId });
+      const call = await readCallForVerification(gateway, input.callId, correlationId);
+      verifyCallNote(call, input.note, { correlationId, callId: input.callId });
+      return { success: true, verified: true, call };
+    },
 
     [V3_ACTIONS.ASSIGN_UNIT]: async ({ input, correlationId }) => {
-      const callsign = await resolveSafeCallsign(input.unitId, correlationId);
-      return gateway.post('/api/radio/assign', { call_id: input.callId, unit_id: callsign }, { correlationId });
+      const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      await gateway.post('/api/radio/assign', { call_id: input.callId, unit_id: identity.callsign }, { correlationId });
+      const call = await readCallForVerification(gateway, input.callId, correlationId);
+      verifyUnitAssigned(call, identity, true, { correlationId, callId: input.callId });
+      return { success: true, verified: true, call };
     },
 
     [V3_ACTIONS.UNASSIGN_UNIT]: async ({ input, correlationId }) => {
-      const callsign = await resolveSafeCallsign(input.unitId, correlationId);
-      return gateway.post(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}/unassign-unit`, { unit_id: callsign }, { correlationId });
+      const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      await gateway.post(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}/unassign-unit`, { unit_id: identity.callsign }, { correlationId });
+      const call = await readCallForVerification(gateway, input.callId, correlationId);
+      verifyUnitAssigned(call, identity, false, { correlationId, callId: input.callId });
+      return { success: true, verified: true, call };
     },
 
     [V3_ACTIONS.MAKE_PRIMARY]: async ({ input, correlationId }) => {
-      const callsign = await resolveSafeCallsign(input.unitId, correlationId);
-      return gateway.post(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}/primary-unit`, { unit_id: callsign }, { correlationId });
+      const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      await gateway.post(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}/primary-unit`, { unit_id: identity.callsign }, { correlationId });
+      const call = await readCallForVerification(gateway, input.callId, correlationId);
+      verifyPrimaryUnit(call, identity, { correlationId, callId: input.callId });
+      return { success: true, verified: true, call };
     },
 
     [V3_ACTIONS.UPDATE_ASSIGNMENT_TIMES]: async ({ input, correlationId }) => {
-      const callsign = await resolveSafeCallsign(input.unitId, correlationId);
-      return gateway.patch(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}/assignment-times`, {
-        unit_id: callsign,
+      const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      await gateway.patch(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}/assignment-times`, {
+        unit_id: identity.callsign,
         assigned_at: input.assignedAt || undefined,
         dispatched_at: input.dispatchedAt || undefined,
         arrived_at: input.arrivedAt || undefined,
         ondt_at: input.ondtAt || undefined,
       }, { correlationId });
+      const call = await readCallForVerification(gateway, input.callId, correlationId);
+      verifyAssignmentTimes(call, identity, input, { correlationId, callId: input.callId });
+      return { success: true, verified: true, call };
     },
 
     [V3_ACTIONS.CLEAR_UNIT]: async ({ input, correlationId }) => {
@@ -127,14 +157,22 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
       const activeUnits = extractActiveCallUnits(callDetails);
       const isOnlyActiveUnit = activeUnits.length === 1 && activeUnits.some((unit) => unitMatches(unit, identity));
       if (isOnlyActiveUnit) {
-        return gateway.post('/api/radio/dispose', { call_id: input.callId, disposition: input.disposition || 'CLEARED', unit_ids: [identity.callsign] }, { correlationId });
+        await gateway.post('/api/radio/dispose', { call_id: input.callId, disposition: input.disposition || 'CLEARED', unit_ids: [identity.callsign] }, { correlationId });
+      } else {
+        await gateway.post('/api/radio/clear', { call_id: input.callId, unit_id: identity.callsign, disposition: input.disposition || undefined }, { correlationId });
       }
-      return gateway.post('/api/radio/clear', { call_id: input.callId, unit_id: identity.callsign, disposition: input.disposition || undefined }, { correlationId });
+      const call = await readCallForVerification(gateway, input.callId, correlationId);
+      verifyUnitAssigned(call, identity, false, { correlationId, callId: input.callId });
+      if (isOnlyActiveUnit) verifyCallClosed(call, input.disposition || 'CLEARED', { correlationId, callId: input.callId });
+      return { success: true, verified: true, call };
     },
 
-    [V3_ACTIONS.CLOSE_CALL]: async ({ input, correlationId }) => gateway.post('/api/radio/dispose', {
-      call_id: input.callId, disposition: input.disposition, unit_ids: input.unitIds, note: input.note || undefined,
-    }, { correlationId }),
+    [V3_ACTIONS.CLOSE_CALL]: async ({ input, correlationId }) => {
+      await gateway.post('/api/radio/dispose', { call_id: input.callId, disposition: input.disposition, unit_ids: input.unitIds, note: input.note || undefined }, { correlationId });
+      const call = await readCallForVerification(gateway, input.callId, correlationId);
+      verifyCallClosed(call, input.disposition, { correlationId, callId: input.callId });
+      return { success: true, verified: true, call };
+    },
 
     [V3_ACTIONS.STATUS_CHECK]: async ({ input, correlationId }) => {
       const callsign = await resolveSafeCallsign(input.unitId, correlationId);
@@ -191,4 +229,3 @@ function unitMatches(candidate, identity) {
 }
 
 function normalizeIdentity(value) { return value === undefined || value === null ? '' : String(value).trim().toUpperCase(); }
-function normalizeStatus(value) { return String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_'); }
