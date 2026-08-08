@@ -189,6 +189,35 @@ function installPttIdentityNormalization(service) {
 
     const originalEmit = socket.emit.bind(socket);
     socket.emit = (event, payload, ...rest) => {
+      // Dedicated radios authenticate with a radio token, so the server owns a
+      // persistent radio device UUID while older installed APKs may still carry
+      // a different app-local UUID. The grant is emitted only to this socket and
+      // is already bound to this exact one-shot requestId. Return the requester’s
+      // own deviceId at the client validation boundary so the radio cannot reject
+      // its own valid grant as foreign. Keep the server floorKey unchanged.
+      if (
+        event === 'ptt:granted' &&
+        socket.isRadioDevice === true &&
+        data?.requestId &&
+        payload?.requestId === data.requestId &&
+        typeof data?.deviceId === 'string' &&
+        data.deviceId.trim()
+      ) {
+        const clientDeviceId = data.deviceId.trim();
+        if (payload.targetDeviceId !== clientDeviceId) {
+          console.warn(
+            `[Signaling] RADIO_GRANT_DEVICE_ID_MAPPED unitId=${socket.unitId} ` +
+            `channelId=${channelId} serverDeviceId=${payload.targetDeviceId || socket.deviceId || 'none'} ` +
+            `clientDeviceId=${clientDeviceId} requestId=${data.requestId}`
+          );
+        }
+        payload = {
+          ...payload,
+          targetDeviceId: clientDeviceId,
+          serverDeviceId: socket.deviceId || null,
+        };
+      }
+
       if (event === 'ptt:denied' && payload?.heldBy) {
         const identity = resolveFloorIdentity(this, channelId, payload.heldBy);
         payload = {
