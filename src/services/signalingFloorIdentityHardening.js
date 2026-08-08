@@ -1,5 +1,7 @@
 import { floorControlService, AI_FLOOR_IDENTITY } from './floorControlService.js';
 import { canonicalChannelKey } from './channelKeyUtils.js';
+import { audioRelayService } from './audioRelayService.js';
+import { installAudioRelaySiblingDeviceHardening } from './audioRelaySiblingDeviceHardening.js';
 
 const SWEEP_INTERVAL_MS = 30000;
 const ORPHAN_FLOOR_MIN_AGE_MS = 2000;
@@ -272,6 +274,7 @@ export function installFloorIdentityHardening(signalingService) {
   installCorrectConsistencySweep(signalingService);
   installJoinIdentityNormalization(signalingService);
   installPttIdentityNormalization(signalingService);
+  installAudioRelaySiblingDeviceHardening(audioRelayService);
 
   console.log('[Signaling] Floor identity hardening installed');
 }
