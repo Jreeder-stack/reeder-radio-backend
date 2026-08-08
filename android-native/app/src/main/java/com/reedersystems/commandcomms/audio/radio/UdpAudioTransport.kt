@@ -29,7 +29,6 @@ enum class TransportHealth { CONNECTED, RECONNECTING, DISCONNECTED }
 data class OpusRadioPacket(
     val channelIndex: Int,
     val senderUnitId: String,
-    val senderDeviceId: String,
     val sequence: Int,
     val timestampMs: Long,
     val flags: Int,
@@ -342,19 +341,14 @@ class UdpAudioTransport(
                             _connectionHealth.value = TransportHealth.CONNECTED
                         }
                         if (parsed != null) {
-                            val sameUnit = parsed.senderUnitId == unitId
-                            val samePhysicalDevice = parsed.senderDeviceId.isNotBlank() &&
-                                deviceId.isNotBlank() && parsed.senderDeviceId == deviceId
-                            val legacySelfPacket = parsed.senderDeviceId.isBlank() && sameUnit
-                            if (samePhysicalDevice || legacySelfPacket) {
-                                Log.d(TAG, "SELF_AUDIO_SUPPRESSED senderUnitId=${parsed.senderUnitId} senderDeviceId=${parsed.senderDeviceId.ifBlank { "legacy" }} localDeviceId=${deviceId.ifBlank { "none" }} seq=${parsed.sequence}")
+                            if (parsed.senderUnitId == unitId) {
+                                Log.d(TAG, "SELF_AUDIO_SUPPRESSED senderUnitId=${parsed.senderUnitId} seq=${parsed.sequence}")
                             } else {
                                 rxPacketCount++
                                 rxSummaryBytes += packet.length
 
-                                val senderKey = if (parsed.senderDeviceId.isNotBlank()) "${parsed.senderUnitId}@${parsed.senderDeviceId}" else parsed.senderUnitId
-                                val lastSeq = rxSeqTracker[senderKey]
-                                rxSeqTracker[senderKey] = parsed.sequence
+                                val lastSeq = rxSeqTracker[parsed.senderUnitId]
+                                rxSeqTracker[parsed.senderUnitId] = parsed.sequence
                                 if (lastSeq != null) {
                                     val gap = parsed.sequence - lastSeq
                                     if (gap > SEQ_GAP_THRESHOLD) {
@@ -368,7 +362,7 @@ class UdpAudioTransport(
 
                                 rxRateLimiter.tick()
                                 if (rxRateLimiter.shouldLogDetail()) {
-                                    Log.d(TAG, "RX_PACKET seq=${parsed.sequence} sender=${parsed.senderUnitId} senderDeviceId=${parsed.senderDeviceId.ifBlank { "legacy" }} payload=${parsed.opusPayload.size} ch=${parsed.channelIndex} localCh=$channelIndex channelMatch=$channelMatch accept=$acceptReason ${RadioDiagLog.elapsedTag()}")
+                                    Log.d(TAG, "RX_PACKET seq=${parsed.sequence} sender=${parsed.senderUnitId} payload=${parsed.opusPayload.size} ch=${parsed.channelIndex} localCh=$channelIndex channelMatch=$channelMatch accept=$acceptReason ${RadioDiagLog.elapsedTag()}")
                                 } else if (rxRateLimiter.shouldLogSummary()) {
                                     val cnt = rxRateLimiter.resetSummaryAccumulator()
                                     Log.d(TAG, "RX_SUMMARY packets=$cnt totalPkts=$rxPacketCount totalBytes=$rxSummaryBytes dropped=$rxDropped ${RadioDiagLog.elapsedTag()}")
@@ -486,9 +480,8 @@ class UdpAudioTransport(
         if (packetLength < RADIO_HEADER_FIXED_LEN) return null
         var offset = 0
         val version = buffer[offset++].toInt() and 0xFF
-        val isDeviceVersion = version == PACKET_VERSION_DEVICE.toInt()
-        if (version != PACKET_VERSION.toInt() && !isDeviceVersion) {
-            Log.w("[RadioError]", "Unsupported relay packet version=$version expected=${PACKET_VERSION.toInt()} or ${PACKET_VERSION_DEVICE.toInt()} method=parseRelayPacket")
+        if (version != PACKET_VERSION.toInt()) {
+            Log.w("[RadioError]", "Unsupported relay packet version=$version expected=${PACKET_VERSION.toInt()} method=parseRelayPacket")
             return null
         }
         val flags = buffer[offset++].toInt() and 0xFF
@@ -509,22 +502,6 @@ class UdpAudioTransport(
             ""
         }
         offset += senderLen
-
-        var senderDeviceId = ""
-        if (isDeviceVersion) {
-            if (packetLength < offset + 1) {
-                Log.w("[RadioError]", "Truncated v2 packet: missing device length totalLen=$packetLength method=parseRelayPacket")
-                return null
-            }
-            val deviceLen = buffer[offset++].toInt() and 0xFF
-            if (packetLength < offset + deviceLen + 2) {
-                Log.w("[RadioError]", "Truncated v2 packet: deviceLen=$deviceLen available=${packetLength - offset} method=parseRelayPacket")
-                return null
-            }
-            senderDeviceId = if (deviceLen > 0) String(buffer, offset, deviceLen, Charsets.UTF_8) else ""
-            offset += deviceLen
-        }
-
         if (packetLength < offset + 2) {
             Log.w("[RadioError]", "Truncated packet: missing payload length totalLen=$packetLength method=parseRelayPacket")
             return null
@@ -540,7 +517,6 @@ class UdpAudioTransport(
         return OpusRadioPacket(
             channelIndex = channelNumeric,
             senderUnitId = sender,
-            senderDeviceId = senderDeviceId,
             sequence = sequence,
             timestampMs = timestampMs,
             flags = flags,
