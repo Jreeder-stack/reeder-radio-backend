@@ -52,9 +52,6 @@ export class V3OperationalContextService {
     const ref = normalize(callRef);
     const currentCallId = clean(operationalContext?.currentCall?.id);
 
-    // Explicit self/current-call language is authoritative when the transmitting
-    // unit is actually assigned to a current call. This must beat unrelated
-    // active calls in the center.
     if (ref && isCurrentCallReference(ref) && currentCallId) return currentCallId;
     if (!ref && preferCurrentCall && currentCallId) return currentCallId;
 
@@ -66,9 +63,6 @@ export class V3OperationalContextService {
       throw new DispatcherV3Error(V3_ERROR_CODES.CALL_NOT_FOUND, 'There are no active calls in the selected dispatch center', { statusCode: 404 });
     }
 
-    // Demonstratives such as "that call" are safe only when the center context
-    // makes the target unique. Do not silently turn them into the speaker's call
-    // when several plausible calls exist.
     if (!ref || isGenericCallReference(ref)) {
       if (calls.length === 1) return getCallId(calls[0]);
       throw new DispatcherV3Error(
@@ -213,8 +207,10 @@ function isGenericCallReference(ref) {
 }
 
 function simplifyCallReference(ref) {
-  const possessiveNormalized = String(ref || '').replace(/\b([a-z0-9]+)\s+s\b/g, '$1');
-  const words = possessiveNormalized.split(' ').filter(Boolean);
+  const words = String(ref || '').split(' ').filter(Boolean);
+  if (words.length >= 2 && /^(?:call|incident|job|event)s?$/.test(words[words.length - 1]) && /s$/.test(words[0]) && words[0].length > 2) {
+    words[0] = words[0].slice(0, -1);
+  }
   const filtered = words.filter((word) => !CALL_REFERENCE_STOPWORDS.has(word));
   return filtered.join(' ').trim() || ref;
 }
