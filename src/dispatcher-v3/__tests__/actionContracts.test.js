@@ -49,11 +49,12 @@ describe('Dispatcher V3 action contracts', () => {
     }, context)).toThrowError(expect.objectContaining({ code: V3_ERROR_CODES.INVALID_ACTION_INPUT }));
   });
 
-  it('requires at least one resolved unit for call creation', () => {
-    expect(() => validateV3ActionRequest({
+  it('allows zero resolved units for an unassigned call', () => {
+    const result = validateV3ActionRequest({
       action: V3_ACTIONS.CREATE_CALL,
       input: { type: 'Building Check', location: '100 Main St', unitIds: [] },
-    }, context)).toThrowError(expect.objectContaining({ code: V3_ERROR_CODES.INVALID_ACTION_INPUT }));
+    }, context);
+    expect(result.input.unitIds).toEqual([]);
   });
 
   it('deduplicates resolved unit IDs for call creation', () => {
