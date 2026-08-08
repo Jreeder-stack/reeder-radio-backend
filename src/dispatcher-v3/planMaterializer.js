@@ -6,6 +6,9 @@ const SINGLE_UNIT_ACTIONS = new Set([
   V3_ACTIONS.CHANGE_UNIT_ZONE,
   V3_ACTIONS.GET_CURRENT_CALL,
   V3_ACTIONS.ASSIGN_UNIT,
+  V3_ACTIONS.UNASSIGN_UNIT,
+  V3_ACTIONS.MAKE_PRIMARY,
+  V3_ACTIONS.UPDATE_ASSIGNMENT_TIMES,
   V3_ACTIONS.CLEAR_UNIT,
   V3_ACTIONS.STATUS_CHECK,
   V3_ACTIONS.REQUEST_BACKUP,
@@ -13,14 +16,26 @@ const SINGLE_UNIT_ACTIONS = new Set([
 ]);
 
 const CONTEXTUAL_CALL_ACTIONS = new Set([
+  V3_ACTIONS.GET_CALL,
+  V3_ACTIONS.UPDATE_CALL,
   V3_ACTIONS.ASSIGN_UNIT,
+  V3_ACTIONS.UNASSIGN_UNIT,
+  V3_ACTIONS.MAKE_PRIMARY,
+  V3_ACTIONS.UPDATE_ASSIGNMENT_TIMES,
   V3_ACTIONS.CLEAR_UNIT,
   V3_ACTIONS.ADD_CALL_NOTE,
+  V3_ACTIONS.CLOSE_CALL,
 ]);
 
 const CURRENT_CALL_FIRST_ACTIONS = new Set([
+  V3_ACTIONS.GET_CALL,
+  V3_ACTIONS.UPDATE_CALL,
+  V3_ACTIONS.UNASSIGN_UNIT,
+  V3_ACTIONS.MAKE_PRIMARY,
+  V3_ACTIONS.UPDATE_ASSIGNMENT_TIMES,
   V3_ACTIONS.CLEAR_UNIT,
   V3_ACTIONS.ADD_CALL_NOTE,
+  V3_ACTIONS.CLOSE_CALL,
 ]);
 
 export async function materializeV3Plan(plan, {
@@ -41,10 +56,14 @@ export async function materializeV3Plan(plan, {
     delete input.unitRef;
   }
 
+  if (plan.action === V3_ACTIONS.SEARCH_CALLS && input.unitRef) {
+    const identity = await unitIdentityService.resolve(input.unitRef, { correlationId });
+    input.unitId = identity.unitId;
+    delete input.unitRef;
+  }
+
   if (CONTEXTUAL_CALL_ACTIONS.has(plan.action) && !input.callId) {
-    if (!operationalContextService) {
-      throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION_INPUT, 'Operational context service is required to resolve an implicit call');
-    }
+    if (!operationalContextService) throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION_INPUT, 'Operational context service is required to resolve an implicit call');
     input.callId = await operationalContextService.resolveCallId({
       callRef: input.callRef || null,
       operationalContext,
@@ -55,7 +74,7 @@ export async function materializeV3Plan(plan, {
   }
 
   if (plan.action === V3_ACTIONS.CREATE_CALL) {
-    const refs = normalizeRefs(input.unitRefs, speakerCallsign);
+    const refs = normalizeRefs(input.unitRefs);
     input.unitIds = await resolveRefs(refs, unitIdentityService, correlationId);
     delete input.unitRefs;
   }
@@ -90,7 +109,7 @@ async function resolveRefs(refs, service, correlationId) {
   return ids;
 }
 
-function normalizeRefs(value, fallback = null) {
-  const refs = Array.isArray(value) ? value : value ? [value] : fallback ? [fallback] : [];
+function normalizeRefs(value) {
+  const refs = Array.isArray(value) ? value : value ? [value] : [];
   return refs.map((ref) => String(ref).trim()).filter(Boolean);
 }
