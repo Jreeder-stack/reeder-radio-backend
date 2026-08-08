@@ -153,4 +153,42 @@ describe('signaling floor identity hardening', () => {
 
     expect(stillPresent).toBe(true);
   });
+
+  it('maps a token-radio grant back to the exact client device id that requested it', () => {
+    const channelId = 'OPS__5';
+    const emitted = [];
+    const service = makeService({
+      _handlePttRequest: (socket, data) => {
+        socket.emit('ptt:granted', {
+          channelId,
+          senderUnitId: socket.unitId,
+          requestId: data.requestId,
+          targetDeviceId: socket.deviceId,
+        });
+      },
+    });
+    const socket = {
+      unitId: 'INDIANA-5',
+      deviceId: 'server-radio-device-id',
+      floorKey: 'server-radio-device-id',
+      isRadioDevice: true,
+      _channelKeyMap: new Map([[channelId, channelId]]),
+      emit(event, payload) {
+        emitted.push({ event, payload });
+      },
+    };
+
+    installFloorIdentityHardening(service);
+    service._handlePttRequest(socket, {
+      channelId,
+      requestId: 'request-123',
+      deviceId: 'client-installed-device-id',
+    });
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0].event).toBe('ptt:granted');
+    expect(emitted[0].payload.requestId).toBe('request-123');
+    expect(emitted[0].payload.targetDeviceId).toBe('client-installed-device-id');
+    expect(emitted[0].payload.serverDeviceId).toBe('server-radio-device-id');
+  });
 });
