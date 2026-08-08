@@ -38,6 +38,11 @@ const CURRENT_CALL_FIRST_ACTIONS = new Set([
   V3_ACTIONS.CLOSE_CALL,
 ]);
 
+const SELF_UNIT_REFS = new Set([
+  'me', 'myself', 'my unit', 'this unit', 'transmitting unit', 'the transmitting unit',
+  'speaker', 'the speaker', 'i',
+]);
+
 export async function materializeV3Plan(plan, {
   speakerCallsign,
   unitIdentityService,
@@ -51,13 +56,13 @@ export async function materializeV3Plan(plan, {
 
   const input = { ...(plan.input || {}) };
   if (SINGLE_UNIT_ACTIONS.has(plan.action)) {
-    const identity = await unitIdentityService.resolve(input.unitRef || speakerCallsign, { correlationId });
+    const identity = await resolveUnitRef(input.unitRef, speakerCallsign, unitIdentityService, correlationId);
     input.unitId = identity.unitId;
     delete input.unitRef;
   }
 
   if (plan.action === V3_ACTIONS.SEARCH_CALLS && input.unitRef) {
-    const identity = await unitIdentityService.resolve(input.unitRef, { correlationId });
+    const identity = await resolveUnitRef(input.unitRef, speakerCallsign, unitIdentityService, correlationId);
     input.unitId = identity.unitId;
     delete input.unitRef;
   }
@@ -75,23 +80,23 @@ export async function materializeV3Plan(plan, {
 
   if (plan.action === V3_ACTIONS.CREATE_CALL) {
     const refs = normalizeRefs(input.unitRefs);
-    input.unitIds = await resolveRefs(refs, unitIdentityService, correlationId);
+    input.unitIds = await resolveRefs(refs, speakerCallsign, unitIdentityService, correlationId);
     delete input.unitRefs;
   }
 
   if (plan.action === V3_ACTIONS.CLOSE_CALL && input.unitRefs !== undefined) {
-    input.unitIds = await resolveRefs(normalizeRefs(input.unitRefs), unitIdentityService, correlationId);
+    input.unitIds = await resolveRefs(normalizeRefs(input.unitRefs), speakerCallsign, unitIdentityService, correlationId);
     delete input.unitRefs;
   }
 
   if (plan.action === V3_ACTIONS.ADD_CALL_NOTE && input.unitRef) {
-    const identity = await unitIdentityService.resolve(input.unitRef, { correlationId });
+    const identity = await resolveUnitRef(input.unitRef, speakerCallsign, unitIdentityService, correlationId);
     input.unitId = identity.unitId;
     delete input.unitRef;
   }
 
   if ((plan.action === V3_ACTIONS.RADIO_CHECK || plan.action === V3_ACTIONS.TIME_CHECK) && input.unitRef) {
-    const identity = await unitIdentityService.resolve(input.unitRef, { correlationId });
+    const identity = await resolveUnitRef(input.unitRef, speakerCallsign, unitIdentityService, correlationId);
     input.unitId = identity.unitId;
     delete input.unitRef;
   }
@@ -100,13 +105,21 @@ export async function materializeV3Plan(plan, {
   return Object.freeze({ ...plan, input: Object.freeze(input) });
 }
 
-async function resolveRefs(refs, service, correlationId) {
+async function resolveRefs(refs, speakerCallsign, service, correlationId) {
   const ids = [];
   for (const ref of refs) {
-    const identity = await service.resolve(ref, { correlationId });
+    const identity = await resolveUnitRef(ref, speakerCallsign, service, correlationId);
     if (!ids.includes(identity.unitId)) ids.push(identity.unitId);
   }
   return ids;
+}
+
+async function resolveUnitRef(ref, speakerCallsign, service, correlationId) {
+  const raw = String(ref || '').trim();
+  const normalized = raw.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const target = !raw || SELF_UNIT_REFS.has(normalized) ? speakerCallsign : raw;
+  if (!target) throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION_INPUT, 'A unit reference is required');
+  return service.resolve(target, { correlationId });
 }
 
 function normalizeRefs(value) {
