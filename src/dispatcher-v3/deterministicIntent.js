@@ -113,7 +113,7 @@ function planFieldIncident(text, speakerCallsign) {
 function planNamedCallResponse(text, speakerCallsign, operationalContext) {
   const match = text.match(/^(?:(?:show|mark|put|set)\s+)?(?:me\s+)?(?:en\s*route|responding)\s+to\s+(?:the\s+)?(.+?)\s*[?.!]*$/i);
   const callRef = match?.[1]?.trim();
-  if (!callRef || /^(?:call|current\s+call|my\s+call)$/i.test(callRef)) return null;
+  if (!callRef || /^(?:call|current\s+call|my\s+(?:current\s+)?call|call\s+on\s+my\s+screen)$/i.test(callRef)) return null;
   if (callMatchesReference(operationalContext?.currentCall, callRef)) {
     return plan(V3_ACTIONS.SET_UNIT_STATUS, { unitRef: speakerCallsign, status: 'en_route' }, 'deterministic_named_call_status');
   }
