@@ -79,6 +79,12 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
     [V3_ACTIONS.GET_CALL]: async ({ input, correlationId }) =>
       gateway.get(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}`, { correlationId }),
 
+    [V3_ACTIONS.LIST_ACTIVE_CALLS]: async ({ correlationId }) => {
+      const response = await gateway.get('/api/radio/calls', { correlationId });
+      const calls = Array.isArray(response?.calls) ? response.calls : [];
+      return { calls, count: calls.length };
+    },
+
     [V3_ACTIONS.SEARCH_CALLS]: async ({ input, correlationId }) => {
       const query = {
         q: input.query || undefined,
@@ -98,10 +104,11 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
     [V3_ACTIONS.CREATE_CALL]: createCall,
 
     [V3_ACTIONS.UPDATE_CALL]: async ({ input, correlationId }) => {
-      const body = toCadCallMutation(input);
+      const resolvedInput = await resolveLocationMutation(gateway, input, correlationId);
+      const body = toCadCallMutation(resolvedInput);
       await gateway.patch(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}`, body, { correlationId });
       const call = await readCallForVerification(gateway, input.callId, correlationId);
-      verifyCallMutation(call, input, { correlationId, callId: input.callId });
+      verifyCallMutation(call, resolvedInput, { correlationId, callId: input.callId });
       return { success: true, verified: true, call };
     },
 
@@ -155,15 +162,22 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
       let callDetails = null;
       try { callDetails = await gateway.get(`/api/radio/call/${encodeURIComponent(input.callId)}`, { correlationId }); } catch { callDetails = null; }
       const activeUnits = extractActiveCallUnits(callDetails);
-      const isOnlyActiveUnit = activeUnits.length === 1 && activeUnits.some((unit) => unitMatches(unit, identity));
-      if (isOnlyActiveUnit) {
-        await gateway.post('/api/radio/dispose', { call_id: input.callId, disposition: input.disposition || 'CLEARED', unit_ids: [identity.callsign] }, { correlationId });
+      const hasOtherActiveUnits = activeUnits.some((unit) => !unitMatches(unit, identity));
+      const closesCall = !hasOtherActiveUnits;
+      if (closesCall) {
+        if (!input.disposition) {
+          throw new DispatcherV3Error(V3_ERROR_CODES.DISPOSITION_REQUIRED, 'A disposition is required before closing the last unit\'s call', {
+            statusCode: 409,
+            details: { callId: input.callId, unitId: identity.unitId, callsign: identity.callsign },
+          });
+        }
+        await gateway.post('/api/radio/dispose', { call_id: input.callId, disposition: input.disposition, unit_ids: [identity.callsign] }, { correlationId });
       } else {
         await gateway.post('/api/radio/clear', { call_id: input.callId, unit_id: identity.callsign, disposition: input.disposition || undefined }, { correlationId });
       }
       const call = await readCallForVerification(gateway, input.callId, correlationId);
       verifyUnitAssigned(call, identity, false, { correlationId, callId: input.callId });
-      if (isOnlyActiveUnit) verifyCallClosed(call, input.disposition || 'CLEARED', { correlationId, callId: input.callId });
+      if (closesCall) verifyCallClosed(call, input.disposition, { correlationId, callId: input.callId });
       return { success: true, verified: true, call };
     },
 
@@ -190,11 +204,11 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
       return { ...alertResult, cadNote: note };
     },
 
-    [V3_ACTIONS.DECLARE_EMERGENCY]: async ({ input, runtimeContext, correlationId }) => {
-      const identity = await resolveSafeIdentity(input.unitId, correlationId);
-      const emergencyResult = requireOperationalAlerts().declareEmergency({ identity, runtimeContext, correlationId, callId: input.callId, location: input.location, reason: input.reason });
-      const note = await recordOperationalNote({ callId: input.callId, correlationId, note: `EMERGENCY ACTIVATED by ${identity.callsign}${input.location ? ` at ${input.location}` : ''}${input.reason ? ` — ${input.reason}` : ''}` });
-      return { ...emergencyResult, cadNote: note };
+    [V3_ACTIONS.DECLARE_EMERGENCY]: async ({ input }) => {
+      throw new DispatcherV3Error(V3_ERROR_CODES.UNAUTHORIZED, 'Voice or planner actions cannot activate the emergency system; use the physical emergency button', {
+        statusCode: 403,
+        details: { unitId: input.unitId, callId: input.callId || null, source: 'dispatcher_v3_action' },
+      });
     },
   };
 }
@@ -209,6 +223,33 @@ function toCadCallMutation(input) {
   const body = {};
   for (const [source, target] of Object.entries(map)) if (input[source] !== null && input[source] !== undefined) body[target] = input[source];
   return body;
+}
+
+async function resolveLocationMutation(gateway, input, correlationId) {
+  if (!input.location) return input;
+  const query = [input.location, input.city].filter(Boolean).join(', ');
+  const resolution = await gateway.get('/api/radio/locations/resolve', { correlationId, query: { q: query } });
+  const location = resolution?.location || {};
+  const address = clean(location.address);
+  if (!address) {
+    throw new DispatcherV3Error(V3_ERROR_CODES.CAD_REJECTED, `Unable to verify call location: ${query}`, {
+      statusCode: 422,
+      details: { query, source: resolution?.source || null },
+    });
+  }
+  return {
+    ...input,
+    location: address,
+    city: clean(location.city) || clean(location.municipality) || input.city,
+    municipality: clean(location.municipality) || input.municipality,
+    county: clean(location.county) || input.county,
+    state: clean(location.state) || input.state,
+    zip: clean(location.zipCode || location.zip) || input.zip,
+    latitude: clean(location.latitude) || input.latitude,
+    longitude: clean(location.longitude) || input.longitude,
+    crossStreet1: clean(location.crossStreet1 || location.cross_street_1) || input.crossStreet1,
+    crossStreet2: clean(location.crossStreet2 || location.cross_street_2) || input.crossStreet2,
+  };
 }
 
 function extractActiveCallUnits(payload) {
@@ -229,3 +270,4 @@ function unitMatches(candidate, identity) {
 }
 
 function normalizeIdentity(value) { return value === undefined || value === null ? '' : String(value).trim().toUpperCase(); }
+function clean(value) { if (value === undefined || value === null) return null; const text = String(value).trim(); return text || null; }

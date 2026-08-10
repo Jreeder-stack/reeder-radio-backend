@@ -8,6 +8,7 @@ export const V3_ACTIONS = Object.freeze({
   CHANGE_UNIT_ZONE: 'CHANGE_UNIT_ZONE',
   GET_CURRENT_CALL: 'GET_CURRENT_CALL',
   GET_CALL: 'GET_CALL',
+  LIST_ACTIVE_CALLS: 'LIST_ACTIVE_CALLS',
   SEARCH_CALLS: 'SEARCH_CALLS',
   CREATE_CALL: 'CREATE_CALL',
   UPDATE_CALL: 'UPDATE_CALL',
@@ -20,6 +21,8 @@ export const V3_ACTIONS = Object.freeze({
   CLOSE_CALL: 'CLOSE_CALL',
   STATUS_CHECK: 'STATUS_CHECK',
   REQUEST_BACKUP: 'REQUEST_BACKUP',
+  REPORT_FIELD_INCIDENT: 'REPORT_FIELD_INCIDENT',
+  UPDATE_FIELD_INCIDENT: 'UPDATE_FIELD_INCIDENT',
   DECLARE_EMERGENCY: 'DECLARE_EMERGENCY',
 });
 
@@ -53,6 +56,7 @@ const ACTION_DEFINITIONS = Object.freeze({
   [V3_ACTIONS.GET_CALL]: define(['call.read'], (input) => ({
     callId: requiredString(input.callId, 'callId'),
   })),
+  [V3_ACTIONS.LIST_ACTIVE_CALLS]: define(['call.read'], validateEmptyOrUnit),
   [V3_ACTIONS.SEARCH_CALLS]: define(['call.read'], (input) => ({
     query: optionalString(input.query),
     callNumber: optionalString(input.callNumber),
@@ -143,6 +147,23 @@ const ACTION_DEFINITIONS = Object.freeze({
     location: optionalString(input.location),
     priority: optionalEnum(input.priority, 'priority', ['routine', 'urgent', 'emergency']),
     reason: optionalString(input.reason),
+  })),
+  [V3_ACTIONS.REPORT_FIELD_INCIDENT]: define(['call.write'], (input) => ({
+    unitId: requiredString(input.unitId, 'unitId'),
+    eventType: requiredEnum(input.eventType, 'eventType', [
+      'shots_fired', 'officer_assist', 'gunpoint', 'taserpoint', 'fight', 'operational_update',
+    ]),
+    note: requiredString(input.note, 'note'),
+    location: optionalString(input.location),
+    subjectDescription: optionalString(input.subjectDescription),
+  })),
+  [V3_ACTIONS.UPDATE_FIELD_INCIDENT]: define(['call.write'], (input) => ({
+    unitId: requiredString(input.unitId, 'unitId'),
+    informationType: requiredEnum(input.informationType, 'informationType', [
+      'location', 'subject_description', 'direction', 'weapon', 'status', 'other',
+    ]),
+    value: requiredString(input.value, 'value'),
+    note: optionalString(input.note),
   })),
   [V3_ACTIONS.DECLARE_EMERGENCY]: define(['unit.write'], (input) => ({
     unitId: requiredString(input.unitId, 'unitId'),

@@ -8,12 +8,16 @@ describe('createResolvedCallHandler', () => {
         .mockResolvedValueOnce({
           success: true,
           source: 'PUBLIC_GEOCODER',
-          location: { address: '132 Pechin Rd', city: 'Dunbar', municipality: 'Dunbar', state: 'PA' },
+          location: {
+            address: '132 Pechin Rd', city: 'Dunbar', municipality: 'Dunbar Borough', state: 'PA',
+            crossStreet1: 'University Dr', crossStreet2: 'Fairground Rd',
+          },
         })
         .mockResolvedValueOnce({
           success: true,
           call: {
-            call_id: 'call-1', type: 'BUILDING CHECK', location: '132 PECHIN RD', city: 'DUNBAR', state: 'PA',
+            call_id: 'call-1', type: 'BUILDING CHECK', location: '132 PECHIN RD', city: 'DUNBAR', municipality: 'DUNBAR BOROUGH', state: 'PA',
+            cross_street_1: 'UNIVERSITY DR', cross_street_2: 'FAIRGROUND RD',
             status: 'assigned', assigned_units: [{ unit_id: 'unit-uuid', callsign: 'INDIANA-1' }],
           },
         }),
@@ -31,7 +35,8 @@ describe('createResolvedCallHandler', () => {
       correlationId: 'corr-1', query: { q: 'Fayette County Fair, Dunbar' },
     });
     expect(gateway.post).toHaveBeenCalledWith('/api/radio/v3/cad/calls', expect.objectContaining({
-      type: 'BUILDING CHECK', location: '132 Pechin Rd', city: 'Dunbar', units: ['INDIANA-1'],
+      type: 'BUILDING CHECK', location: '132 Pechin Rd', city: 'Dunbar', municipality: 'Dunbar Borough',
+      cross_street_1: 'University Dr', cross_street_2: 'Fairground Rd', units: ['INDIANA-1'],
     }), { correlationId: 'corr-1', timeoutMs: 20000 });
     expect(gateway.get).toHaveBeenNthCalledWith(2, '/api/radio/v3/cad/calls/call-1', { correlationId: 'corr-1' });
     expect(result).toMatchObject({ success: true, verified: true, call: { call_id: 'call-1' } });

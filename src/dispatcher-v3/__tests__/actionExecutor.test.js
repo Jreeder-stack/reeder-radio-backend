@@ -111,20 +111,17 @@ describe('default V3 handlers', () => {
     expect(result.cadNote).toMatchObject({ recorded: true, verified: true });
   });
 
-  it('activates native emergency even if recording the CAD note fails', async () => {
+  it('never allows a dispatcher action to activate the physical emergency system', async () => {
     const gateway = makeGateway();
-    gateway.post.mockRejectedValue(Object.assign(new Error('CAD down'), { code: 'CAD_UNAVAILABLE' }));
     const operationalAlertService = { declareEmergency: vi.fn(() => ({ activated: true, emergency: { unitId: 'INDIANA-1' } })) };
     const handlers = createDefaultV3ActionHandlers({ gateway, unitIdentityService: makeIdentityService(), operationalAlertService });
-    const result = await handlers[V3_ACTIONS.DECLARE_EMERGENCY]({
+    await expect(handlers[V3_ACTIONS.DECLARE_EMERGENCY]({
       input: { unitId: 'uuid-1', callId: 'call-1', location: '100 Main St', reason: 'officer needs assistance' },
       runtimeContext: runtime,
       correlationId: 'emerg-1',
-    });
-    expect(result.activated).toBe(true);
-    expect(operationalAlertService.declareEmergency).toHaveBeenCalled();
-    expect(result.cadNote.recorded).toBe(false);
-    expect(result.cadNote.error.code).toBe('CAD_UNAVAILABLE');
+    })).rejects.toMatchObject({ code: 'UNAUTHORIZED', statusCode: 403 });
+    expect(operationalAlertService.declareEmergency).not.toHaveBeenCalled();
+    expect(gateway.post).not.toHaveBeenCalled();
   });
 
   it('fails closed when Command Comms operational alerts are unavailable', async () => {

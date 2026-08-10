@@ -18,6 +18,9 @@ import { V3ConversationGate } from './conversationGate.js';
 import { materializeV3Plan } from './planMaterializer.js';
 import { composeV3Response } from './responseComposer.js';
 import { createV3CorrelationId } from './correlation.js';
+import { V3_ACTIONS } from './actionContracts.js';
+import { V3FieldIncidentCoordinator } from './fieldIncidentCoordinator.js';
+import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 
 const TX_FRAME_MS = 20;
 const MIN_EXECUTION_CONFIDENCE = 0.7;
@@ -64,7 +67,7 @@ export class V3LiveDispatcher {
     this.connected = false;
     this._sequence = 1;
     this._recentContext = [];
-    this._processing = new Set();
+    this._processing = new Map();
     this._emergency = null;
     this._emergencyTimers = new Set();
     this._rawEmergencyEnds = new Map();
@@ -83,6 +86,17 @@ export class V3LiveDispatcher {
     this.operationalContextService = new V3OperationalContextService({ gateway: this.gateway, unitIdentityService: this.unitIdentityService });
     this.operationalAlertService = new V3OperationalAlertService({ signalingService: this.signaling });
     this.handlers = createDefaultV3ActionHandlers({ gateway: this.gateway, unitIdentityService: this.unitIdentityService, operationalAlertService: this.operationalAlertService });
+    this.fieldIncidents = new V3FieldIncidentCoordinator({
+      gateway: this.gateway,
+      unitIdentityService: this.unitIdentityService,
+      operationalContextService: this.operationalContextService,
+      createCall: this.handlers[V3_ACTIONS.CREATE_CALL],
+      addCallNote: this.handlers[V3_ACTIONS.ADD_CALL_NOTE],
+      updateCall: this.handlers[V3_ACTIONS.UPDATE_CALL],
+      getUnitLocation: (callsign) => this._getFreshFieldUnitLocation(callsign),
+    });
+    this.handlers[V3_ACTIONS.REPORT_FIELD_INCIDENT] = (request) => this.fieldIncidents.report(request);
+    this.handlers[V3_ACTIONS.UPDATE_FIELD_INCIDENT] = (request) => this.fieldIncidents.update(request);
     this.executor = new V3ActionExecutor({ runtimeContext: this.context, handlers: this.handlers, diagnostics: this.diagnostics });
     this.speech = new V3SpeechPipeline({ runtimeContext: this.context, transcribe, codec: this.codec, diagnostics: this.diagnostics });
     this.planner = planner || new V3IntentPlanner({ diagnostics: this.diagnostics });
@@ -114,6 +128,7 @@ export class V3LiveDispatcher {
     this.floorControl.releaseAllForUnit?.(AI_FLOOR_IDENTITY);
     this.speech.clear();
     this.conversationGate.clearAll();
+    this.fieldIncidents.clearAll();
     this._processing.clear();
     this._clearEmergencyTimers();
     this._emergency = null;
@@ -174,6 +189,7 @@ export class V3LiveDispatcher {
       return false;
     }
     transmission.transcript = gate.transcript || transmission.transcript;
+    transmission.pendingContext = gate.pending || null;
 
     if (gate.reason === 'wake_word') {
       const hail = normalizeV3RadioHail(transmission.transcript);
@@ -190,16 +206,14 @@ export class V3LiveDispatcher {
       }
     }
 
-    if (this._processing.has(unitId)) {
-      this._diag('transmission_ignored_busy', transmission.correlationId, false, { unitId, transcript: transmission.transcript });
-      return false;
-    }
-    this._processing.add(unitId);
+    const previous = this._processing.get(unitId) || Promise.resolve();
+    const work = previous.catch(() => null).then(() => this._processTranscript(transmission));
+    this._processing.set(unitId, work);
     try {
-      await this._processTranscript(transmission);
+      await work;
       return true;
     } finally {
-      this._processing.delete(unitId);
+      if (this._processing.get(unitId) === work) this._processing.delete(unitId);
     }
   }
 
@@ -259,16 +273,7 @@ export class V3LiveDispatcher {
       }
     }
 
-    const classification = classifyOfficerEmergency(text);
-    if (!classification) return false;
-
-    this._diag('officer_emergency_language_detected', correlationId, true, {
-      speakerCallsign,
-      transcript: text,
-      reason: classification.reason,
-    });
-    await this._startVerbalEmergency(speakerCallsign, classification, text, correlationId);
-    return true;
+    return false;
   }
 
   async _startHardwareEmergency(unitId, correlationId) {
@@ -280,7 +285,7 @@ export class V3LiveDispatcher {
     }
 
     const identity = await this._resolveEmergencyIdentity(unitId, correlationId);
-    const location = this._getUnitLocation(identity.callsign);
+    const location = this._getUnitLocation(identity.callsign, { emergency: true });
     const state = this._makeEmergencyState({
       source: 'hardware',
       stage: 'status_check_1',
@@ -310,24 +315,13 @@ export class V3LiveDispatcher {
   }
 
   async _startVerbalEmergency(unitId, classification, transcript, correlationId) {
-    if (this._emergency && sameUnit(this._emergency.callsign, unitId)) {
-      await this._escalateEmergency(this._emergency, correlationId, { reason: classification.reason, note: transcript });
-      return this._emergency;
-    }
-
-    const identity = await this._resolveEmergencyIdentity(unitId, correlationId);
-    const state = this._makeEmergencyState({
-      source: 'voice',
-      stage: 'escalating',
-      callsign: identity.callsign,
-      unitUuid: identity.unitId,
-      reason: classification.reason,
-      location: this._getUnitLocation(identity.callsign),
-      correlationId,
+    this._diag('verbal_emergency_activation_rejected', correlationId, true, {
+      unitId,
+      transcript,
+      classification: classification?.reason || null,
+      policy: 'physical_button_only',
     });
-    this._emergency = state;
-    await this._escalateEmergency(state, correlationId, { reason: classification.reason, note: transcript, announcement: classification.announcement });
-    return state;
+    return false;
   }
 
   async _escalateEmergency(state, correlationId, options = {}) {
@@ -351,7 +345,7 @@ export class V3LiveDispatcher {
       }
       state.operationalContext = operationalContext;
       state.callId = operationalContext?.currentCall?.id || state.callId || null;
-      state.location = this._getUnitLocation(state.callsign) || state.location || null;
+      state.location = this._getUnitLocation(state.callsign, { emergency: state.source === 'hardware' }) || state.location || null;
 
       if (!state.callId) {
         const created = await this._createEmergencyCall(state, correlationId);
@@ -541,7 +535,14 @@ export class V3LiveDispatcher {
     }
   }
 
-  _getUnitLocation(unitId) {
+  _getUnitLocation(unitId, { emergency = false } = {}) {
+    const location = this._peekUnitLocation(unitId);
+    if (location) return location;
+    this._requestUnitLocation(unitId, { emergency });
+    return null;
+  }
+
+  _peekUnitLocation(unitId) {
     const tracked = this.signaling.getTrackedLocations?.() || [];
     const exact = tracked.find((item) => sameUnit(item?.unitId, unitId));
     if (exact && Number.isFinite(exact.lat) && Number.isFinite(exact.lng)) {
@@ -553,8 +554,27 @@ export class V3LiveDispatcher {
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
       return { lat, lng, accuracy: presence.location.accuracy ?? null, timestamp: presence.lastSeen ?? null };
     }
+    return null;
+  }
+
+  _requestUnitLocation(unitId, { emergency = false } = {}) {
     const socket = this.signaling._findSocketByUnitId?.(unitId);
-    socket?.emit?.('location:track_start', { requestedBy: 'ai_dispatcher_v3_emergency', emergency: true });
+    socket?.emit?.('location:track_start', {
+      requestedBy: emergency ? 'ai_dispatcher_v3_emergency' : 'ai_dispatcher_v3_field_incident',
+      emergency,
+    });
+  }
+
+  async _getFreshFieldUnitLocation(unitId, waitMs = 1000) {
+    const initial = this._peekUnitLocation(unitId);
+    if (locationIsFresh(initial)) return initial;
+    this._requestUnitLocation(unitId, { emergency: false });
+    const deadline = Date.now() + Math.max(0, Number(waitMs) || 0);
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const location = this._peekUnitLocation(unitId);
+      if (locationIsFresh(location)) return location;
+    }
     return null;
   }
 
@@ -599,11 +619,12 @@ export class V3LiveDispatcher {
     this._emergencyTimers.clear();
   }
 
-  async _processTranscript({ unitId: speakerCallsign, transcript, correlationId }) {
+  async _processTranscript({ unitId: speakerCallsign, transcript, correlationId, pendingContext = null }) {
     this._diag('transcript_received', correlationId, true, { speakerCallsign, transcript });
     let plan;
     let result = null;
     let operationalContext = null;
+    let dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign);
     try {
       try {
         operationalContext = await this.operationalContextService.snapshot({ speakerCallsign, correlationId });
@@ -623,19 +644,35 @@ export class V3LiveDispatcher {
         correlationId,
         recentContext: this._recentContext,
         operationalContext,
+        pendingContext,
+        dialogueContext,
       });
+      if (plan.action === 'NO_ACTION' && dialogueContext && !ROUTINE_EMERGENCY_CHAT_RX.test(transcript)) {
+        plan = {
+          action: V3_ACTIONS.UPDATE_FIELD_INCIDENT,
+          input: { unitRef: speakerCallsign, informationType: 'other', value: transcript, note: transcript },
+          confidence: 1,
+          clarification: null,
+          reason: 'field_incident_no_silent_drop',
+        };
+      }
+      assertExplicitUnitTargets({ transcript, plan, operationalContext, speakerCallsign });
       if (plan.action !== 'NO_ACTION' && plan.action !== 'CLARIFY' && plan.confidence < MIN_EXECUTION_CONFIDENCE) {
         plan = { action: 'CLARIFY', input: plan.input || {}, confidence: plan.confidence, clarification: 'Repeat your request.', reason: 'low_confidence' };
       }
       if (plan.action !== 'NO_ACTION' && plan.action !== 'CLARIFY') {
-        plan = await materializeV3Plan(plan, {
-          speakerCallsign,
-          unitIdentityService: this.unitIdentityService,
-          operationalContextService: this.operationalContextService,
-          operationalContext,
-          correlationId,
-        });
-        result = await this.executor.execute({ action: plan.action, input: plan.input }, { correlationId });
+        if (plan.action === 'MULTI_ACTION') {
+          result = await this._executeMultiActionPlan(plan, { speakerCallsign, operationalContext, correlationId });
+        } else {
+          plan = await materializeV3Plan(plan, {
+            speakerCallsign,
+            unitIdentityService: this.unitIdentityService,
+            operationalContextService: this.operationalContextService,
+            operationalContext,
+            correlationId,
+          });
+          result = await this.executor.execute({ action: plan.action, input: plan.input }, { correlationId });
+        }
       }
     } catch (error) {
       result = { success: false, error: { code: error.code || 'CAD_UNAVAILABLE', message: error.message } };
@@ -643,8 +680,20 @@ export class V3LiveDispatcher {
       this._diag('transcript_processing_failed', correlationId, false, { speakerCallsign, message: error.message, code: error.code || null });
     }
 
+    dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign);
     if (plan.action === 'CLARIFY') {
       this.conversationGate.expectFollowUp(speakerCallsign, { clarification: plan.clarification, input: plan.input || {}, correlationId });
+    } else if (result?.error?.code === 'DISPOSITION_REQUIRED') {
+      this.conversationGate.expectFollowUp(speakerCallsign, {
+        kind: 'disposition',
+        callId: result.error.details?.callId || plan.input?.callId || null,
+        unitRef: speakerCallsign,
+        correlationId,
+      });
+    } else if (dialogueContext) {
+      this.conversationGate.expectFollowUp(speakerCallsign, { ...dialogueContext, correlationId });
+    } else if (pendingContext?.kind === 'disposition' && plan.action !== V3_ACTIONS.CLEAR_UNIT && plan.action !== V3_ACTIONS.CLOSE_CALL) {
+      this.conversationGate.expectFollowUp(speakerCallsign, { ...pendingContext, correlationId });
     } else {
       this.conversationGate.clear(speakerCallsign);
     }
@@ -652,6 +701,35 @@ export class V3LiveDispatcher {
     const responseText = composeV3Response({ plan, result, speakerCallsign });
     this._remember({ transcript, action: plan.action, input: plan.input || {}, clarification: plan.clarification || null, success: result ? result.success === true : plan.action !== 'NO_ACTION' });
     if (responseText) await this._speak(responseText, correlationId);
+  }
+
+  async _executeMultiActionPlan(plan, { speakerCallsign, operationalContext, correlationId }) {
+    const steps = [];
+    let context = operationalContext;
+    for (const actionPlan of plan.actions || []) {
+      const materialized = await materializeV3Plan({ ...actionPlan, confidence: plan.confidence }, {
+        speakerCallsign,
+        unitIdentityService: this.unitIdentityService,
+        operationalContextService: this.operationalContextService,
+        operationalContext: context,
+        correlationId,
+      });
+      const stepResult = await this.executor.execute({ action: materialized.action, input: materialized.input }, { correlationId });
+      steps.push({ action: materialized.action, input: materialized.input, result: stepResult });
+      if (!stepResult.success) {
+        return {
+          success: false,
+          action: 'MULTI_ACTION',
+          correlationId,
+          error: { ...stepResult.error, details: { ...(stepResult.error?.details || {}), completedSteps: steps.slice(0, -1).map((step) => step.action), failedAction: materialized.action } },
+          data: { steps },
+        };
+      }
+      try {
+        context = await this.operationalContextService.snapshot({ speakerCallsign, correlationId });
+      } catch (_) {}
+    }
+    return { success: true, action: 'MULTI_ACTION', correlationId, data: { steps } };
   }
 
   async _alert(text, correlationId) {
@@ -806,7 +884,47 @@ function responseForResolutionError(error, speakerCallsign) {
   if (error?.code === 'CALL_AMBIGUOUS') return `${unit}, which call?`;
   if (error?.code === 'CALL_NOT_FOUND') return `${unit}, I don't have an active call matching that.`;
   if (error?.code === 'UNIT_AMBIGUOUS') return `${unit}, repeat the unit callsign.`;
+  if (error?.code === 'UNIT_NOT_FOUND') return `${unit}, I couldn't locate that unit in this dispatch center.`;
   return 'Dispatcher is unable to process that request. Repeat shortly.';
+}
+
+function assertExplicitUnitTargets({ transcript, plan, operationalContext, speakerCallsign }) {
+  if (!planUsesNamedUnits(plan)) return;
+  const candidates = extractUnitLikeTargets(transcript);
+  if (candidates.length === 0) return;
+  const roster = new Set((operationalContext?.units || []).map((unit) => normalizeUnitTarget(unit?.callsign)).filter(Boolean));
+  roster.add(normalizeUnitTarget(speakerCallsign));
+  const missing = candidates.find((candidate) => !roster.has(normalizeUnitTarget(candidate)));
+  if (!missing) return;
+  throw new DispatcherV3Error(V3_ERROR_CODES.UNIT_NOT_FOUND, `Unit ${missing} is not in this dispatch center`, {
+    statusCode: 404,
+    details: { unitRef: missing },
+  });
+}
+
+function planUsesNamedUnits(plan) {
+  const actions = plan?.action === 'MULTI_ACTION' ? plan.actions || [] : [plan];
+  return actions.some((item) => [
+    V3_ACTIONS.ASSIGN_UNIT, V3_ACTIONS.UNASSIGN_UNIT, V3_ACTIONS.MAKE_PRIMARY,
+    V3_ACTIONS.SET_UNIT_STATUS, V3_ACTIONS.CREATE_CALL,
+  ].includes(item?.action));
+}
+
+function extractUnitLikeTargets(value) {
+  const text = String(value || '');
+  const results = [];
+  const patterns = [
+    /\b(?:with|assign|attach|add)\s+(?:unit\s+)?([a-z][a-z0-9']*(?:[-\s]+\d+))\b/gi,
+    /\bunit\s+([a-z0-9][a-z0-9'-]*(?:\s+\d+)?)\b/gi,
+  ];
+  for (const rx of patterns) {
+    for (const match of text.matchAll(rx)) if (match[1]) results.push(match[1]);
+  }
+  return Array.from(new Set(results.map((item) => item.trim())));
+}
+
+function normalizeUnitTarget(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
 function announcementForEmergency(reason) {
@@ -840,6 +958,17 @@ function getCallLocation(payload) {
 function formatCoordinateLocation(location) {
   if (!location || !Number.isFinite(location.lat) || !Number.isFinite(location.lng)) return null;
   return `${location.lat},${location.lng}`;
+}
+
+function locationIsFresh(location, maxAgeMs = 2 * 60 * 1000) {
+  if (!location || !Number.isFinite(location.lat) || !Number.isFinite(location.lng)) return false;
+  if (location.timestamp === undefined || location.timestamp === null || location.timestamp === '') return true;
+  let timestamp = typeof location.timestamp === 'number'
+    ? location.timestamp
+    : new Date(location.timestamp).getTime();
+  if (Number.isFinite(timestamp) && timestamp > 0 && timestamp < 1e12) timestamp *= 1000;
+  if (!Number.isFinite(timestamp)) return true;
+  return Date.now() - timestamp <= maxAgeMs;
 }
 
 function sameUnit(a, b) {

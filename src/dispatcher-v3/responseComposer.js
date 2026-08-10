@@ -32,7 +32,12 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
     if (code === 'UNAUTHORIZED') return `${unit}, unable. That action isn't authorized.`;
     if (code === 'CAD_UNAVAILABLE') return `${unit}, CAD is unavailable. Try again.`;
     if (code === 'CALL_NOT_FOUND') return `${unit}, I couldn't locate that call.`;
+    if (code === 'DISPOSITION_REQUIRED') return `${unit}, what's your disposition?`;
     return `${unit}, unable to complete that request.`;
+  }
+
+  if (plan?.action === V3_ACTIONS.REPORT_FIELD_INCIDENT || plan?.action === V3_ACTIONS.UPDATE_FIELD_INCIDENT) {
+    return clean(result?.data?.radioResponse) || `${unit}, copy.`;
   }
 
   if (plan?.action === 'MULTI_ACTION' || ROUTINE_ACK_ACTIONS.has(plan?.action)) {
@@ -47,13 +52,28 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
       return `${unit}, ${formatMilitaryTimeForSpeech(data.timestamp || now)}.`;
     case V3_ACTIONS.GET_CURRENT_CALL:
       return currentCallResponse(unit, data);
+    case V3_ACTIONS.LIST_ACTIVE_CALLS:
+      return activeCallsResponse(unit, data);
     case V3_ACTIONS.STATUS_CHECK:
       return statusCheckResponse(unit, data);
     case V3_ACTIONS.DECLARE_EMERGENCY:
-      return `${unit}, emergency activated.`;
+      return `${unit}, unable. The emergency system requires the physical emergency button.`;
     default:
       return `${unit}, copy.`;
   }
+}
+
+function activeCallsResponse(unit, data) {
+  const calls = Array.isArray(data?.calls) ? data.calls : [];
+  if (calls.length === 0) return `${unit}, no active calls on the screen.`;
+  const summaries = calls.slice(0, 5).map((call) => {
+    const number = callNumber(call);
+    const nature = clean(call?.nature || call?.type || call?.call_type) || 'unknown nature';
+    const location = clean(call?.location || call?.address);
+    return `${number ? `call ${number}, ` : ''}${nature}${location ? ` at ${location}` : ''}`;
+  });
+  const remaining = calls.length - summaries.length;
+  return `${unit}, ${calls.length} active call${calls.length === 1 ? '' : 's'}: ${summaries.join('; ')}${remaining > 0 ? `; plus ${remaining} more` : ''}.`;
 }
 
 function currentCallResponse(unit, data) {
