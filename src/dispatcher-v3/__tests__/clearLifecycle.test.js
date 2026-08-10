@@ -31,18 +31,43 @@ describe('Dispatcher V3 clear lifecycle', () => {
     });
   });
 
-  it('disposes the call when the clearing unit is the only active assignment and verifies closure', async () => {
+  it('requires a disposition before mutating the only active assignment', async () => {
     const { handlers, gateway } = makeHandlers({
       success: true,
       call: { id: 'call-1', assignments: [{ unit_id: 'unit-1', unit_number: 'INDIANA-1', active: true }] },
     }, {
-      call_id: 'call-1', status: 'closed', disposition: 'CLEARED', assigned_units: [],
+      call_id: 'call-1', status: 'assigned', assigned_units: [{ unit_id: 'unit-1', callsign: 'INDIANA-1' }],
     });
 
-    const result = await handlers[V3_ACTIONS.CLEAR_UNIT]({ input: { callId: 'call-1', unitId: 'unit-1' }, correlationId: 'corr-1' });
+    await expect(handlers[V3_ACTIONS.CLEAR_UNIT]({ input: { callId: 'call-1', unitId: 'unit-1' }, correlationId: 'corr-1' }))
+      .rejects.toMatchObject({ code: 'DISPOSITION_REQUIRED', details: { callId: 'call-1' } });
+
+    expect(gateway.post).not.toHaveBeenCalled();
+  });
+
+  it('fails safe and asks for a disposition when assignment details are unavailable', async () => {
+    const { handlers, gateway } = makeHandlers({ success: true, call: { id: 'call-1' } }, {
+      call_id: 'call-1', status: 'assigned', assigned_units: [{ unit_id: 'unit-1', callsign: 'INDIANA-1' }],
+    });
+
+    await expect(handlers[V3_ACTIONS.CLEAR_UNIT]({ input: { callId: 'call-1', unitId: 'unit-1' }, correlationId: 'corr-unknown' }))
+      .rejects.toMatchObject({ code: 'DISPOSITION_REQUIRED' });
+
+    expect(gateway.post).not.toHaveBeenCalled();
+  });
+
+  it('disposes the call after the only active unit supplies a disposition', async () => {
+    const { handlers, gateway } = makeHandlers({
+      success: true,
+      call: { id: 'call-1', assignments: [{ unit_id: 'unit-1', unit_number: 'INDIANA-1', active: true }] },
+    }, {
+      call_id: 'call-1', status: 'closed', disposition: 'ARREST', assigned_units: [],
+    });
+
+    const result = await handlers[V3_ACTIONS.CLEAR_UNIT]({ input: { callId: 'call-1', unitId: 'unit-1', disposition: 'ARREST' }, correlationId: 'corr-1' });
 
     expect(gateway.post).toHaveBeenCalledWith('/api/radio/dispose', {
-      call_id: 'call-1', disposition: 'CLEARED', unit_ids: ['INDIANA-1'],
+      call_id: 'call-1', disposition: 'ARREST', unit_ids: ['INDIANA-1'],
     }, { correlationId: 'corr-1' });
     expect(gateway.post).not.toHaveBeenCalledWith('/api/radio/clear', expect.anything(), expect.anything());
     expect(result.verified).toBe(true);

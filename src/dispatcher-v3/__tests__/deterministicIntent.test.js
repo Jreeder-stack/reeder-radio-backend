@@ -9,9 +9,11 @@ describe('Dispatcher V3 deterministic routine commands', () => {
     ['radio check', 'RADIO_CHECK', {}],
     ['what time is it', 'TIME_CHECK', {}],
     ['what call am I on', 'GET_CURRENT_CALL', { unitRef: speakerCallsign }],
+    ['what calls are on the screen', 'LIST_ACTIVE_CALLS', {}],
     ["what's my status", 'STATUS_CHECK', { unitRef: speakerCallsign }],
     ['show me en route', 'SET_UNIT_STATUS', { unitRef: speakerCallsign, status: 'en_route' }],
     ['on scene', 'SET_UNIT_STATUS', { unitRef: speakerCallsign, status: 'on_scene' }],
+    ['show me arriving', 'SET_UNIT_STATUS', { unitRef: speakerCallsign, status: 'on_scene' }],
     ['available', 'SET_UNIT_STATUS', { unitRef: speakerCallsign, status: 'available' }],
     ['out of service', 'SET_UNIT_STATUS', { unitRef: speakerCallsign, status: 'out_of_service' }],
     ['off duty', 'SET_UNIT_STATUS', { unitRef: speakerCallsign, status: 'off_duty' }],
@@ -60,8 +62,46 @@ describe('Dispatcher V3 deterministic routine commands', () => {
     })).toBeNull();
   });
 
-  it('does not overmatch a status phrase that contains additional operational detail', () => {
-    expect(planDeterministicV3Intent({ transcript: 'show me en route to the courthouse', speakerCallsign })).toBeNull();
+  it('turns a named-call response into ordered assignment and status actions', () => {
+    expect(planDeterministicV3Intent({ transcript: 'show me en route to the fight', speakerCallsign })).toMatchObject({
+      action: 'MULTI_ACTION',
+      actions: [
+        { action: 'ASSIGN_UNIT', input: { callRef: 'fight', unitRef: speakerCallsign } },
+        { action: 'SET_UNIT_STATUS', input: { unitRef: speakerCallsign, status: 'en_route' } },
+      ],
+    });
+  });
+
+  it('does not mistake an unrelated current assignment for the named call', () => {
+    expect(planDeterministicV3Intent({
+      transcript: 'show me en route to the fight',
+      speakerCallsign,
+      operationalContext: { currentCall: { id: 'alarm-1', nature: 'BURGLAR ALARM' } },
+    })).toMatchObject({ action: 'MULTI_ACTION', actions: [{ action: 'ASSIGN_UNIT' }, { action: 'SET_UNIT_STATUS' }] });
+    expect(planDeterministicV3Intent({
+      transcript: 'show me en route to the fight',
+      speakerCallsign,
+      operationalContext: { currentCall: { id: 'fight-1', nature: 'FIGHT' } },
+    })).toMatchObject({ action: 'SET_UNIT_STATUS', input: { status: 'en_route' } });
+  });
+
+  it.each([
+    ['shots fired', 'shots_fired'],
+    ['I have one running by the Ferris Wheel', 'officer_assist'],
+  ])('plans urgent field traffic as a non-emergency field incident: %s', (transcript, eventType) => {
+    expect(planDeterministicV3Intent({ transcript, speakerCallsign })).toMatchObject({
+      action: 'REPORT_FIELD_INCIDENT',
+      input: { unitRef: speakerCallsign, eventType, note: transcript },
+    });
+  });
+
+  it('uses a known disposition for a pending clear but leaves unrelated traffic for semantic planning', () => {
+    const pendingContext = { kind: 'disposition', callId: 'call-1' };
+    expect(planDeterministicV3Intent({ transcript: 'report taken', speakerCallsign, pendingContext })).toMatchObject({
+      action: 'CLEAR_UNIT',
+      input: { callId: 'call-1', unitRef: speakerCallsign, disposition: 'REPORT TAKEN' },
+    });
+    expect(planDeterministicV3Intent({ transcript: `we're by the bumper boats`, speakerCallsign, pendingContext })).toBeNull();
   });
 
   it('does not call Azure OpenAI for deterministic commands', async () => {

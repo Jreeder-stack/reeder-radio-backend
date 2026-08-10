@@ -30,30 +30,30 @@ export function createResolvedCallHandler({ gateway, resolveSafeCallsign } = {})
 
     const resolved = resolution?.location || {};
     const canonicalAddress = clean(resolved.address);
-    const canonicalCity = clean(resolved.city) || spokenCity || null;
+    const canonicalCity = clean(resolved.city) || clean(resolved.municipality) || spokenCity || null;
     const source = clean(resolution?.source);
     if (!canonicalAddress) throw new DispatcherV3Error(V3_ERROR_CODES.CAD_REJECTED, `Command Link could not resolve a street address for ${query}`, { statusCode: 422, retryable: false, details: { correlationId, query, source } });
 
-    const municipality = source === 'MAI' ? clean(resolved.municipality) : clean(input.municipality);
+    const municipality = clean(resolved.municipality) || clean(input.municipality);
     const requestBody = {
       type: input.type,
       location: canonicalAddress,
       apt: input.apt || clean(resolved.apartmentUnit) || undefined,
       city: canonicalCity || undefined,
-      state: input.state || clean(resolved.state) || undefined,
-      zip: input.zip || clean(resolved.zipCode) || undefined,
-      county: input.county || clean(resolved.county) || undefined,
+      state: clean(resolved.state) || input.state || undefined,
+      zip: clean(resolved.zipCode || resolved.zip) || input.zip || undefined,
+      county: clean(resolved.county) || input.county || undefined,
       municipality: municipality || undefined,
       priority: input.priority || undefined,
       description: input.description || undefined,
       caller_name: input.callerName || undefined,
       callback_number: input.callerPhone || undefined,
       zone: input.zone || undefined,
-      latitude: input.latitude || resolved.latitude || undefined,
-      longitude: input.longitude || resolved.longitude || undefined,
-      cross_street_1: input.crossStreet1 || undefined,
-      cross_street_2: input.crossStreet2 || undefined,
-      location_address_id: input.locationAddressId || resolved.id || undefined,
+      latitude: resolved.latitude || input.latitude || undefined,
+      longitude: resolved.longitude || input.longitude || undefined,
+      cross_street_1: clean(resolved.crossStreet1 || resolved.cross_street_1) || input.crossStreet1 || undefined,
+      cross_street_2: clean(resolved.crossStreet2 || resolved.cross_street_2) || input.crossStreet2 || undefined,
+      location_address_id: resolved.id || input.locationAddressId || undefined,
       security_client_id: input.securityClientId || undefined,
       security_client_site_id: input.securityClientSiteId || undefined,
       units: callsigns,

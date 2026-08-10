@@ -44,11 +44,12 @@ describe('Dispatcher V3 phase 4 pipeline', () => {
     expect(normalizeV3RadioHail('10-33')).toBeNull();
   });
 
-  it('bypasses the LLM for protected emergency traffic', async () => {
+  it('bypasses the LLM for protected urgent traffic without activating emergency mode', async () => {
     const planner = new V3IntentPlanner({ client: null });
     const plan = await planner.plan({ transcript: 'Central, Indiana 1, 10-33 emergency traffic', speakerCallsign: 'INDIANA-1', runtimeContext, correlationId: 'emerg-1' });
-    expect(plan.action).toBe('DECLARE_EMERGENCY');
+    expect(plan.action).toBe('REPORT_FIELD_INCIDENT');
     expect(plan.input.unitRef).toBe('INDIANA-1');
+    expect(plan.input.eventType).toBe('officer_assist');
     expect(plan.confidence).toBe(1);
   });
 

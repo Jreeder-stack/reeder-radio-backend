@@ -1,27 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { buildMdcTonePcm, classifyOfficerEmergency } from '../liveRuntime.js';
+import { buildMdcTonePcm } from '../liveRuntime.js';
+import { planDeterministicV3Intent } from '../deterministicIntent.js';
+import { createDefaultV3ActionHandlers } from '../defaultActionHandlers.js';
+import { V3_ACTIONS } from '../actionContracts.js';
 
-describe('Dispatcher V3 officer emergency recognition', () => {
+describe('Dispatcher V3 physical-button-only emergency policy', () => {
   it.each([
-    ['shots fired', 'SHOTS FIRED'],
-    ['I have one at gun point', 'AT GUNPOINT'],
-    ['I have him at taser point', 'AT TASER POINT'],
-    ["I'm fighting with him", 'OFFICER FIGHTING'],
-    ["I've been shot", 'OFFICER INJURED'],
-    ['I need help', 'OFFICER NEEDS ASSISTANCE'],
-    ['send me another unit', 'OFFICER NEEDS ASSISTANCE'],
-  ])('recognizes unit-involved emergency language: %s', (transcript, reason) => {
-    expect(classifyOfficerEmergency(transcript)).toMatchObject({ reason });
+    ['shots fired', 'shots_fired'],
+    ['I have one at gun point', 'gunpoint'],
+    ['I have him at taser point', 'taserpoint'],
+    ["I'm fighting with him", 'fight'],
+    ['10-33 emergency traffic', 'officer_assist'],
+    ['officer down', 'officer_assist'],
+  ])('routes urgent voice language into CAD field handling, never emergency activation: %s', (transcript, eventType) => {
+    expect(planDeterministicV3Intent({ transcript, speakerCallsign: 'INDIANA-1' })).toMatchObject({
+      action: V3_ACTIONS.REPORT_FIELD_INCIDENT,
+      input: { unitRef: 'INDIANA-1', eventType, note: transcript },
+    });
   });
 
-  it.each([
-    'caller reports shots fired',
-    'report of shots fired at 123 Main',
-    'responding to a shots fired call',
-    'complainant says there is a fight',
-    'victim reports a man has a gun',
-  ])('does not mistake reported incidents for an officer emergency: %s', (transcript) => {
-    expect(classifyOfficerEmergency(transcript)).toBeNull();
+  it('rejects DECLARE_EMERGENCY even if a planner or caller attempts it', async () => {
+    const handlers = createDefaultV3ActionHandlers({
+      gateway: {},
+      unitIdentityService: { resolve: async () => ({ unitId: 'unit-1', callsign: 'INDIANA-1' }) },
+    });
+    await expect(handlers[V3_ACTIONS.DECLARE_EMERGENCY]({
+      input: { unitId: 'unit-1', reason: 'shots fired' },
+    })).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
   });
 });
 

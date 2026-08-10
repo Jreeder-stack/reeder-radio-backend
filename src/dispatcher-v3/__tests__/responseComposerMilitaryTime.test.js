@@ -51,10 +51,28 @@ describe('Dispatcher V3 military-time acknowledgements', () => {
     }
   });
 
-  it('keeps radio checks and emergency acknowledgements short', () => {
+  it('keeps radio checks short and never announces voice-triggered emergency activation', () => {
     expect(composeV3Response({ plan: { action: 'RADIO_CHECK', input: {} }, result: { success: true, data: {} }, speakerCallsign: 'INDIANA-1', now }))
       .toBe('INDIANA-1, loud and clear.');
-    expect(composeV3Response({ plan: { action: 'DECLARE_EMERGENCY', input: {} }, result: { success: true, data: {} }, speakerCallsign: 'INDIANA-1', now }))
-      .toBe('INDIANA-1, emergency activated.');
+    expect(composeV3Response({ plan: { action: 'DECLARE_EMERGENCY', input: {} }, result: { success: false, error: { code: 'UNAUTHORIZED' } }, speakerCallsign: 'INDIANA-1', now }))
+      .toBe(`INDIANA-1, unable. That action isn't authorized.`);
+  });
+
+  it('reads active calls from the CAD screen context', () => {
+    expect(composeV3Response({
+      plan: { action: 'LIST_ACTIVE_CALLS', input: {} },
+      result: { success: true, data: { calls: [{ call_number: '26-101', nature: 'FIGHT', location: '100 MAIN ST' }] } },
+      speakerCallsign: 'INDIANA-1',
+      now,
+    })).toBe('INDIANA-1, 1 active call: call 26-101, FIGHT at 100 MAIN ST.');
+  });
+
+  it('asks for disposition instead of acknowledging an unperformed clear', () => {
+    expect(composeV3Response({
+      plan: { action: 'CLEAR_UNIT', input: { callId: 'call-1' } },
+      result: { success: false, error: { code: 'DISPOSITION_REQUIRED' } },
+      speakerCallsign: 'INDIANA-1',
+      now,
+    })).toBe(`INDIANA-1, what's your disposition?`);
   });
 });
