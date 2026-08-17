@@ -2,6 +2,8 @@ import { floorControlService, AI_FLOOR_IDENTITY } from './floorControlService.js
 import { canonicalChannelKey } from './channelKeyUtils.js';
 import { audioRelayService } from './audioRelayService.js';
 import { installAudioRelaySiblingDeviceHardening } from './audioRelaySiblingDeviceHardening.js';
+import { wsAudioBridge } from './wsAudioBridge.js';
+import pool from '../db/index.js';
 
 const SWEEP_INTERVAL_MS = 30000;
 const ORPHAN_FLOOR_MIN_AGE_MS = 2000;
@@ -30,6 +32,146 @@ function resolveFloorIdentity(service, channelId, rawFloorKey) {
     unitId: holderSocket?.unitId || (activeMatches ? active.unitId : null) || floorKey,
     deviceId: holderSocket?.deviceId || (activeMatches ? active.deviceId : null) || floorKey,
   };
+}
+
+async function resolveAuthorizedChannel(unitId, rawChannelId) {
+  const requestedChannel = canonicalChannelKey(rawChannelId);
+  if (!unitId || !requestedChannel) return null;
+
+  try {
+    const accessResult = await pool.query(
+      `SELECT uca.channel_id,
+              COALESCE(c.zone, 'Default') || '__' || c.name AS compound_key
+       FROM user_channel_access uca
+       JOIN users u ON uca.user_id = u.id
+       JOIN channels c ON uca.channel_id = c.id
+       WHERE (u.unit_id = $1 OR u.username = $1)
+         AND (c.id::text = $2 OR COALESCE(c.zone, 'Default') || '__' || c.name = $2)
+         AND c.enabled = true
+       LIMIT 1`,
+      [unitId, requestedChannel]
+    );
+
+    if (accessResult.rows.length === 0) return null;
+    return canonicalChannelKey(accessResult.rows[0].compound_key) || requestedChannel;
+  } catch (err) {
+    // Permissions are a security boundary. Database errors must fail closed.
+    console.error(
+      `[ChannelAccess] authorization lookup failed unitId=${unitId} channel=${requestedChannel}:`,
+      err.message
+    );
+    return null;
+  }
+}
+
+function emitChannelAccessDenied(socket, rawChannelId, action) {
+  const channelId = canonicalChannelKey(rawChannelId);
+  socket.emit?.('error', {
+    code: 'CHANNEL_ACCESS_DENIED',
+    message: 'Not authorized for this channel',
+    channelId,
+    action,
+  });
+  console.warn(
+    `[ChannelAccess] denied action=${action} unitId=${socket.unitId || 'unknown'} channelId=${channelId || rawChannelId || 'unknown'}`
+  );
+}
+
+function installCadChannelAccessHardening(service) {
+  if (service._cadChannelAccessHardeningInstalled) return;
+  service._cadChannelAccessHardeningInstalled = true;
+
+  // The legacy CAD RadioClient uses channel:join, while dedicated radios use
+  // radio:joinChannel. The dedicated-radio path already checks
+  // user_channel_access in signalingService; the legacy path historically did
+  // not. Enforce the same database-backed assignment here.
+  const originalChannelJoin = service._handleChannelJoin.bind(service);
+  service._handleChannelJoin = async function permissionCheckedChannelJoin(socket, data) {
+    if (socket.isDispatcher === true) {
+      return originalChannelJoin(socket, data);
+    }
+
+    const authorizedChannel = await resolveAuthorizedChannel(socket.unitId, data?.channelId);
+    if (!authorizedChannel) {
+      emitChannelAccessDenied(socket, data?.channelId, 'channel:join');
+      return;
+    }
+
+    return originalChannelJoin(socket, { ...data, channelId: authorizedChannel });
+  };
+
+  // Never rely solely on a prior join check. A crafted client could emit PTT
+  // or emergency events directly. Non-dispatchers must already be a member of
+  // the channel that passed the authorization check above.
+  const guardJoinedChannelAction = (methodName, action) => {
+    const original = service[methodName].bind(service);
+    service[methodName] = function permissionCheckedChannelAction(socket, data) {
+      const channelId = canonicalChannelKey(data?.channelId);
+      if (
+        socket.isDispatcher !== true &&
+        (!channelId || !socket.channels || !socket.channels.has(channelId))
+      ) {
+        emitChannelAccessDenied(socket, data?.channelId, action);
+        return;
+      }
+      return original(socket, data);
+    };
+  };
+
+  guardJoinedChannelAction('_handlePttPre', 'ptt:pre');
+  guardJoinedChannelAction('_handlePttStart', 'ptt:start');
+  guardJoinedChannelAction('_handleEmergencyStart', 'emergency:start');
+
+  console.log('[ChannelAccess] CAD signaling channel authorization hardening installed');
+}
+
+function installAudioWsChannelAccessHardening(bridge) {
+  if (!bridge || bridge._channelAccessHardeningInstalled) return;
+  bridge._channelAccessHardeningInstalled = true;
+
+  const originalAuthenticate = bridge._authenticate.bind(bridge);
+  bridge._authenticate = async function permissionCheckedAudioAuthenticate(request) {
+    const authResult = await originalAuthenticate(request);
+    if (!authResult) return null;
+
+    const user = authResult.user || {};
+    const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+    const rawChannelId = url.searchParams.get('channelId');
+    const unitId = user.unit_id || user.username || null;
+
+    // A bare CAD integration key is a service credential, not a user identity.
+    // Accepting ?unitId= with only that key lets a client claim another unit.
+    // Command Link already creates a per-user Comms session via cad-login, so
+    // require that session (or a hardware radio token) for the audio socket.
+    if (authResult.authType === 'cadApiKey') {
+      console.warn(
+        `[ChannelAccess] AUDIO_WS_REJECTED reason=cad_api_key_without_user_session requestedUnit=${unitId || 'unknown'} channel=${rawChannelId || 'unknown'}`
+      );
+      return null;
+    }
+
+    const isDispatcher =
+      user.is_dispatcher === true ||
+      user.isDispatcher === true ||
+      user.role === 'dispatcher' ||
+      user.role === 'admin';
+
+    if (isDispatcher) {
+      return authResult;
+    }
+
+    const authorizedChannel = await resolveAuthorizedChannel(unitId, rawChannelId);
+    if (!authorizedChannel) {
+      console.warn(
+        `[ChannelAccess] AUDIO_WS_REJECTED reason=channel_access_denied authType=${authResult.authType} unitId=${unitId || 'unknown'} channel=${rawChannelId || 'unknown'}`
+      );
+      return null;
+    }
+
+    return authResult;
+  };
+
+  console.log('[ChannelAccess] Audio WebSocket channel authorization hardening installed');
 }
 
 function installCorrectConsistencySweep(service) {
@@ -274,6 +416,11 @@ export function installFloorIdentityHardening(signalingService) {
   installCorrectConsistencySweep(signalingService);
   installJoinIdentityNormalization(signalingService);
   installPttIdentityNormalization(signalingService);
+  // Install permission wrappers after identity wrappers so the PTT permission
+  // boundary remains the outermost guard and the existing identity behavior is
+  // preserved once a request is authorized.
+  installCadChannelAccessHardening(signalingService);
+  installAudioWsChannelAccessHardening(wsAudioBridge);
   installAudioRelaySiblingDeviceHardening(audioRelayService);
 
   console.log('[Signaling] Floor identity hardening installed');
