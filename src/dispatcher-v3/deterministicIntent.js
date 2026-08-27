@@ -9,6 +9,8 @@ const BACKUP_RX = /^(?:send\s+(?:me\s+)?backup|send\s+(?:me\s+)?another\s+unit|i
 const ZONE_CHANGE_RX = /^(?:(?:change|switch|move|put)\s+(?:me\s+)?(?:to|on)?\s*zone\s+[a-z0-9-]+|(?:change|switch|move)\s+zone\s+(?:to\s+)?[a-z0-9-]+)\s*[?.!]*$/i;
 const CLEAR_CALL_RX = /^(?:(?:i(?:'m|\s+am)\s+)?clear(?:\s+of|\s+from)?\s+(?:(?:the|my|that)\s+)?call(?:\s+i\s+was\s+on)?|clear\s+me(?:\s+of|\s+from)?\s+(?:(?:the|my|that)\s+)?call|show\s+me\s+clear(?:\s+of|\s+from)?\s+(?:(?:the|my|that)\s+)?call)\s*[?.!]*$/i;
 const MAKE_PRIMARY_SELF_RX = /^(?:(?:make|show|mark|put|set)\s+me\s+(?:as\s+)?(?:the\s+)?primary(?:\s+unit)?|(?:make|show|mark|put|set)\s+(?:this|my)\s+unit\s+(?:as\s+)?(?:the\s+)?primary|i(?:'m|\s+am)\s+(?:the\s+)?primary(?:\s+unit)?|primary\s+me)\s*(?:on\s+(?:the|my|this|that)\s+(?:current\s+)?call)?\s*[?.!]*$/i;
+const START_CALL_RX = /^(?:start|create|open)\s+(?:me\s+)?(?:a|an|the)?\s*(.+?)\s+(?:at|on)\s+(.+?)\s*[?.!]*$/i;
+const NO_ASSIGN_SUFFIX_RX = /(?:,\s*)?(?:don't|do\s+not)\s+(?:assign|attach|put)\s+(?:anybody|anyone|any\s+unit|me)(?:\s+to\s+(?:it|the\s+call))?\s*[?.!]*$/i;
 const DISPOSITION_RX = /^(?:arrest(?:\s+made)?|report(?:\s+taken)?|citation(?:\s+issued)?|warning(?:\s+issued)?|unfounded|gone\s+on\s+arrival|goa|unable\s+to\s+locate|utl|no\s+action(?:\s+taken)?|false\s+alarm|referred|handled\s+by\s+(?:another|other)\s+agency|cancel+l?ed\s+by\s+(?:the\s+)?complainant)\s*[.!]*$/i;
 
 const NUMBER_WORDS = Object.freeze({
@@ -65,6 +67,9 @@ export function planDeterministicV3Intent({ transcript, speakerCallsign, operati
   if (CLEAR_CALL_RX.test(text)) return plan(V3_ACTIONS.CLEAR_UNIT, { unitRef: speakerCallsign }, 'deterministic_clear_current_call');
   if (MAKE_PRIMARY_SELF_RX.test(text)) return plan(V3_ACTIONS.MAKE_PRIMARY, { unitRef: speakerCallsign }, 'deterministic_make_primary_self');
 
+  const startedCall = planStartedCall(text, speakerCallsign);
+  if (startedCall) return startedCall;
+
   const fieldIncident = planFieldIncident(text, speakerCallsign);
   if (fieldIncident) return fieldIncident;
 
@@ -92,6 +97,24 @@ export function planDeterministicV3Intent({ transcript, speakerCallsign, operati
   }
 
   return null;
+}
+
+function planStartedCall(text, speakerCallsign) {
+  const noAssign = NO_ASSIGN_SUFFIX_RX.test(text);
+  const command = text.replace(NO_ASSIGN_SUFFIX_RX, '').trim().replace(/,+$/, '').trim();
+  const match = command.match(START_CALL_RX);
+  if (!match) return null;
+
+  const type = String(match[1] || '').trim();
+  const location = String(match[2] || '').trim();
+  if (!type || !location) return null;
+
+  const input = {
+    type: type.toUpperCase(),
+    location,
+  };
+  if (!noAssign && speakerCallsign) input.unitRefs = [speakerCallsign];
+  return plan(V3_ACTIONS.CREATE_CALL, input, 'deterministic_start_call');
 }
 
 function planFieldIncident(text, speakerCallsign) {
