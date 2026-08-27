@@ -12,7 +12,7 @@ describe('Dispatcher V3 military-time acknowledgements', () => {
   ])('uses ten-four plus current military time for %s acknowledgements', (status) => {
     expect(composeV3Response({
       plan: { action: 'SET_UNIT_STATUS', input: { status } },
-      result: { success: true, data: {} },
+      result: { success: true, data: { verified: true } },
       speakerCallsign: 'INDIANA-1',
       now,
     })).toBe('Ten-four, eleven fifty-nine hours.');
@@ -21,7 +21,7 @@ describe('Dispatcher V3 military-time acknowledgements', () => {
   it('uses ten-four plus spoken military time for routine CAD acknowledgements', () => {
     expect(composeV3Response({
       plan: { action: 'ADD_CALL_NOTE', input: {} },
-      result: { success: true, data: {} },
+      result: { success: true, data: { verified: true } },
       speakerCallsign: 'INDIANA-1',
       now,
     })).toBe('Ten-four, eleven fifty-nine hours.');
