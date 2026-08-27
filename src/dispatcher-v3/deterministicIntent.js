@@ -264,5 +264,8 @@ function canonicalTokens(value) {
 }
 
 function normalize(value) {
-  return String(value || '').trim().replace(/\s+/g, ' ');
+  return String(value || '')
+    .trim()
+    .replace(/\bin\s+route\b/gi, 'en route')
+    .replace(/\s+/g, ' ');
 }
