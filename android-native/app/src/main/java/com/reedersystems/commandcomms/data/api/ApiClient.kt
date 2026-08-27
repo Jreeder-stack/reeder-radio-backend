@@ -3,12 +3,14 @@ package com.reedersystems.commandcomms.data.api
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import com.google.firebase.messaging.FirebaseMessaging
 import com.google.gson.Gson
 import com.reedersystems.commandcomms.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
@@ -91,6 +93,64 @@ class ApiClient private constructor(context: Context) {
     fun getPersistedFcmToken(): String? = fcmPrefs.getString(FCM_TOKEN_KEY, null)
 
     /**
+     * Actively asks Firebase for the device's current token, persists it, and
+     * registers it with Command Comms whenever authentication is available.
+     *
+     * This is deliberately stronger than relying on FirebaseMessagingService.onNewToken():
+     * onNewToken is not guaranteed to fire during every app install/startup path. A radio
+     * that missed that callback could otherwise remain registered in Command Comms with a
+     * null fcm_token forever. Calling this at process startup and after socket authentication
+     * makes push registration self-healing for existing and newly provisioned radios.
+     */
+    fun refreshAndRegisterFcmToken(scope: CoroutineScope) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                Log.d(TAG, "FCM self-heal: requesting current Firebase token")
+                val token = FirebaseMessaging.getInstance().token.await()
+                if (token.isBlank()) {
+                    Log.w(TAG, "FCM self-heal: Firebase returned a blank token")
+                    return@launch
+                }
+
+                val previous = getPersistedFcmToken()
+                fcmPrefs.edit().putString(FCM_TOKEN_KEY, token).apply()
+                Log.d(
+                    TAG,
+                    "FCM self-heal: token acquired and persisted changed=${previous != token} deviceType=${BuildConfig.RADIO_DEVICE_TYPE}"
+                )
+
+                if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+                    registerPhonePresence()
+                    registerFcmTokenNow(token)
+                    return@launch
+                }
+
+                if (radioToken == null) {
+                    Log.d(TAG, "FCM self-heal: radio token not available yet; token persisted for post-auth retry")
+                    return@launch
+                }
+
+                registerFcmTokenNow(token)
+            } catch (e: Exception) {
+                Log.w(TAG, "FCM self-heal: failed to obtain/register current token: ${e.message}", e)
+
+                // If Firebase retrieval fails transiently but we already have a cached token,
+                // still try to repair the backend row with that known token.
+                val cached = getPersistedFcmToken()
+                if (!cached.isNullOrBlank()) {
+                    Log.d(TAG, "FCM self-heal: falling back to persisted token")
+                    if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+                        registerPhonePresence()
+                        registerFcmTokenNow(cached)
+                    } else if (radioToken != null) {
+                        registerFcmTokenNow(cached)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Re-register push delivery after signaling authentication. Android-phone
      * builds are session-authenticated first-class radio endpoints, so they
      * must register presence even when Firebase has not issued a new token in
@@ -149,7 +209,8 @@ class ApiClient private constructor(context: Context) {
                 if (response.isSuccessful) {
                     Log.d(TAG, "Persisted FCM token registered successfully after auth")
                 } else {
-                    Log.w(TAG, "FCM token re-registration failed: ${response.code}")
+                    val responseBody = response.body?.string()?.take(300)
+                    Log.w(TAG, "FCM token re-registration failed: ${response.code} body=$responseBody")
                 }
             }
         } catch (e: Exception) {
