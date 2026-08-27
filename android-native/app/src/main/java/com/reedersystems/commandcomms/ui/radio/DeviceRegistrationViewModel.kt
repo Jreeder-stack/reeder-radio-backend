@@ -67,8 +67,8 @@ class DeviceRegistrationViewModel(application: Application) : AndroidViewModel(a
                 app.radioTokenStore.saveToken(radioId, token)
                 app.signalingClient.setRadioToken(token)
                 app.apiClient.radioToken = token
-                Log.d(TAG, "Registration success radioId=$radioId")
-                app.apiClient.registerPersistedFcmToken(viewModelScope)
+                Log.d(TAG, "Registration success radioId=$radioId — refreshing FCM token")
+                app.apiClient.refreshAndRegisterFcmToken(viewModelScope)
                 _uiState.value = RegistrationUiState.Success
             } else {
                 val msg = result.exceptionOrNull()?.message ?: "Registration failed"
