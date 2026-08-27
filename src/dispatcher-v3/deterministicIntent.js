@@ -10,6 +10,7 @@ const ZONE_CHANGE_RX = /^(?:(?:change|switch|move|put)\s+(?:me\s+)?(?:to|on)?\s*
 const CLEAR_CALL_RX = /^(?:(?:i(?:'m|\s+am)\s+)?clear(?:\s+of|\s+from)?\s+(?:(?:the|my|that)\s+)?call(?:\s+i\s+was\s+on)?|clear\s+me(?:\s+of|\s+from)?\s+(?:(?:the|my|that)\s+)?call|show\s+me\s+clear(?:\s+of|\s+from)?\s+(?:(?:the|my|that)\s+)?call)\s*[?.!]*$/i;
 const MAKE_PRIMARY_SELF_RX = /^(?:(?:make|show|mark|put|set)\s+me\s+(?:as\s+)?(?:the\s+)?primary(?:\s+unit)?|(?:make|show|mark|put|set)\s+(?:this|my)\s+unit\s+(?:as\s+)?(?:the\s+)?primary|i(?:'m|\s+am)\s+(?:the\s+)?primary(?:\s+unit)?|primary\s+me)\s*(?:on\s+(?:the|my|this|that)\s+(?:current\s+)?call)?\s*[?.!]*$/i;
 const START_CALL_RX = /^(?:start|create|open)\s+(?:me\s+)?(?:a|an|the)?\s*(.+?)\s+(?:at|on)\s+(.+?)\s*[?.!]*$/i;
+const SELF_INITIATED_RESPONSE_RX = /^(?:(?:show|mark|put|set)\s+)?(?:me\s+)?(?:en\s*route|responding)\s+to\s+(?:a|an|the)?\s*(.+?)\s+(?:at|on)\s+(.+?)\s*[?.!]*$/i;
 const NO_ASSIGN_SUFFIX_RX = /(?:,\s*)?(?:don't|do\s+not)\s+(?:assign|attach|put)\s+(?:anybody|anyone|any\s+unit|me)(?:\s+to\s+(?:it|the\s+call))?\s*[?.!]*$/i;
 const DISPOSITION_RX = /^(?:arrest(?:\s+made)?|report(?:\s+taken)?|citation(?:\s+issued)?|warning(?:\s+issued)?|unfounded|gone\s+on\s+arrival|goa|unable\s+to\s+locate|utl|no\s+action(?:\s+taken)?|false\s+alarm|referred|handled\s+by\s+(?:another|other)\s+agency|cancel+l?ed\s+by\s+(?:the\s+)?complainant)\s*[.!]*$/i;
 
@@ -67,6 +68,9 @@ export function planDeterministicV3Intent({ transcript, speakerCallsign, operati
   if (CLEAR_CALL_RX.test(text)) return plan(V3_ACTIONS.CLEAR_UNIT, { unitRef: speakerCallsign }, 'deterministic_clear_current_call');
   if (MAKE_PRIMARY_SELF_RX.test(text)) return plan(V3_ACTIONS.MAKE_PRIMARY, { unitRef: speakerCallsign }, 'deterministic_make_primary_self');
 
+  const selfInitiatedResponse = planSelfInitiatedResponse(text, speakerCallsign);
+  if (selfInitiatedResponse) return selfInitiatedResponse;
+
   const startedCall = planStartedCall(text, speakerCallsign);
   if (startedCall) return startedCall;
 
@@ -97,6 +101,37 @@ export function planDeterministicV3Intent({ transcript, speakerCallsign, operati
   }
 
   return null;
+}
+
+function planSelfInitiatedResponse(text, speakerCallsign) {
+  const match = text.match(SELF_INITIATED_RESPONSE_RX);
+  if (!match) return null;
+
+  const type = String(match[1] || '').trim();
+  const location = String(match[2] || '').trim();
+  if (!type || !location || !speakerCallsign) return null;
+
+  return Object.freeze({
+    action: 'MULTI_ACTION',
+    actions: Object.freeze([
+      Object.freeze({
+        action: V3_ACTIONS.CREATE_CALL,
+        input: Object.freeze({
+          type: type.toUpperCase(),
+          location,
+          unitRefs: [speakerCallsign],
+        }),
+      }),
+      Object.freeze({
+        action: V3_ACTIONS.SET_UNIT_STATUS,
+        input: Object.freeze({ unitRef: speakerCallsign, status: 'en_route' }),
+      }),
+    ]),
+    input: Object.freeze({}),
+    confidence: 1,
+    clarification: null,
+    reason: 'deterministic_self_initiated_response',
+  });
 }
 
 function planStartedCall(text, speakerCallsign) {
