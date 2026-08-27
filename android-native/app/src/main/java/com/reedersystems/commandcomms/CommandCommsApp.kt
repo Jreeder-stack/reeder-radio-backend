@@ -130,12 +130,18 @@ class CommandCommsApp : Application() {
         val persistedDeviceId = getOrCreateDeviceId()
         signalingClient = SignalingClient(apiClient.baseUrl, storedRadioToken, persistedDeviceId)
         signalingClient.onAuthenticated = {
-            Log.d("CommandCommsApp", "Socket authenticated — re-registering persisted FCM token")
-            apiClient.registerPersistedFcmToken(appScope)
+            Log.d("CommandCommsApp", "Socket authenticated — refreshing and registering FCM token")
+            apiClient.refreshAndRegisterFcmToken(appScope)
         }
         signalingRepository = SignalingRepository(signalingClient)
         radioConfigRepository = RadioConfigRepository(apiClient)
         toneEngine = ToneEngine(this)
+
+        // Do not wait for a screen/ViewModel to request Firebase registration.
+        // Fetch the current token as soon as the process starts. On an already
+        // provisioned radio it will be uploaded immediately; on a brand-new radio
+        // it is persisted and uploaded as soon as device registration/auth completes.
+        apiClient.refreshAndRegisterFcmToken(appScope)
 
         radioStateManager = RadioStateManager()
 
