@@ -30,16 +30,18 @@ export function createResolvedCallHandler({ gateway, resolveSafeCallsign } = {})
 
     const resolved = resolution?.location || {};
     const canonicalAddress = clean(resolved.address);
-    const canonicalCity = clean(resolved.city) || clean(resolved.municipality) || spokenCity || null;
+    const inferredCity = inferCityFromSpokenLocation(spokenLocation);
+    const canonicalCity = clean(resolved.city) || clean(resolved.municipality) || spokenCity || inferredCity || null;
     const source = clean(resolution?.source);
     if (!canonicalAddress) throw new DispatcherV3Error(V3_ERROR_CODES.CAD_REJECTED, `Command Link could not resolve a street address for ${query}`, { statusCode: 422, retryable: false, details: { correlationId, query, source } });
+    if (!canonicalCity) throw new DispatcherV3Error(V3_ERROR_CODES.CAD_REJECTED, `Command Link could not resolve a municipality/city for ${query}`, { statusCode: 422, retryable: false, details: { correlationId, query, source } });
 
     const municipality = clean(resolved.municipality) || clean(input.municipality);
     const requestBody = {
       type: input.type,
       location: canonicalAddress,
       apt: input.apt || clean(resolved.apartmentUnit) || undefined,
-      city: canonicalCity || undefined,
+      city: canonicalCity,
       state: clean(resolved.state) || input.state || undefined,
       zip: clean(resolved.zipCode || resolved.zip) || input.zip || undefined,
       county: clean(resolved.county) || input.county || undefined,
@@ -97,10 +99,30 @@ export function createResolvedCallHandler({ gateway, resolveSafeCallsign } = {})
   };
 }
 
+function inferCityFromSpokenLocation(value) {
+  const text = String(value || '').trim().replace(/\s+/g, ' ');
+  if (!text) return null;
+
+  const commaParts = text.split(',').map((part) => part.trim()).filter(Boolean);
+  if (commaParts.length >= 2) {
+    const locality = commaParts[1]
+      .replace(/\b(?:PA|Pennsylvania)\b/ig, '')
+      .replace(/\b\d{5}(?:-\d{4})?\b/g, '')
+      .trim();
+    if (locality) return locality;
+  }
+
+  const noState = text
+    .replace(/\s+(?:PA|Pennsylvania)(?:\s+\d{5}(?:-\d{4})?)?\s*$/i, '')
+    .trim();
+  const match = noState.match(/^\d+[A-Za-z]?\s+.+?\b(?:st(?:reet)?|rd|road|ave(?:nue)?|dr(?:ive)?|ln|lane|ct|court|blvd|boulevard|hwy|highway|rte|route|way|pl|place|pike|trl|trail|ter|terrace)\b\s+(.+)$/i);
+  return clean(match?.[1]);
+}
+
 function clean(value) {
   if (value === undefined || value === null) return null;
   const text = String(value).trim();
   return text || null;
 }
 
-export const __createCallHandlerTest = { CREATE_CALL_TIMEOUT_MS };
+export const __createCallHandlerTest = { CREATE_CALL_TIMEOUT_MS, inferCityFromSpokenLocation };
