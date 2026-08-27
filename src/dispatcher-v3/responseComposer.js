@@ -11,6 +11,20 @@ const ROUTINE_ACK_ACTIONS = new Set([
   V3_ACTIONS.REQUEST_BACKUP,
 ]);
 
+const VERIFIED_MUTATION_ACTIONS = new Set([
+  V3_ACTIONS.SET_UNIT_STATUS,
+  V3_ACTIONS.CHANGE_UNIT_ZONE,
+  V3_ACTIONS.CREATE_CALL,
+  V3_ACTIONS.UPDATE_CALL,
+  V3_ACTIONS.ADD_CALL_NOTE,
+  V3_ACTIONS.ASSIGN_UNIT,
+  V3_ACTIONS.UNASSIGN_UNIT,
+  V3_ACTIONS.MAKE_PRIMARY,
+  V3_ACTIONS.UPDATE_ASSIGNMENT_TIMES,
+  V3_ACTIONS.CLEAR_UNIT,
+  V3_ACTIONS.CLOSE_CALL,
+]);
+
 const SMALL_NUMBER_WORDS = Object.freeze([
   'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
   'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen',
@@ -34,6 +48,10 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
     if (code === 'CALL_NOT_FOUND') return `${unit}, I couldn't locate that call.`;
     if (code === 'DISPOSITION_REQUIRED') return `${unit}, what's your disposition?`;
     return `${unit}, unable to complete that request.`;
+  }
+
+  if (!mutationVerificationSatisfied(plan, result)) {
+    return `${unit}, unable to verify that change in CAD.`;
   }
 
   if (plan?.action === V3_ACTIONS.REPORT_FIELD_INCIDENT || plan?.action === V3_ACTIONS.UPDATE_FIELD_INCIDENT) {
@@ -61,6 +79,19 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
     default:
       return `${unit}, copy.`;
   }
+}
+
+function mutationVerificationSatisfied(plan, result) {
+  if (plan?.action === 'MULTI_ACTION') {
+    const steps = Array.isArray(result?.data?.steps) ? result.data.steps : [];
+    for (const step of steps) {
+      if (!VERIFIED_MUTATION_ACTIONS.has(step?.action)) continue;
+      if (step?.result?.data?.verified !== true) return false;
+    }
+    return true;
+  }
+  if (!VERIFIED_MUTATION_ACTIONS.has(plan?.action)) return true;
+  return result?.data?.verified === true;
 }
 
 function activeCallsResponse(unit, data) {
