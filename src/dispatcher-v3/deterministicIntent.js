@@ -8,6 +8,7 @@ const STATUS_CHECK_RX = /^(?:what(?:'s|\s+is)\s+my\s+status|what\s+status\s+do\s
 const BACKUP_RX = /^(?:send\s+(?:me\s+)?backup|send\s+(?:me\s+)?another\s+unit|i\s+need\s+backup|need\s+backup|i\s+need\s+another\s+unit|need\s+another\s+unit|requesting\s+backup|start\s+(?:me\s+)?backup)\s*[?.!]*$/i;
 const ZONE_CHANGE_RX = /^(?:(?:change|switch|move|put)\s+(?:me\s+)?(?:to|on)?\s*zone\s+[a-z0-9-]+|(?:change|switch|move)\s+zone\s+(?:to\s+)?[a-z0-9-]+)\s*[?.!]*$/i;
 const CLEAR_CALL_RX = /^(?:(?:i(?:'m|\s+am)\s+)?clear(?:\s+of|\s+from)?\s+(?:(?:the|my|that)\s+)?call(?:\s+i\s+was\s+on)?|clear\s+me(?:\s+of|\s+from)?\s+(?:(?:the|my|that)\s+)?call|show\s+me\s+clear(?:\s+of|\s+from)?\s+(?:(?:the|my|that)\s+)?call)\s*[?.!]*$/i;
+const MAKE_PRIMARY_SELF_RX = /^(?:(?:make|show|mark|put|set)\s+me\s+(?:as\s+)?(?:the\s+)?primary(?:\s+unit)?|(?:make|show|mark|put|set)\s+(?:this|my)\s+unit\s+(?:as\s+)?(?:the\s+)?primary|i(?:'m|\s+am)\s+(?:the\s+)?primary(?:\s+unit)?|primary\s+me)\s*(?:on\s+(?:the|my|this|that)\s+(?:current\s+)?call)?\s*[?.!]*$/i;
 const DISPOSITION_RX = /^(?:arrest(?:\s+made)?|report(?:\s+taken)?|citation(?:\s+issued)?|warning(?:\s+issued)?|unfounded|gone\s+on\s+arrival|goa|unable\s+to\s+locate|utl|no\s+action(?:\s+taken)?|false\s+alarm|referred|handled\s+by\s+(?:another|other)\s+agency|cancel+l?ed\s+by\s+(?:the\s+)?complainant)\s*[.!]*$/i;
 
 const NUMBER_WORDS = Object.freeze({
@@ -62,6 +63,7 @@ export function planDeterministicV3Intent({ transcript, speakerCallsign, operati
   if (STATUS_CHECK_RX.test(text)) return plan(V3_ACTIONS.STATUS_CHECK, { unitRef: speakerCallsign }, 'deterministic_status_check');
   if (BACKUP_RX.test(text)) return plan(V3_ACTIONS.REQUEST_BACKUP, { unitRef: speakerCallsign, reason: text, priority: 'urgent' }, 'deterministic_backup');
   if (CLEAR_CALL_RX.test(text)) return plan(V3_ACTIONS.CLEAR_UNIT, { unitRef: speakerCallsign }, 'deterministic_clear_current_call');
+  if (MAKE_PRIMARY_SELF_RX.test(text)) return plan(V3_ACTIONS.MAKE_PRIMARY, { unitRef: speakerCallsign }, 'deterministic_make_primary_self');
 
   const fieldIncident = planFieldIncident(text, speakerCallsign);
   if (fieldIncident) return fieldIncident;
