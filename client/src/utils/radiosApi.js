@@ -20,6 +20,13 @@ export async function getRadios() {
   return fetchRadios('/');
 }
 
+export async function preRegisterRadio({ imei, serial, unitId }) {
+  return fetchRadios('/pre-register', {
+    method: 'POST',
+    body: JSON.stringify({ imei, serial, unit_id: unitId || null }),
+  });
+}
+
 export async function assignRadioUnit(radioId, unitId, { force = false } = {}) {
   return fetchRadios(`/${radioId}/assign`, {
     method: 'PATCH',
