@@ -37,6 +37,35 @@ async function startTest(){
     raf=requestAnimationFrame(tick);
   };tick();
 }
+async function playOutputTest() {
+  if (!$('txConfirm').checked) throw new Error('Confirm the SR-629 is OFF before testing USB output.');
+  const outputId = $('output').value;
+  if (!outputId) throw new Error('Choose the USB headphone output first.');
+  const testContext = new AudioContext();
+  const destination = testContext.createMediaStreamDestination();
+  const oscillator = testContext.createOscillator();
+  const gain = testContext.createGain();
+  oscillator.frequency.value = 650;
+  gain.gain.value = 0.008;
+  oscillator.connect(gain).connect(destination);
+  const audio = new Audio();
+  audio.srcObject = destination.stream;
+  try {
+    if (typeof audio.setSinkId !== 'function') throw new Error('This desktop audio runtime cannot select an output device.');
+    await audio.setSinkId(outputId);
+    await audio.play();
+    oscillator.start();
+    $('status').textContent = '1-second USB output test in progress (SR-629 must remain OFF).';
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    oscillator.stop();
+    $('status').textContent = 'Output tone completed. RF gateway remains disabled.';
+  } finally {
+    try { oscillator.stop(); } catch (_) {}
+    audio.pause(); audio.srcObject = null;
+    destination.stream.getTracks().forEach(track => track.stop());
+    await testContext.close();
+  }
+}
 document.addEventListener('DOMContentLoaded',async()=>{
   try{selected=await window.electronAPI.getGatewaySettings();await listDevices();}
   catch(error){$('status').textContent='Unable to enumerate audio devices: '+error.message;}
@@ -48,6 +77,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
     if(!result.success)throw new Error(result.error);selected={inputId,outputId};
     $('status').textContent='USB device selection saved. RF transmission remains disabled.';
   });
+  $('tone').onclick=()=>safe(playOutputTest);
   $('start').onclick=()=>safe(startTest);$('stop').onclick=stopTest;
   window.addEventListener('beforeunload',stopTest);
 });
