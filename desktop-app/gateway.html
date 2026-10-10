@@ -20,4 +20,9 @@ meter{width:100%;height:24px}#status{min-height:20px}
 <meter id="level" min="0" max="100" value="0"></meter>
 <div><button id="start">Test input</button><button id="stop" disabled>Stop test</button></div>
 <p id="status" role="status">Gateway inactive — RF transmit disabled.</p></section>
+<section><strong>Computer audio output test</strong>
+<p>Send a 1-second quiet test tone to the selected output, to verify that Windows can address the USB sound card. WARNING: if the SR-629 is on, this tone might trigger a radio transmission. Switch the SR-629 off before testing.</p>
+<label><input type="checkbox" id="txConfirm"> SR-629 is OFF / radio cannot transmit</label>
+<div><button id="tone">Play 1-second output test</button></div>
+</section>
 <script src="gateway.js"></script></body></html>
