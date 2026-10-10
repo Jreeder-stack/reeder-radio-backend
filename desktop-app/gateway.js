@@ -69,7 +69,7 @@ async function playOutputTest() {
 
 let networkChannel = '', gatewayTx = false, radioOutput = null, playCursor = 0;
 let txProcessor = null, txBuffer = [], txSequence = 0, txTimeout = null;
-let stoppingTx = false;
+let stoppingTx = false, pttHeld = false;
 async function loadGatewayChannels() {
   const list = await window.electronAPI.fetchGatewayChannels();
   const select = $('channel'); select.replaceChildren();
@@ -149,6 +149,7 @@ function shutdownTxProcessor(){
   txBuffer=[];
 }
 async function stopPtt(){
+  pttHeld=false;
   if(stoppingTx)return;stoppingTx=true;
   gatewayTx=false;shutdownTxProcessor();
   $('ptt').disabled=!networkChannel;$('ptt').textContent='Hold to send radio input to channel (max 10s)';
@@ -163,6 +164,7 @@ async function beginPtt(){
   if(!currentTrack || currentTrack.readyState!=='live')throw Error('Radio audio input unavailable');
   $('ptt').disabled=true;
   const result=await window.electronAPI.startGatewayPtt();
+  if(!pttHeld){await window.electronAPI.endGatewayPtt().catch(()=>{});$('ptt').disabled=false;return;}
   if(!result.success){$('ptt').disabled=false;throw Error(result.error || 'PTT denied');}
   gatewayTx=true;txSequence=0;txBuffer=[];
   txProcessor=context.createScriptProcessor(1024,1,1);
@@ -213,7 +215,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   $('disconnect').onclick=()=>safe(disconnectChannel);
   $('rxEnable').onclick=()=>safe(enableOutput);
   $('rxDisable').onclick=()=>safe(disableOutput);
-  $('ptt').addEventListener('pointerdown',e=>{e.preventDefault();safe(beginPtt);});
+  $('ptt').addEventListener('pointerdown',e=>{e.preventDefault();pttHeld=true;e.currentTarget.setPointerCapture(e.pointerId);safe(beginPtt);});
   for(const evt of ['pointerup','pointercancel','pointerleave']) $('ptt').addEventListener(evt,()=>safe(stopPtt));
   window.addEventListener('blur',()=>safe(stopPtt));
   window.electronAPI.onGatewayAudio(data=>{
