@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radio Gateway Setup</title>
+<style>
+body{font:14px system-ui,sans-serif;background:#111827;color:#f3f4f6;padding:24px;max-width:720px;margin:auto}
+h1{font-size:23px}section{background:#1f2937;padding:18px;margin:16px 0;border-radius:10px}
+label{display:block;margin:15px 0 6px}select,button{padding:10px;border-radius:6px}select{width:100%;background:#111827;color:white;border:1px solid #6b7280}
+button{background:#2563eb;border:0;color:white;cursor:pointer;margin:10px 8px 0 0}button:disabled{opacity:.45;cursor:not-allowed}
+small,p{color:#d1d5db;line-height:1.5}.warning{border-left:4px solid #f59e0b;padding-left:12px}
+meter{width:100%;height:24px}#status{min-height:20px}
+</style></head><body>
+<h1>CF-33 / SURECOM SR-629 Gateway</h1>
+<p class="warning">Setup and receive-audio diagnostics only. RF transmit and automatic network bridging are disabled until the 48-PC1 PTT behavior and channel authorization are verified.</p>
+<section><strong>USB audio devices</strong>
+<label for="input">Radio receive input — USB sound card microphone</label><select id="input"></select>
+<label for="output">Radio transmit output — USB sound card headphones</label><select id="output"></select>
+<button id="refresh">Refresh devices</button><button id="save">Save device selections</button>
+<p><small>Do not use the CF-33 built-in microphone or speaker for the physical radio gateway.</small></p></section>
+<section><strong>Receive-path test (no RF transmission)</strong><p>Start the meter, then listen to traffic on an authorized test channel. The meter measures incoming audio from the chosen USB microphone.</p>
+<meter id="level" min="0" max="100" value="0"></meter>
+<div><button id="start">Test input</button><button id="stop" disabled>Stop test</button></div>
+<p id="status" role="status">Gateway inactive — RF transmit disabled.</p></section>
+<section><strong>Command Communications channel bridge</strong>
+<p>Connects to a channel using your existing logged-in desktop dispatch console. Both audio directions are OFF until explicitly enabled.</p>
+<label for="channel">Channel</label><select id="channel"><option value="">Loading...</option></select>
+<div><button id="connect">Connect channel</button><button id="disconnect" disabled>Disconnect</button></div>
+<p id="networkStatus" role="status">Not connected</p>
+<hr>
+<label><input type="checkbox" id="radioOutputConfirm"> I am authorized to retransmit this channel, and the radio setup is ready</label>
+<div><button id="rxEnable" disabled>Enable channel audio to USB radio output</button><button id="rxDisable" disabled>Disable channel output</button></div>
+<p><small>Network audio will not play to the radio unless you enable this output. Keep it disabled during initial computer-only testing.</small></p>
+<label for="ptt">UV-5R to Command Communications (manual test)</label>
+<div><button id="ptt" disabled>Hold to send radio input to channel (max 10s)</button></div>
+<p><small>Uses Command Communications channel floor control. Release the button to stop. Never use on unauthorized frequencies or channels.</small></p>
+</section>
+<section><strong>Computer audio output test</strong>
+<p>Send a 1-second quiet test tone to the selected output, to verify that Windows can address the USB sound card. WARNING: if the SR-629 is on, this tone might trigger a radio transmission. Switch the SR-629 off before testing.</p>
+<label><input type="checkbox" id="txConfirm"> SR-629 is OFF / radio cannot transmit</label>
+<div><button id="tone">Play 1-second output test</button></div>
+</section>
+<script src="gateway.js"></script></body></html>

@@ -17,6 +17,7 @@ const store = new Store({
 
 let mainWindow = null;
 let settingsWindow = null;
+let gatewayWindow = null;
 let tray = null;
 const activePttChannels = new Set();
 
@@ -301,6 +302,7 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+,',
           click: () => openSettings()
         },
+        { label: 'Radio Gateway Setup', click: () => openRadioGateway() },
         { type: 'separator' },
         {
           label: 'Always on Top',
@@ -395,6 +397,172 @@ function openSettings() {
     settingsWindow = null;
   });
 }
+
+function openRadioGateway() {
+  if (gatewayWindow && !gatewayWindow.isDestroyed()) {
+    gatewayWindow.focus();
+    return;
+  }
+  gatewayWindow = new BrowserWindow({
+    width: 780, height: 760, minWidth: 620, minHeight: 580,
+    parent: mainWindow || undefined,
+    title: 'Radio Gateway — CF-33 / SR-629',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+  gatewayWindow.loadFile('gateway.html');
+  gatewayWindow.on('closed', () => { stopGatewaySession().catch(()=>{}); gatewayWindow = null; });
+}
+
+ipcMain.handle('get-gateway-settings', () => ({
+  inputId: store.get('radioGateway.inputId') || '',
+  outputId: store.get('radioGateway.outputId') || '',
+  enabled: false
+}));
+
+ipcMain.handle('save-gateway-settings', (_event, devices) => {
+  if (!devices || typeof devices.inputId !== 'string' || typeof devices.outputId !== 'string' ||
+      !devices.inputId || !devices.outputId || devices.inputId === devices.outputId ||
+      devices.inputId.length > 1024 || devices.outputId.length > 1024) {
+    return { success: false, error: 'Select valid, separate USB audio input and output devices.' };
+  }
+  store.set('radioGateway.inputId', devices.inputId);
+  store.set('radioGateway.outputId', devices.outputId);
+  return { success: true, enabled: false };
+});
+
+
+const gatewaySession = { channel: null, tx: false, generation: 0 };
+function gatewayInvoke(script) {
+  if (!mainWindow || mainWindow.isDestroyed()) return Promise.reject(new Error('Dispatch console is not open'));
+  return mainWindow.webContents.executeJavaScript(script);
+}
+async function stopGatewaySession() {
+  const channel = gatewaySession.channel;
+  gatewaySession.channel = null;
+  gatewaySession.tx = false;
+  gatewaySession.generation++;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    try { await gatewayInvoke('window.__cf33Gateway && window.__cf33Gateway.close()'); } catch (_) {}
+  }
+  if (gatewayWindow && !gatewayWindow.isDestroyed()) gatewayWindow.webContents.send('gateway-status', {type: 'closed', channel});
+}
+ipcMain.handle('gateway-connect', async (event, channel) => {
+  if (!gatewayWindow || event.sender !== gatewayWindow.webContents || typeof channel !== 'string' || !/^[a-zA-Z0-9 _.-]{1,150}__[a-zA-Z0-9 _.-]{1,150}$/.test(channel)) {
+    return {success: false,error:'Invalid channel or gateway window'};
+  }
+  try {
+    await stopGatewaySession();
+    // This runs in the authenticated dispatch window, not the file:// setup window.
+    const result = await gatewayInvoke(`(async () => {
+      const channel = ${JSON.stringify(channel)};
+      const transport = window.__audioTransportManager;
+      const signal = window.__signalingManager;
+      if (!transport || !signal || !signal.authenticated) throw Error('Log into the Command Communications dispatch console first');
+      const allowed = await fetch('/api/channels/', {credentials:'include'}).then(r => r.ok ? r.json() : []);
+      if (!Array.isArray(allowed) || !allowed.some(c => (c.room_key || ((c.zone||'Default')+'__'+c.name)) === channel)) {
+        throw Error('Channel unavailable for this account');
+      }
+      if (window.__cf33Gateway) window.__cf33Gateway.close();
+      const url = new URL('/api/audio-ws',location.origin);
+      url.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      url.searchParams.set('channelId',channel);
+      url.searchParams.set('format','pcm');
+      const ws = new WebSocket(url.href);
+      ws.binaryType = 'arraybuffer';
+      const relay = (type,extra={}) => window.postMessage({source:'cf33-gateway-transport',type,...extra},location.origin);
+      const bridge = {
+        ws, channel, active:false,
+        close() {
+          if (this.active) { try {signal.signalPttEnd(channel)} catch (_){} }
+          this.active=false;
+          try {ws.close()} catch (_) {}
+          if(window.__cf33Gateway === this) window.__cf33Gateway=null;
+        },
+        async startTx() {
+          if (this.active) return;
+          if(ws.readyState!==WebSocket.OPEN) throw Error('Gateway websocket disconnected');
+          await signal.signalPttStart(channel);
+          if(ws.readyState!==WebSocket.OPEN) {
+            signal.signalPttEnd(channel);throw Error('Connection lost while requesting PTT');
+          }
+          this.active=true;
+        },
+        endTx() {
+          if(!this.active)return;
+          this.active=false;
+          signal.signalPttEnd(channel);
+        },
+        sendPcm(bytes,sequence) {
+          if(!this.active || ws.readyState!==WebSocket.OPEN)return false;
+          if(!Array.isArray(bytes)||bytes.length!==640)return false;
+          const ch=new TextEncoder().encode(channel), id=new TextEncoder().encode(signal.unitId||'GATEWAY');
+          if(ch.length>255||id.length>255)return false;
+          const out=new Uint8Array(1+4+1+ch.length+1+id.length+bytes.length);
+          const dv=new DataView(out.buffer);let p=0;
+          out[p++]=1;dv.setUint32(p,sequence>>>0,true);p+=4;
+          out[p++]=ch.length;out.set(ch,p);p+=ch.length;
+          out[p++]=id.length;out.set(id,p);p+=id.length;
+          out.set(bytes,p);ws.send(out.buffer);return true;
+        }
+      };
+      window.__cf33Gateway=bridge;
+      ws.onmessage=e=>{
+        if(!(e.data instanceof ArrayBuffer))return;
+        const input=new Uint8Array(e.data);
+        if(input.length>8&&input[0]===1)relay('audio',{bytes:Array.from(input)});
+      };
+      ws.onclose=()=>{bridge.endTx();relay('disconnected');};
+      ws.onerror=()=>relay('error');
+      await new Promise((resolve,reject)=>{
+        const timeout=setTimeout(()=>reject(Error('Gateway websocket connection timed out')),8000);
+        ws.addEventListener('open',()=>{clearTimeout(timeout);resolve()},{once:true});
+        ws.addEventListener('error',()=>{clearTimeout(timeout);reject(Error('Gateway websocket rejected'))},{once:true});
+      }).catch(err=>{bridge.close();throw err});
+      return {success:true};
+    })().catch(e=>({success:false,error:e.message}))`);
+    if (result.success) gatewaySession.channel=channel;
+    return result;
+  } catch (e) { return {success:false,error:e.message}; }
+});
+ipcMain.handle('gateway-disconnect', async (event) => {
+  if (!gatewayWindow || event.sender !== gatewayWindow.webContents) return {success:false};
+  await stopGatewaySession();return {success:true};
+});
+ipcMain.handle('gateway-ptt-start', async (event) => {
+  if (!gatewayWindow || event.sender !== gatewayWindow.webContents || !gatewaySession.channel || gatewaySession.tx) return {success:false,error:'Gateway not ready'};
+  const generation = gatewaySession.generation;
+  const result = await gatewayInvoke('window.__cf33Gateway.startTx().then(()=>({success:true})).catch(e=>({success:false,error:e.message}))').catch(e=>({success:false,error:e.message}));
+  if(generation !== gatewaySession.generation || !gatewaySession.channel) {
+    await gatewayInvoke('window.__cf33Gateway && window.__cf33Gateway.endTx()').catch(()=>{});
+    return {success:false,error:'PTT released before grant'};
+  }
+  gatewaySession.tx=!!result.success;
+  return result;
+});
+ipcMain.handle('gateway-ptt-end', async (event) => {
+  if (!gatewayWindow || event.sender !== gatewayWindow.webContents) return {success:false};
+  gatewaySession.tx=false;
+  gatewaySession.generation++;
+  await gatewayInvoke('window.__cf33Gateway && window.__cf33Gateway.endTx()').catch(()=>{});
+  return {success:true};
+});
+ipcMain.on('gateway-tx-pcm', (event,payload) => {
+  if (!gatewayWindow || event.sender !== gatewayWindow.webContents || !gatewaySession.tx ||
+      !payload || !Array.isArray(payload.bytes) || payload.bytes.length!==640 ||
+      !Number.isInteger(payload.sequence)) return;
+  gatewayInvoke(`window.__cf33Gateway && window.__cf33Gateway.sendPcm(${JSON.stringify(payload.bytes)},${payload.sequence})`).catch(()=>{});
+});
+ipcMain.on('gateway-transport-event', (event,payload)=>{
+  if (!mainWindow || event.sender!==mainWindow.webContents || !gatewayWindow || gatewayWindow.isDestroyed()) return;
+  if(!payload || !['audio','disconnected','error'].includes(payload.type))return;
+  if(payload.type==='audio' && (!Array.isArray(payload.bytes)||payload.bytes.length>8192))return;
+  if(payload.type==='disconnected'){gatewaySession.tx=false;gatewaySession.channel=null;}
+  gatewayWindow.webContents.send('gateway-transport-event',payload);
+});
 
 function createTray() {
   try {
