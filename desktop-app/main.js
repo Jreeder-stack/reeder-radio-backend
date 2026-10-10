@@ -17,6 +17,7 @@ const store = new Store({
 
 let mainWindow = null;
 let settingsWindow = null;
+let gatewayWindow = null;
 let tray = null;
 const activePttChannels = new Set();
 
@@ -301,6 +302,7 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+,',
           click: () => openSettings()
         },
+        { label: 'Radio Gateway Setup', click: () => openRadioGateway() },
         { type: 'separator' },
         {
           label: 'Always on Top',
@@ -395,6 +397,42 @@ function openSettings() {
     settingsWindow = null;
   });
 }
+
+function openRadioGateway() {
+  if (gatewayWindow && !gatewayWindow.isDestroyed()) {
+    gatewayWindow.focus();
+    return;
+  }
+  gatewayWindow = new BrowserWindow({
+    width: 780, height: 760, minWidth: 620, minHeight: 580,
+    parent: mainWindow || undefined,
+    title: 'Radio Gateway — CF-33 / SR-629',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+  gatewayWindow.loadFile('gateway.html');
+  gatewayWindow.on('closed', () => { gatewayWindow = null; });
+}
+
+ipcMain.handle('get-gateway-settings', () => ({
+  inputId: store.get('radioGateway.inputId') || '',
+  outputId: store.get('radioGateway.outputId') || '',
+  enabled: false
+}));
+
+ipcMain.handle('save-gateway-settings', (_event, devices) => {
+  if (!devices || typeof devices.inputId !== 'string' || typeof devices.outputId !== 'string' ||
+      !devices.inputId || !devices.outputId || devices.inputId === devices.outputId ||
+      devices.inputId.length > 1024 || devices.outputId.length > 1024) {
+    return { success: false, error: 'Select valid, separate USB audio input and output devices.' };
+  }
+  store.set('radioGateway.inputId', devices.inputId);
+  store.set('radioGateway.outputId', devices.outputId);
+  return { success: true, enabled: false };
+});
 
 function createTray() {
   try {
