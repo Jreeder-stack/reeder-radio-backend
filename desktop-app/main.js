@@ -435,7 +435,7 @@ ipcMain.handle('save-gateway-settings', (_event, devices) => {
 });
 
 
-const gatewaySession = { channel: null, tx: false };
+const gatewaySession = { channel: null, tx: false, generation: 0 };
 function gatewayInvoke(script) {
   if (!mainWindow || mainWindow.isDestroyed()) return Promise.reject(new Error('Dispatch console is not open'));
   return mainWindow.webContents.executeJavaScript(script);
@@ -444,6 +444,7 @@ async function stopGatewaySession() {
   const channel = gatewaySession.channel;
   gatewaySession.channel = null;
   gatewaySession.tx = false;
+  gatewaySession.generation++;
   if (mainWindow && !mainWindow.isDestroyed()) {
     try { await gatewayInvoke('window.__cf33Gateway && window.__cf33Gateway.close()'); } catch (_) {}
   }
@@ -533,13 +534,19 @@ ipcMain.handle('gateway-disconnect', async (event) => {
 });
 ipcMain.handle('gateway-ptt-start', async (event) => {
   if (!gatewayWindow || event.sender !== gatewayWindow.webContents || !gatewaySession.channel || gatewaySession.tx) return {success:false,error:'Gateway not ready'};
+  const generation = gatewaySession.generation;
   const result = await gatewayInvoke('window.__cf33Gateway.startTx().then(()=>({success:true})).catch(e=>({success:false,error:e.message}))').catch(e=>({success:false,error:e.message}));
+  if(generation !== gatewaySession.generation || !gatewaySession.channel) {
+    await gatewayInvoke('window.__cf33Gateway && window.__cf33Gateway.endTx()').catch(()=>{});
+    return {success:false,error:'PTT released before grant'};
+  }
   gatewaySession.tx=!!result.success;
   return result;
 });
 ipcMain.handle('gateway-ptt-end', async (event) => {
   if (!gatewayWindow || event.sender !== gatewayWindow.webContents) return {success:false};
   gatewaySession.tx=false;
+  gatewaySession.generation++;
   await gatewayInvoke('window.__cf33Gateway && window.__cf33Gateway.endTx()').catch(()=>{});
   return {success:true};
 });
