@@ -1,5 +1,6 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, Menu, Tray, dialog, shell } = require('electron');
 const path = require('path');
+const { fetchAccessibleChannels } = require('./gateway-channels.cjs');
 const Store = require('electron-store');
 const { autoUpdater } = require('electron-updater');
 
@@ -462,7 +463,7 @@ ipcMain.handle('gateway-connect', async (event, channel) => {
       const transport = window.__audioTransportManager;
       const signal = window.__signalingManager;
       if (!transport || !signal || !signal.authenticated) throw Error('Log into the Command Communications dispatch console first');
-      const allowed = await fetch('/api/channels/', {credentials:'include'}).then(r => r.ok ? r.json() : []);
+      const allowed = await (${fetchAccessibleChannels.toString()})();
       if (!Array.isArray(allowed) || !allowed.some(c => (c.room_key || ((c.zone||'Default')+'__'+c.name)) === channel)) {
         throw Error('Channel unavailable for this account');
       }
@@ -671,23 +672,8 @@ ipcMain.handle('save-settings', (event, settings) => {
 });
 
 ipcMain.handle('fetch-channels', async () => {
-  if (!mainWindow) return [];
-  try {
-    const result = await mainWindow.webContents.executeJavaScript(`
-      fetch('/api/channels/', { credentials: 'include' })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (Array.isArray(data) && data.length > 0) return data;
-          return fetch('/api/admin/channels', { credentials: 'include' })
-            .then(r2 => r2.ok ? r2.json() : [])
-            .catch(() => []);
-        })
-        .catch(() => [])
-    `);
-    return result || [];
-  } catch {
-    return [];
-  }
+  if (!mainWindow || mainWindow.isDestroyed()) throw new Error('Open and log into the dispatch console first.');
+  return gatewayInvoke(`(${fetchAccessibleChannels.toString()})()`);
 });
 
 app.whenReady().then(() => {

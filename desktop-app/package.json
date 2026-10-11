@@ -10,6 +10,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "test": "node --test gateway-channels.test.cjs",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",
     "dist:mac": "electron-builder --mac",
@@ -23,6 +24,7 @@
     },
     "files": [
       "main.js",
+      "gateway-channels.cjs",
       "preload.js",
       "settings.html",
       "settings.js",

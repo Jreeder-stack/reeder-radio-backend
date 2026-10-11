@@ -74,8 +74,15 @@ async function loadChannels() {
   try {
     const channels = await window.electronAPI.fetchChannels();
     allChannels = Array.isArray(channels) ? channels : [];
-  } catch {
+  } catch (error) {
     allChannels = [];
+    select.replaceChildren();
+    const option = document.createElement('option');
+    option.textContent = error.message || 'Unable to load channels';
+    option.value = '';
+    select.appendChild(option);
+    btn.disabled = true;
+    return;
   }
 
   updateChannelDropdown();

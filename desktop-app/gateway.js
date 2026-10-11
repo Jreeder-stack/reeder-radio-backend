@@ -71,10 +71,21 @@ let networkChannel = '', gatewayTx = false, radioOutput = null, playCursor = 0;
 let txProcessor = null, txBuffer = [], txSequence = 0, txTimeout = null;
 let stoppingTx = false, pttHeld = false;
 async function loadGatewayChannels() {
-  const list = await window.electronAPI.fetchGatewayChannels();
+  if (networkChannel) return;
   const select = $('channel'); select.replaceChildren();
-  const blank = document.createElement('option'); blank.value=''; blank.textContent='Choose a channel'; select.append(blank);
-  if (!Array.isArray(list)) return;
+  const loading = document.createElement('option'); loading.value=''; loading.textContent='Loading channels...'; select.append(loading);
+  let list;
+  try {
+    list = await window.electronAPI.fetchGatewayChannels();
+    if (!Array.isArray(list)) throw new Error('Invalid channel list received.');
+  } catch (error) {
+    loading.textContent='Unable to load channels';
+    $('networkStatus').textContent=error.message || 'Unable to load channels.';
+    throw error;
+  }
+  select.replaceChildren();
+  if (!networkChannel) $('networkStatus').textContent=list.length ? 'Select a channel, then connect.' : 'No channels are assigned to this account.';
+  const blank = document.createElement('option'); blank.value=''; blank.textContent=list.length ? 'Choose a channel' : 'No accessible channels'; select.append(blank);
   for(const ch of list) {
     const option=document.createElement('option');
     option.value=ch.room_key || ((ch.zone || 'Default')+'__'+ch.name);
@@ -90,7 +101,7 @@ async function connectChannel(){
   if(!result.success)throw new Error(result.error || 'Connection failed');
   networkChannel=$('channel').value;
   $('networkStatus').textContent='Connected to '+networkChannel+' (receive output disabled)';
-  $('connect').disabled=true;$('disconnect').disabled=false;
+  $('connect').disabled=true;$('disconnect').disabled=false;$('reloadChannels').disabled=true;
   $('rxEnable').disabled=false;$('ptt').disabled=false;$('channel').disabled=true;
 }
 async function disableOutput(){
@@ -195,7 +206,7 @@ async function disconnectChannel(){
   await stopPtt();await disableOutput();
   await window.electronAPI.disconnectGateway().catch(()=>{});
   networkChannel='';$('networkStatus').textContent='Not connected';
-  $('connect').disabled=false;$('disconnect').disabled=true;
+  $('connect').disabled=false;$('disconnect').disabled=true;$('reloadChannels').disabled=false;
   $('rxEnable').disabled=true;$('rxDisable').disabled=true;$('ptt').disabled=true;$('channel').disabled=false;
 }
 
@@ -211,6 +222,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
     $('status').textContent='USB device selection saved. RF transmission remains disabled.';
   });
   safe(loadGatewayChannels);
+  $('reloadChannels').onclick=()=>safe(loadGatewayChannels);
   $('connect').onclick=()=>safe(connectChannel);
   $('disconnect').onclick=()=>safe(disconnectChannel);
   $('rxEnable').onclick=()=>safe(enableOutput);
