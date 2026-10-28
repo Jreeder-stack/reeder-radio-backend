@@ -45,7 +45,8 @@ android {
         }
         create("hd760") {
             dimension = "device"
-            applicationIdSuffix = ".hd760"
+            // Reuse base app ID already registered in google-services.json.
+            // HD760 is on separate hardware; its deviceType remains specific.
             minSdk = 25
             targetSdk = 25
             versionCode = 1

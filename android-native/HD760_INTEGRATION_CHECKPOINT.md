@@ -17,7 +17,7 @@
 
 ## Implementation
 - Standalone flavor `hd760` with application ID
-  `com.reedersystems.commandcomms.hd760`, minSdk/targetSdk 25.
+  `com.reedersystems.commandcomms` (existing Google Services client), minSdk/targetSdk 25.
 - Shared authenticated radio registration, floor-control, Opus, UDP,
   signaling, and background audio retained.
 - Flavor-specific manifest registers confirmed OEM PTT broadcasts,
