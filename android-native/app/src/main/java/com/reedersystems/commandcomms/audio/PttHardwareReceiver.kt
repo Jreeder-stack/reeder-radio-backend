@@ -53,6 +53,13 @@ class PttHardwareReceiver : BroadcastReceiver() {
             "com.zello.ptt.up" -> if (BuildConfig.FLAVOR == "hd760") {
                 BackgroundAudioService.ACTION_PTT_UP
             } else null
+            // On HD760, the SOS broadcast is authoritative, not KEYCODE_STEM_3.
+            "com.zello.intent.buttonSOS.down" -> if (BuildConfig.FLAVOR == "hd760") {
+                BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            } else null
+            "com.zello.intent.buttonSOS.up" -> if (BuildConfig.FLAVOR == "hd760") {
+                BackgroundAudioService.ACTION_EMERGENCY_UP
+            } else null
             // Internal self-sent actions (legacy / foreground callers)
             ACTION_PTT_DOWN     -> BackgroundAudioService.ACTION_PTT_DOWN
             ACTION_PTT_UP       -> BackgroundAudioService.ACTION_PTT_UP
@@ -191,6 +198,9 @@ class PttHardwareReceiver : BroadcastReceiver() {
         if (pttAction == null) return
 
         Log.d(TAG, "PttHardwareReceiver: mapped action=$action -> svcAction=$pttAction")
+        if (BuildConfig.FLAVOR == "hd760") {
+            Log.i("CC-HD760", "HARDWARE action=" + action + " service=" + pttAction)
+        }
 
         // Every accepted DOWN starts a new physical press generation. The delayed
         // release watchdog from an older press is therefore prevented from cutting

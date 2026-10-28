@@ -20,6 +20,10 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.KeyAction
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
+import com.reedersystems.commandcomms.BuildConfig
+import com.reedersystems.commandcomms.hd760.Hd760Preferences
+import com.reedersystems.commandcomms.hd760.Hd760SideAction
+import com.reedersystems.commandcomms.hd760.Hd760KnobMapping
 import com.reedersystems.commandcomms.audio.radio.RadioState
 import com.reedersystems.commandcomms.audio.radio.SignalQuality
 import com.reedersystems.commandcomms.data.model.Channel
@@ -89,6 +93,14 @@ data class RadioUiState(
     val pageAlertMessage: String = "",
     val pageAlertSender: String = "DISPATCH",
     val signalQuality: SignalQuality = SignalQuality.NONE,
+    val hd760KnobPosition: Int? = null,
+    val hd760SlotEmpty: Boolean = false,
+    val hd760MenuOpen: Boolean = false,
+    val hd760MenuIndex: Int = 0,
+    val hd760ProgrammingSlot: Boolean = false,
+    val hd760ProgramChannelIndex: Int = 0,
+    val hd760SettingsRequested: Boolean = false,
+    val hd760MenuVersion: Int = 0,
 ) {
     val currentZone: Zone? get() = zones.getOrNull(currentZoneIndex)
     val currentChannel: Channel? get() = currentZone?.channels?.getOrNull(currentChannelIndex)
@@ -101,6 +113,23 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private val app get() = getApplication<CommandCommsApp>()
     private val scanPrefs = application.getSharedPreferences("ScanPrefs", android.content.Context.MODE_PRIVATE)
     private val KEY_SCAN_ACTIVE = "scan_active"
+    private val isHd760 = BuildConfig.FLAVOR == "hd760"
+    private val hd760Prefs = if (isHd760) Hd760Preferences(application) else null
+    private var hd760AnnouncementJob: Job? = null
+
+    val hd760MenuLabels: List<String>
+        get() = listOf(
+            "SCAN: " + if (_uiState.value.isScanning) "ON" else "OFF",
+            "SCAN CURRENT CHANNEL",
+            "STATUS: " + _uiState.value.currentStatus.uppercase(),
+            "SIDE 1 TAP: " + hd760Prefs?.buttonAction(1, false)?.label,
+            "SIDE 1 HOLD: " + hd760Prefs?.buttonAction(1, true)?.label,
+            "SIDE 2 TAP: " + hd760Prefs?.buttonAction(2, false)?.label,
+            "SIDE 2 HOLD: " + hd760Prefs?.buttonAction(2, true)?.label,
+            "PROGRAM KNOB SLOT",
+            "SETTINGS",
+            "CLOSE MENU"
+        )
 
     private val locationTracker by lazy {
         com.reedersystems.commandcomms.field.LocationTracker(getApplication(), app.signalingRepository)
@@ -201,6 +230,16 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         loadChannels()
         observeSignaling()
         collectKeyEvents()
+        if (isHd760) {
+            viewModelScope.launch {
+                app.hd760KnobPosition.collect { position ->
+                    if (position != null) {
+                        hd760Prefs?.savePosition(position)
+                        selectHd760Position(position)
+                    }
+                }
+            }
+        }
         registerPttFailureReceiver()
         registerPageReceiver()
         observeRadioState()
@@ -338,7 +377,9 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     ScanChannelItem(ch.id, ch.name, loadScanEnabled(ch.id))
                 }
                 val savedScanning = scanPrefs.getBoolean(KEY_SCAN_ACTIVE, false)
+                if (isHd760) zones.forEach { hd760Prefs?.initializeZone(it) }
                 _uiState.update { it.copy(zones = zones, isLoading = false, scanChannels = scanChannels, isScanning = savedScanning) }
+                if (isHd760) hd760Prefs?.lastPosition()?.let { selectHd760Position(it) }
                 connectSignaling()
             } else {
                 Log.e(STARTUP_TAG, "CHANNEL_FETCH_FAILED reason=${result.exceptionOrNull()?.message}")
@@ -558,6 +599,13 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     is KeyAction.StarLongPress -> toggleKeyLock()
                     is KeyAction.EmergencyDown -> onEmergencyDown()
                     is KeyAction.EmergencyUp -> onEmergencyUp()
+                    is KeyAction.Hd760Up -> if (isHd760) hd760Navigate(-1)
+                    is KeyAction.Hd760Down -> if (isHd760) hd760Navigate(1)
+                    is KeyAction.Hd760Left -> if (isHd760 && !_uiState.value.hd760MenuOpen) prevZone()
+                    is KeyAction.Hd760Right -> if (isHd760 && !_uiState.value.hd760MenuOpen) nextZone()
+                    is KeyAction.Hd760Select -> if (isHd760) hd760Select()
+                    is KeyAction.Hd760Back -> if (isHd760) hd760Back()
+                    is KeyAction.Hd760SideButton -> if (isHd760) hd760SidePressed(action.button, action.longPress)
                     else -> {
                         if (!locked) when (action) {
                             is KeyAction.DpadUp -> nextChannel()
@@ -974,6 +1022,129 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         ContextCompat.startForegroundService(getApplication<Application>(), intent)
     }
 
+    private fun selectHd760Position(position: Int, oldRoomKeyOverride: String? = null) {
+        if (!isHd760 || position !in 0 until Hd760KnobMapping.SLOT_COUNT) return
+        _uiState.update { it.copy(hd760KnobPosition = position, hd760ProgrammingSlot = false) }
+        val zone = _uiState.value.currentZone ?: return
+        val channelId = hd760Prefs?.channelIdForSlot(zone, position)
+        val index = zone.channels.indexOfFirst { it.id == channelId }
+        if (channelId == null || index < 0) {
+            _uiState.update { it.copy(hd760SlotEmpty = true) }
+            app.hd760SlotActive.value = false
+            val previous = oldRoomKeyOverride ?: _uiState.value.currentChannel?.roomKey
+            if (previous != null) app.signalingRepository.leaveChannel(previous)
+            app.serviceConnectionPrefs.channelId = -1
+            app.serviceConnectionPrefs.channelRoomKey = null
+            app.serviceConnectionPrefs.channelName = null
+            Log.w(TAG, "HD760_EMPTY_SLOT zone=" + zone.name + " position=" + position)
+            return
+        }
+        val oldRoomKey = oldRoomKeyOverride ?: _uiState.value.currentChannel?.roomKey
+        val wasActive = app.hd760SlotActive.value
+        _uiState.update { it.copy(currentChannelIndex = index, hd760SlotEmpty = false) }
+        app.hd760SlotActive.value = true
+        val newRoomKey = _uiState.value.currentChannel?.roomKey
+        if (oldRoomKey != newRoomKey || !wasActive) {
+            // Join the target immediately; coalesce spoken announcements.
+            onChannelChanged(if (wasActive) oldRoomKey else null)
+            if (!wasActive && newRoomKey != null &&
+                app.signalingRepository.connectionState.value == ConnectionState.AUTHENTICATED) {
+                app.signalingRepository.joinChannel(newRoomKey)
+            }
+            hd760AnnouncementJob?.cancel()
+            hd760AnnouncementJob = viewModelScope.launch {
+                delay(250L)
+                playChannelAnnouncement(channelId)
+            }
+        }
+    }
+
+    private fun hd760Navigate(direction: Int) {
+        val state = _uiState.value
+        if (!state.hd760MenuOpen) {
+            _uiState.update { it.copy(hd760MenuOpen = true, hd760MenuIndex = 0) }
+            return
+        }
+        if (state.hd760ProgrammingSlot) {
+            val count = (state.currentZone?.channels?.size ?: 0) + 1
+            _uiState.update {
+                it.copy(hd760ProgramChannelIndex =
+                    (it.hd760ProgramChannelIndex + direction + count) % count)
+            }
+        } else {
+            val count = hd760MenuLabels.size
+            _uiState.update { it.copy(hd760MenuIndex =
+                (it.hd760MenuIndex + direction + count) % count) }
+        }
+    }
+
+    private fun hd760Back() {
+        _uiState.update { state ->
+            when {
+                state.hd760ProgrammingSlot -> state.copy(hd760ProgrammingSlot = false)
+                state.hd760MenuOpen -> state.copy(hd760MenuOpen = false)
+                else -> state // BACK must never exit the active radio screen.
+            }
+        }
+    }
+
+    private fun hd760Select() {
+        val state = _uiState.value
+        if (!state.hd760MenuOpen) {
+            _uiState.update { it.copy(hd760MenuOpen = true, hd760MenuIndex = 0) }
+            return
+        }
+        if (state.hd760ProgrammingSlot) {
+            val zone = state.currentZone ?: return
+            val position = state.hd760KnobPosition ?: return
+            val channelId = zone.channels.getOrNull(state.hd760ProgramChannelIndex)?.id
+            hd760Prefs?.programSlot(zone, position, channelId)
+            _uiState.update { it.copy(hd760ProgrammingSlot = false) }
+            selectHd760Position(position)
+            return
+        }
+        when (state.hd760MenuIndex) {
+            0 -> toggleScanning()
+            1 -> state.currentChannel?.id?.let { toggleScanChannel(it) }
+            2 -> cycleStatus()
+            in 3..6 -> {
+                val button = if (state.hd760MenuIndex <= 4) 1 else 2
+                val longPress = state.hd760MenuIndex == 4 || state.hd760MenuIndex == 6
+                hd760Prefs?.cycleButtonAction(button, longPress)
+                _uiState.update { it.copy(hd760MenuVersion = it.hd760MenuVersion + 1) }
+            }
+            7 -> {
+                if (state.hd760KnobPosition != null && state.currentZone != null) {
+                    _uiState.update {
+                        it.copy(hd760ProgrammingSlot = true,
+                            hd760ProgramChannelIndex = it.currentChannelIndex)
+                    }
+                }
+            }
+            8 -> _uiState.update {
+                it.copy(hd760SettingsRequested = true, hd760MenuOpen = false)
+            }
+            9 -> _uiState.update { it.copy(hd760MenuOpen = false) }
+        }
+    }
+
+    fun consumeHd760SettingsRequest() {
+        _uiState.update { it.copy(hd760SettingsRequested = false) }
+    }
+
+    private fun hd760SidePressed(button: Int, longPress: Boolean) {
+        when (hd760Prefs?.buttonAction(button, longPress)) {
+            Hd760SideAction.NONE, null -> {}
+            Hd760SideAction.SCAN -> toggleScanning()
+            Hd760SideAction.SCAN_CHANNEL ->
+                _uiState.value.currentChannel?.id?.let { toggleScanChannel(it) }
+            Hd760SideAction.STATUS -> cycleStatus()
+            Hd760SideAction.MENU -> _uiState.update {
+                it.copy(hd760MenuOpen = !it.hd760MenuOpen, hd760ProgrammingSlot = false)
+            }
+        }
+    }
+
     fun nextZone() {
         val zones = _uiState.value.zones
         if (zones.isEmpty()) return
@@ -982,7 +1153,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(currentZoneIndex = next, currentChannelIndex = 0) }
         val newZone = _uiState.value.currentZone
         val newChannel = _uiState.value.currentChannel
-        onChannelChangedWithAnnouncement(oldRoomKey) {
+        if (isHd760) {
+            val position = hd760Prefs?.lastPosition()
+            if (position != null) selectHd760Position(position, oldRoomKey)
+            else onChannelChanged(oldRoomKey)
+        } else onChannelChangedWithAnnouncement(oldRoomKey) {
             playZoneThenChannelAnnouncement(newZone?.id, newChannel?.id)
         }
     }
@@ -995,7 +1170,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(currentZoneIndex = p, currentChannelIndex = 0) }
         val newZone = _uiState.value.currentZone
         val newChannel = _uiState.value.currentChannel
-        onChannelChangedWithAnnouncement(oldRoomKey) {
+        if (isHd760) {
+            val position = hd760Prefs?.lastPosition()
+            if (position != null) selectHd760Position(position, oldRoomKey)
+            else onChannelChanged(oldRoomKey)
+        } else onChannelChangedWithAnnouncement(oldRoomKey) {
             playZoneThenChannelAnnouncement(newZone?.id, newChannel?.id)
         }
     }

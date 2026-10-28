@@ -14,10 +14,13 @@ import android.os.Build
 import android.os.SystemClock
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.reedersystems.commandcomms.CommandCommsApp
+import com.reedersystems.commandcomms.BuildConfig
 import com.reedersystems.commandcomms.KeyAction
 import com.reedersystems.commandcomms.MainActivity
 import com.reedersystems.commandcomms.data.model.PttState
@@ -61,6 +64,9 @@ class BackgroundAudioService : Service() {
     private var dynamicPttReceiver: BroadcastReceiver? = null
 
     private var pttState = PttState.IDLE
+    // Only HD760 defers a held rapid re-press until previous TX cleanup completes.
+    @Volatile private var hd760PttHeld = false
+    @Volatile private var hd760DeferredPtt = false
 
     @Volatile private var pttUpWhileConnecting = false
     private var preCaptureSetupJob: Job? = null
@@ -348,9 +354,14 @@ class BackgroundAudioService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_PTT_DOWN -> {
+                if (BuildConfig.FLAVOR == "hd760") hd760PttHeld = true
                 handleRadioPttDown(intent.getBooleanExtra(EXTRA_NEEDS_SIGNALING, false))
             }
             ACTION_PTT_UP -> {
+                if (BuildConfig.FLAVOR == "hd760") {
+                    hd760PttHeld = false
+                    hd760DeferredPtt = false
+                }
                 handleRadioPttUp()
             }
             ACTION_EMERGENCY_DOWN -> handleEmergencyDown()
@@ -1130,6 +1141,11 @@ class BackgroundAudioService : Service() {
         // of the previous release. Without this reset a quick tap after a
         // prior release was being dropped, leaving the radio keyed open.
         lastPttUpTimeMs = 0L
+        if (BuildConfig.FLAVOR == "hd760" && !app.hd760SlotActive.value) {
+            Log.w("CC-HD760", "PTT_BLOCKED_UNPROGRAMMED_SLOT")
+            app.toneEngine.playDeniedBonk()
+            return
+        }
         val channelKey = servicePrefs.channelRoomKey
         val channelId = servicePrefs.channelId
         Log.d(TAG, """{"event":"RADIO_PTT_DOWN","pttState":"$pttState","signaling":$signaling,"channelKey":"${channelKey ?: "none"}","channelId":"$channelId"}""")
@@ -1152,7 +1168,10 @@ class BackgroundAudioService : Service() {
                 transitionPttState(PttState.IDLE)
                 cleaningUpSinceMs = 0L
             } else {
-                Log.d(TAG, "Radio PTT DOWN ignored: pttState=$pttState stuckMs=$stuckMs")
+                if (BuildConfig.FLAVOR == "hd760") {
+                    hd760DeferredPtt = true
+                    Log.i("CC-HD760", "PTT_DEFERRED_CLEANUP held=" + hd760PttHeld + " cleanupMs=" + stuckMs)
+                } else Log.d(TAG, "Radio PTT DOWN ignored: pttState=$pttState stuckMs=$stuckMs")
                 return
             }
         }
@@ -1395,6 +1414,18 @@ class BackgroundAudioService : Service() {
                 transitionPttState(PttState.IDLE)
                 cleaningUpSinceMs = 0L
                 Log.d(TAG, """{"event":"PTT_CLEANUP_COMPLETE","state":"IDLE","cleanupMs":$cleanupDurationMs}""")
+                if (BuildConfig.FLAVOR == "hd760" && hd760DeferredPtt) {
+                    hd760DeferredPtt = false
+                    if (hd760PttHeld) {
+                        // Keep service state changes serialized on the Android main thread.
+                        Handler(Looper.getMainLooper()).post {
+                            if (hd760PttHeld) {
+                                Log.i("CC-HD760", "PTT_RESUMED_AFTER_CLEANUP")
+                                handleRadioPttDown(true)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

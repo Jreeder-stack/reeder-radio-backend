@@ -92,6 +92,11 @@ class CommandCommsApp : Application() {
     var radioTransportConfig: RadioTransportConfig? = null
 
     val keyEventFlow = MutableSharedFlow<KeyAction>(extraBufferCapacity = 16)
+    // Absolute knob position is conflated to the latest keycode during rapid turns.
+    val hd760KnobPosition = MutableStateFlow<Int?>(null)
+    // Do not transmit on empty/unprogrammed slots.
+    val hd760SlotActive = MutableStateFlow(true)
+    @Volatile var hd760RadioScreenActive: Boolean = false
     val keyCapturingFlow = MutableStateFlow(false)
 
     override fun onCreate() {

@@ -6,6 +6,8 @@
             <intent-filter android:priority="999">
                 <action android:name="com.zello.ptt.down" />
                 <action android:name="com.zello.ptt.up" />
+                <action android:name="com.zello.intent.buttonSOS.down" />
+                <action android:name="com.zello.intent.buttonSOS.up" />
             </intent-filter>
         </receiver>
     </application>

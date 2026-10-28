@@ -37,6 +37,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
+import com.reedersystems.commandcomms.hd760.Hd760KnobMapping
+import com.reedersystems.commandcomms.hd760.Hd760Preferences
 import com.reedersystems.commandcomms.data.prefs.formatKeyLabel
 import com.reedersystems.commandcomms.data.prefs.isNonCapturableKey
 import com.reedersystems.commandcomms.navigation.AppNavigation
@@ -69,6 +71,7 @@ class MainActivity : ComponentActivity() {
     private val rootFocusRequester = FocusRequester()
     private var lastT320VolumeDetentAtMs = 0L
     private var lastT320VolumeDirection = 0
+    private val hd760Keys = setOf(4, 5, 19, 20, 21, 22, 23, 66, 265, 266, 267)
 
     private var pendingBatteryPromptAfterFullScreenIntent = false
     private var pendingOverlayPromptAfterBattery = false
@@ -472,6 +475,10 @@ class MainActivity : ComponentActivity() {
 
     private fun handlePreviewKeyEvent(event: androidx.compose.ui.input.key.KeyEvent): Boolean {
         val nativeEvent = event.nativeKeyEvent
+        // HD760 controls are routed once through dispatchKeyEvent, not Compose focus.
+        if (BuildConfig.FLAVOR == "hd760" &&
+            (nativeEvent.keyCode in hd760Keys ||
+                Hd760KnobMapping.positionForKeyCode(nativeEvent.keyCode) != null)) return false
         if (app.keyCapturingFlow.value) {
             if (event.type == KeyEventType.KeyDown) {
                 return handleKeyCaptureIfActive(nativeEvent.keyCode)
@@ -495,15 +502,47 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // Verified HD760 rotary input: Android codes 402 / 401, Linux scans 602 / 601.
-        // Act only on DOWN (one channel switch per detent).
-        if (BuildConfig.FLAVOR == "hd760" && (event.keyCode == 401 || event.keyCode == 402)) {
-            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-                val action = if (event.keyCode == 402) KeyAction.DpadUp else KeyAction.DpadDown
-                app.keyEventFlow.tryEmit(action)
-                Log.i("[HD760]", "CHANNEL_KNOB code=${event.keyCode} action=$action")
+        if (BuildConfig.FLAVOR == "hd760") {
+            val position = Hd760KnobMapping.positionForKeyCode(event.keyCode)
+            if (position != null && event.device?.name == "rotate-gpio-keys") {
+                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    Hd760Preferences(this).savePosition(position)
+                    app.hd760KnobPosition.value = position
+                    Log.i("CC-HD760", "ABSOLUTE_KNOB position=" + position + " keyCode=" + event.keyCode)
+                }
+                return true
             }
-            return true
+            // Never allow Android's green-call key to open the stock dialer.
+            if (event.keyCode == KeyEvent.KEYCODE_CALL) return true
+            // HD760 emits both an SOS KeyEvent and firmware broadcasts.
+            // Use the broadcast as the only emergency source, even with screen off.
+            if (event.keyCode == 267) return true
+            if (app.hd760RadioScreenActive) {
+                val nav = when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP -> KeyAction.Hd760Up
+                    KeyEvent.KEYCODE_DPAD_DOWN -> KeyAction.Hd760Down
+                    KeyEvent.KEYCODE_DPAD_LEFT -> KeyAction.Hd760Left
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> KeyAction.Hd760Right
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> KeyAction.Hd760Select
+                    KeyEvent.KEYCODE_BACK -> KeyAction.Hd760Back
+                    else -> null
+                }
+                if (nav != null) {
+                    if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                        app.keyEventFlow.tryEmit(nav)
+                    }
+                    return true
+                }
+                if (event.keyCode == 265 || event.keyCode == 266) {
+                    if (event.action == KeyEvent.ACTION_UP) {
+                        val durationMs = event.eventTime - event.downTime
+                        val button = if (event.keyCode == 265) 1 else 2
+                        app.keyEventFlow.tryEmit(KeyAction.Hd760SideButton(button, durationMs >= 600L))
+                        Log.i("CC-HD760", "SIDE button=" + button + " heldMs=" + durationMs)
+                    }
+                    return true
+                }
+            }
         }
         if (event.keyCode == KeyEvent.KEYCODE_CALL && app.kioskPrefs.kioskEnabled) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
