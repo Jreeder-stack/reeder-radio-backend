@@ -97,7 +97,8 @@ class MainActivity : ComponentActivity() {
 
         val micGranted = isGranted(Manifest.permission.RECORD_AUDIO)
         val locationGranted = isGranted(Manifest.permission.ACCESS_FINE_LOCATION)
-        val notifGranted = isGranted(Manifest.permission.POST_NOTIFICATIONS)
+        val notifGranted = !AndroidApiCompatibility.requiresNotificationRuntimePermission(Build.VERSION.SDK_INT) ||
+            isGranted(Manifest.permission.POST_NOTIFICATIONS)
 
         Log.d(TAG, "Multi-permission results: mic=$micGranted location=$locationGranted notif=$notifGranted")
 
@@ -266,10 +267,11 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
 
-        val notifGranted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.POST_NOTIFICATIONS
-        ) == PackageManager.PERMISSION_GRANTED
+        val notifGranted = !AndroidApiCompatibility.requiresNotificationRuntimePermission(Build.VERSION.SDK_INT) ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
 
         val bgLocationGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
                 ContextCompat.checkSelfPermission(
@@ -277,15 +279,17 @@ class MainActivity : ComponentActivity() {
                     Manifest.permission.ACCESS_BACKGROUND_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
 
-        val btConnectGranted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.BLUETOOTH_CONNECT
-        ) == PackageManager.PERMISSION_GRANTED
+        val btConnectGranted = !AndroidApiCompatibility.requiresBluetoothRuntimePermission(Build.VERSION.SDK_INT) ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
 
-        val btScanGranted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.BLUETOOTH_SCAN
-        ) == PackageManager.PERMISSION_GRANTED
+        val btScanGranted = !AndroidApiCompatibility.requiresBluetoothRuntimePermission(Build.VERSION.SDK_INT) ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_SCAN
+            ) == PackageManager.PERMISSION_GRANTED
 
         app.sessionPrefs.micPermissionGranted = micGranted
         app.sessionPrefs.locationPermissionGranted = locationGranted
@@ -295,9 +299,13 @@ class MainActivity : ComponentActivity() {
 
         if (!micGranted) permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
         if (!locationGranted) permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
-        if (!notifGranted) permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
-        if (!btConnectGranted) permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
-        if (!btScanGranted) permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
+        if (AndroidApiCompatibility.requiresNotificationRuntimePermission(Build.VERSION.SDK_INT) && !notifGranted) {
+            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        if (AndroidApiCompatibility.requiresBluetoothRuntimePermission(Build.VERSION.SDK_INT)) {
+            if (!btConnectGranted) permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
+            if (!btScanGranted) permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
+        }
 
         if (permissionsToRequest.isNotEmpty()) {
             requestMultiplePermissionsLauncher.launch(permissionsToRequest.toTypedArray())

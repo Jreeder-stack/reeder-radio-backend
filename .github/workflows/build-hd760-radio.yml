@@ -35,8 +35,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.6"
-      - name: Build HD760 debug APK
-        run: gradle -p android-native :app:assembleHd760Debug --stacktrace
+      - name: Test API compatibility and build HD760 debug APK
+        run: gradle -p android-native :app:testHd760DebugUnitTest :app:assembleHd760Debug --stacktrace
       - name: Upload HD760 debug APK
         uses: actions/upload-artifact@v4
         with:

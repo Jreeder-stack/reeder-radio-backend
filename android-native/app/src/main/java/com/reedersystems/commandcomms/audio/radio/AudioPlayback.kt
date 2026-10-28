@@ -4,9 +4,11 @@ import android.content.SharedPreferences
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.os.Build
 import android.media.audiofx.LoudnessEnhancer
 import android.util.Log
 import com.reedersystems.commandcomms.BuildConfig
+import com.reedersystems.commandcomms.AndroidApiCompatibility
 import com.reedersystems.commandcomms.data.prefs.SpeakerBoostPrefs
 import kotlinx.coroutines.*
 
@@ -267,10 +269,11 @@ class AudioPlayback(
         val playbackUsage = if (BuildConfig.RADIO_DEVICE_TYPE == "android_phone")
             AudioAttributes.USAGE_MEDIA else AudioAttributes.USAGE_VOICE_COMMUNICATION
 
-        Log.d(TAG, "AUDIOTRACK_INIT rate=$SAMPLE_RATE channelConfig=MONO format=PCM_16BIT minBufSize=$minBufferSize allocBufSize=$bufferSize perfMode=LOW_LATENCY usage=$playbackUsage ${RadioDiagLog.elapsedTag()}")
+        val useLowLatencyMode = AndroidApiCompatibility.supportsLowLatencyAudioTrackMode(Build.VERSION.SDK_INT)
+        Log.d(TAG, "AUDIOTRACK_INIT rate=$SAMPLE_RATE channelConfig=MONO format=PCM_16BIT minBufSize=$minBufferSize allocBufSize=$bufferSize perfMode=${if (useLowLatencyMode) "LOW_LATENCY" else "PLATFORM_DEFAULT"} usage=$playbackUsage ${RadioDiagLog.elapsedTag()}")
 
         val track = try {
-            AudioTrack.Builder()
+            val builder = AudioTrack.Builder()
                 .setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(playbackUsage)
@@ -286,8 +289,12 @@ class AudioPlayback(
                 )
                 .setBufferSizeInBytes(bufferSize)
                 .setTransferMode(AudioTrack.MODE_STREAM)
-                .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
-                .build()
+            // setPerformanceMode() was introduced in API 26. HD760 runs API 25.
+            // Preserve low latency on newer radios without crashing Android 7.
+            if (useLowLatencyMode) {
+                builder.setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
+            }
+            builder.build()
         } catch (e: Exception) {
             Log.e("[RadioError]", "AudioTrack.Builder threw: ${e::class.simpleName}: ${e.message} rate=$SAMPLE_RATE bufSize=$bufferSize", e)
             return
