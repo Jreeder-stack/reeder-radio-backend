@@ -21,6 +21,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.BuildConfig
+import com.reedersystems.commandcomms.hd760.Hd760PttPressState
 import com.reedersystems.commandcomms.KeyAction
 import com.reedersystems.commandcomms.MainActivity
 import com.reedersystems.commandcomms.data.model.PttState
@@ -65,8 +66,7 @@ class BackgroundAudioService : Service() {
 
     private var pttState = PttState.IDLE
     // Only HD760 defers a held rapid re-press until previous TX cleanup completes.
-    @Volatile private var hd760PttHeld = false
-    @Volatile private var hd760DeferredPtt = false
+    private val hd760Press = Hd760PttPressState()
 
     @Volatile private var pttUpWhileConnecting = false
     private var preCaptureSetupJob: Job? = null
@@ -354,13 +354,17 @@ class BackgroundAudioService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_PTT_DOWN -> {
-                if (BuildConfig.FLAVOR == "hd760") hd760PttHeld = true
+                if (BuildConfig.FLAVOR == "hd760") {
+                    hd760Press.down()
+                    radioEngine?.udpTransport?.suppressSameUnitDuringLocalTx = true
+                }
                 handleRadioPttDown(intent.getBooleanExtra(EXTRA_NEEDS_SIGNALING, false))
             }
             ACTION_PTT_UP -> {
                 if (BuildConfig.FLAVOR == "hd760") {
-                    hd760PttHeld = false
-                    hd760DeferredPtt = false
+                    hd760Press.up()
+                    radioEngine?.udpTransport?.suppressSameUnitDuringLocalTx = false
+                    app.toneEngine.stopTalkPermitTone()
                 }
                 handleRadioPttUp()
             }
@@ -725,7 +729,10 @@ class BackgroundAudioService : Service() {
         engine.udpTransport.channelIndex = servicePrefs.channelId
         engine.stateManager.activeChannelKey = servicePrefs.channelRoomKey
         engine.udpTransport.unitId = servicePrefs.unitId ?: app.sessionPrefs.unitId ?: ""
-        engine.udpTransport.deviceId = if (com.reedersystems.commandcomms.BuildConfig.RADIO_DEVICE_TYPE == "android_phone") app.signalingClient.deviceId.orEmpty() else ""
+        engine.udpTransport.deviceId = if (BuildConfig.FLAVOR == "hd760" ||
+            BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+            app.signalingClient.deviceId.orEmpty()
+        } else ""
 
         engine.udpTransport.onSocketRecreated = {
             Log.d(TAG, """{"event":"UDP_SOCKET_RECREATED_CALLBACK","newPort":${engine.udpTransport.localPort}}""")
@@ -984,6 +991,10 @@ class BackgroundAudioService : Service() {
                             transitionPttState(PttState.TRANSMITTING)
                             updateNotification("TRANSMITTING")
                             sendPttTxStarted()
+                            if (BuildConfig.FLAVOR == "hd760" && hd760Press.isHeld()) {
+                                // Permit sound is non-blocking and follows floor grant.
+                                app.toneEngine.playTalkPermitTone()
+                            }
                         } else {
                             Log.e(TAG, "Radio TX: promote/startTransmit failed after floor granted")
                             engine.stopPreCapture()
@@ -1169,8 +1180,8 @@ class BackgroundAudioService : Service() {
                 cleaningUpSinceMs = 0L
             } else {
                 if (BuildConfig.FLAVOR == "hd760") {
-                    hd760DeferredPtt = true
-                    Log.i("CC-HD760", "PTT_DEFERRED_CLEANUP held=" + hd760PttHeld + " cleanupMs=" + stuckMs)
+                    hd760Press.deferDuringCleanup()
+                    Log.i("CC-HD760", "PTT_DEFERRED_CLEANUP held=" + hd760Press.isHeld() + " cleanupMs=" + stuckMs)
                 } else Log.d(TAG, "Radio PTT DOWN ignored: pttState=$pttState stuckMs=$stuckMs")
                 return
             }
@@ -1245,6 +1256,56 @@ class BackgroundAudioService : Service() {
 
         applyRadioAudioRoute()
 
+        if (BuildConfig.FLAVOR == "hd760") {
+            // HD760: floor control must never wait for the permit tone or GPS.
+            // The physical edge is authoritative; never initiate TX after release.
+            scope.launch {
+                if (readySync == null &&
+                    app.signalingRepository.connectionState.value != ConnectionState.AUTHENTICATED) {
+                    val (ready, blockedReason) = evaluateReadinessForPtt(signaling, roomKey)
+                    if (!ready) {
+                        Log.w("CC-HD760", "PTT_BLOCKED reason=" + blockedReason)
+                        if (pttState == PttState.CONNECTING && hd760Press.isHeld()) {
+                            app.toneEngine.startDeniedTone()
+                            transitionPttState(PttState.IDLE)
+                            updateNotification("Radio — Standby")
+                            sendPttTxFailed()
+                        }
+                        return@launch
+                    }
+                }
+                if (pttState != PttState.CONNECTING || !hd760Press.isHeld() ||
+                    pttUpWhileConnecting || servicePrefs.channelRoomKey != roomKey) return@launch
+                if (signaling && !ensureBackgroundSignalingReady(servicePrefs.channelId)) {
+                    if (pttState == PttState.CONNECTING && hd760Press.isHeld()) {
+                        Log.w("CC-HD760", "PTT_BLOCKED signaling_not_ready")
+                        app.toneEngine.startDeniedTone()
+                        transitionPttState(PttState.IDLE)
+                        updateNotification("Radio — Standby")
+                        sendPttTxFailed()
+                    }
+                    return@launch
+                }
+                if (pttState != PttState.CONNECTING || !hd760Press.isHeld() ||
+                    pttUpWhileConnecting || servicePrefs.channelRoomKey != roomKey) return@launch
+                preCaptureSetupJob = scope.launch {
+                    val started = engine.startPreCapture()
+                    if (!started) Log.w("CC-HD760", "PTT_PRECAPTURE_UNAVAILABLE")
+                }
+                // Pre-capture is concurrent. The grant handler joins this job
+                // before promoting it to live transmission.
+                if (signaling) app.signalingRepository.transmitPre(roomKey)
+                if (pttState != PttState.CONNECTING || !hd760Press.isHeld() ||
+                    pttUpWhileConnecting || servicePrefs.channelRoomKey != roomKey) return@launch
+                Log.i("CC-HD760", "PTT_FLOOR_REQUEST_SENT roomKey=" + roomKey)
+                engine.floorControl?.requestFloor(roomKey)
+                startPendingFloorTimeout(roomKey)
+                // Optional PTT location reporting must not block floor control.
+                scope.launch { reportPttLocationBestEffort() }
+            }
+            return
+        }
+
         scope.launch {
             app.toneEngine.playTalkPermitToneAndAwait()
 
@@ -1306,30 +1367,7 @@ class BackgroundAudioService : Service() {
                 return@launch
             }
 
-            try {
-                @android.annotation.SuppressLint("MissingPermission")
-                val locTask = fusedLocationClient.lastLocation
-                val location = try {
-                    com.google.android.gms.tasks.Tasks.await(locTask, 500, java.util.concurrent.TimeUnit.MILLISECONDS)
-                } catch (e: Exception) {
-                    Log.w(TAG, """{"event":"PTT_GPS_FIX_TIMEOUT","error":"${e.message}"}""")
-                    null
-                }
-                if (location != null) {
-                    Log.d(TAG, """{"event":"PTT_GPS_FIX","accuracy":${location.accuracy}}""")
-                    app.signalingRepository.sendLocationUpdate(
-                        lat = location.latitude,
-                        lon = location.longitude,
-                        accuracy = location.accuracy,
-                        heading = if (location.hasBearing()) location.bearing else null,
-                        speed = if (location.hasSpeed()) location.speed else null
-                    )
-                } else {
-                    Log.d(TAG, """{"event":"PTT_GPS_FIX","status":"unavailable"}""")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, """{"event":"PTT_GPS_FIX_ERROR","error":"${e.message}"}""")
-            }
+            reportPttLocationBestEffort()
 
             if (signaling) {
                 app.signalingRepository.transmitPre(roomKey)
@@ -1354,6 +1392,34 @@ class BackgroundAudioService : Service() {
         }
     }
 
+    /** GPS stays best-effort and cannot hold up HD760 channel acquisition. */
+    private fun reportPttLocationBestEffort() {
+        try {
+        @android.annotation.SuppressLint("MissingPermission")
+        val locTask = fusedLocationClient.lastLocation
+        val location = try {
+            com.google.android.gms.tasks.Tasks.await(locTask, 500, java.util.concurrent.TimeUnit.MILLISECONDS)
+        } catch (e: Exception) {
+            Log.w(TAG, """{"event":"PTT_GPS_FIX_TIMEOUT","error":"${e.message}"}""")
+            null
+        }
+        if (location != null) {
+            Log.d(TAG, """{"event":"PTT_GPS_FIX","accuracy":${location.accuracy}}""")
+            app.signalingRepository.sendLocationUpdate(
+                lat = location.latitude,
+                lon = location.longitude,
+                accuracy = location.accuracy,
+                heading = if (location.hasBearing()) location.bearing else null,
+                speed = if (location.hasSpeed()) location.speed else null
+            )
+        } else {
+            Log.d(TAG, """{"event":"PTT_GPS_FIX","status":"unavailable"}""")
+        }
+    } catch (e: Exception) {
+        Log.w(TAG, """{"event":"PTT_GPS_FIX_ERROR","error":"${e.message}"}""")
+    }
+
+    }
     private fun handleRadioPttUp(bypassDebounce: Boolean = false) {
         val now = SystemClock.elapsedRealtime()
         if (!bypassDebounce && now - lastPttUpTimeMs < PTT_UP_DEBOUNCE_MS) {
@@ -1402,10 +1468,13 @@ class BackgroundAudioService : Service() {
                 radioEngine?.floorControl?.releaseFloor(roomKey)
                 Log.d(TAG, """{"event":"PTT_RELEASE_SENT","channelId":"$roomKey"}""")
                 sendPttTxEnded()
-                delay(80)
-                Log.d("[ToneEvent]", """{"tone":"end-of-tx","trigger":"ptt_up","state":"$pttState","signaling":$wasSignaling,"ts":${System.currentTimeMillis()}}""")
-                app.toneEngine.playEndOfTxTone()
-                Log.d(TAG, "Radio PTT UP: end-of-TX tone for roomKey $roomKey")
+                if (BuildConfig.FLAVOR != "hd760") {
+                    delay(80)
+                    Log.d("[ToneEvent]", """{"tone":"end-of-tx","trigger":"ptt_up","state":"$pttState","signaling":$wasSignaling,"ts":${System.currentTimeMillis()}}""")
+                    app.toneEngine.playEndOfTxTone()
+                    Log.d(TAG, "Radio PTT UP: end-of-TX tone for roomKey $roomKey")
+                }
+
             } catch (e: Exception) {
                 Log.e(TAG, """{"event":"PTT_CLEANUP_ERROR","error":"${e::class.simpleName}","message":"${e.message}"}""")
             } finally {
@@ -1414,12 +1483,11 @@ class BackgroundAudioService : Service() {
                 transitionPttState(PttState.IDLE)
                 cleaningUpSinceMs = 0L
                 Log.d(TAG, """{"event":"PTT_CLEANUP_COMPLETE","state":"IDLE","cleanupMs":$cleanupDurationMs}""")
-                if (BuildConfig.FLAVOR == "hd760" && hd760DeferredPtt) {
-                    hd760DeferredPtt = false
-                    if (hd760PttHeld) {
+                if (BuildConfig.FLAVOR == "hd760" && hd760Press.takeDeferredIfHeld()) {
+                    if (hd760Press.isHeld()) {
                         // Keep service state changes serialized on the Android main thread.
                         Handler(Looper.getMainLooper()).post {
-                            if (hd760PttHeld) {
+                            if (hd760Press.isHeld()) {
                                 Log.i("CC-HD760", "PTT_RESUMED_AFTER_CLEANUP")
                                 handleRadioPttDown(true)
                             }
@@ -1466,6 +1534,12 @@ class BackgroundAudioService : Service() {
         val state = app.signalingRepository.connectionState.value
         if (state == ConnectionState.AUTHENTICATED) {
             if (joinedSignalingChannelId != roomKey) {
+                if (BuildConfig.FLAVOR == "hd760") {
+                    // Let the async channel-join readiness path synchronize this
+                    // legitimate knob selection before making the PTT request.
+                    Log.i("CC-HD760", "PTT_AWAIT_CHANNEL_JOIN target=" + roomKey)
+                    return null
+                }
                 Log.w(TAG, "RADIO_READY_BLOCKED_REASON reason=channel_not_joined joined=$joinedSignalingChannelId target=$roomKey")
                 Log.d("[ToneEvent]", """{"tone":"denied_bonk","trigger":"ready_sync_blocked","reason":"channel_not_joined","ts":${System.currentTimeMillis()}}""")
                 playErrorToneDebounced()
