@@ -290,6 +290,8 @@ class CommandCommsApp : Application() {
     }
 
     private fun createNotificationChannels() {
+        // Android 7.1.2 (HD760) has no NotificationChannel support.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = getSystemService(NotificationManager::class.java)
 
         val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)

@@ -1,0 +1,46 @@
+name: Build HD760 Command Comms Radio APK
+
+on:
+  push:
+    branches:
+      - feature/hd760-hardware-diagnostics-20261028
+    paths:
+      - "android-native/**"
+      - ".github/workflows/build-hd760-radio.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-hd760:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install Android API 34
+        shell: bash
+        run: |
+          SDKROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMGR="$(find "$SDKROOT/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          test -n "$SDKMGR"
+          "$SDKMGR" "platforms;android-34" "build-tools;34.0.0"
+      - name: Set up Gradle 8.6
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.6"
+      - name: Build HD760 debug APK
+        run: gradle -p android-native :app:assembleHd760Debug --stacktrace
+      - name: Upload HD760 debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: command-comms-hd760-radio-debug
+          path: android-native/app/build/outputs/apk/hd760/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14

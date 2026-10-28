@@ -963,7 +963,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             putExtra(BackgroundAudioService.EXTRA_ROOM_KEY, channel.roomKey)
             putExtra(BackgroundAudioService.EXTRA_CHANNEL_NAME, channel.name)
         }
-        getApplication<Application>().startForegroundService(intent)
+        ContextCompat.startForegroundService(getApplication<Application>(), intent)
     }
 
     private fun sendServiceIntent(action: String) {
@@ -971,7 +971,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             this.action = action
             putExtra(BackgroundAudioService.EXTRA_NEEDS_SIGNALING, false)
         }
-        getApplication<Application>().startForegroundService(intent)
+        ContextCompat.startForegroundService(getApplication<Application>(), intent)
     }
 
     fun nextZone() {

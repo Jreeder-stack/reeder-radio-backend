@@ -43,6 +43,15 @@ android {
             versionNameSuffix = "-sd7"
             buildConfigField("String", "RADIO_DEVICE_TYPE", "\"siyata_sd7\"")
         }
+        create("hd760") {
+            dimension = "device"
+            applicationIdSuffix = ".hd760"
+            minSdk = 25
+            targetSdk = 25
+            versionCode = 1
+            versionNameSuffix = "-hd760"
+            buildConfigField("String", "RADIO_DEVICE_TYPE", "\"anysecu_hd760\"")
+        }
     }
 
     sourceSets {

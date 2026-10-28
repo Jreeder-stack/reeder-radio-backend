@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
 
@@ -19,7 +20,7 @@ class BootReceiver : BroadcastReceiver() {
         if (prefs.isValid()) {
             Log.d("[PTT-DIAG]", "BootReceiver: valid session found, starting service")
             val serviceIntent = Intent(context, BackgroundAudioService::class.java)
-            context.startForegroundService(serviceIntent)
+            ContextCompat.startForegroundService(context, serviceIntent)
         }
     }
 }

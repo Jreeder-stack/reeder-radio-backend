@@ -16,6 +16,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.InputDevice
 import android.view.KeyEvent
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -119,8 +120,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "APP_START")
-        setTurnScreenOn(true)
-        setShowWhenLocked(true)
+        applyLockScreenFlagsCompat()
         enableEdgeToEdge()
         hideSystemBars()
         requestAppPermissions()
@@ -203,6 +203,19 @@ class MainActivity : ComponentActivity() {
         if (hasFocus) hideSystemBars()
     }
 
+    private fun applyLockScreenFlagsCompat() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setTurnScreenOn(true)
+            setShowWhenLocked(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+            )
+        }
+    }
+
     private fun hideSystemBars() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
@@ -214,8 +227,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        setTurnScreenOn(true)
-        setShowWhenLocked(true)
+        applyLockScreenFlagsCompat()
         if (intent.getBooleanExtra(BackgroundAudioService.EXTRA_EMERGENCY_KEY_DOWN, false)) {
             Log.d(TAG, "onNewIntent: emergency DOWN — routing to ViewModel")
             app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
@@ -417,6 +429,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun isOurKey(keyCode: Int, @Suppress("UNUSED_PARAMETER") event: KeyEvent? = null): Boolean {
+        // Do not swallow D-pad UI focus during non-touch HD760 provisioning.
+        // Normal radio-mode arrow keys continue using the existing channel/zone actions.
+        if (BuildConfig.FLAVOR == "hd760" &&
+            app.radioTokenStore.getAssignedUnitId() == null &&
+            keyCode in arrayOf(KEY_DPAD_UP, KEY_DPAD_DOWN, KEY_DPAD_LEFT, KEY_DPAD_RIGHT, KEY_DPAD_CENTER)
+        ) return false
         if (isPttKey(keyCode)) return true
         if (isEmergencyKey(keyCode)) return true
         if (
@@ -469,6 +487,16 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Verified HD760 rotary input: Android codes 402 / 401, Linux scans 602 / 601.
+        // Act only on DOWN (one channel switch per detent).
+        if (BuildConfig.FLAVOR == "hd760" && (event.keyCode == 401 || event.keyCode == 402)) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                val action = if (event.keyCode == 402) KeyAction.DpadUp else KeyAction.DpadDown
+                app.keyEventFlow.tryEmit(action)
+                Log.i("[HD760]", "CHANNEL_KNOB code=${event.keyCode} action=$action")
+            }
+            return true
+        }
         if (event.keyCode == KeyEvent.KEYCODE_CALL && app.kioskPrefs.kioskEnabled) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 Log.d(TAG, "Kiosk: swallowing KEYCODE_CALL to block dialer launch")
