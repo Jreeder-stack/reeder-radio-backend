@@ -17,6 +17,13 @@ on:
       - '.github/workflows/ai-dispatcher-v3-ci.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: dispatcher-v3-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-v3:
     runs-on: ubuntu-latest
@@ -35,6 +42,8 @@ jobs:
           node --check src/services/aiDispatcherSignaling.js
           node --check src/dispatcher-v3/liveRuntime.js
           node --check src/dispatcher-v3/intentPlanner.js
+          node --check src/dispatcher-v3/__tests__/auditBaseline.test.js
+          node --check src/dispatcher-v3/__tests__/helpers/auditRuntimeHarness.js
       - name: Verify legacy dispatcher engine is absent
         run: |
           test ! -e src/services/commandMatcher.js
@@ -46,4 +55,19 @@ jobs:
           test ! -e src/services/strictCenterIsolationBootstrap.js
           test ! -e src/services/aiDispatcherV3RuntimeInstaller.js
           ! grep -R "AI_DISPATCHER_RUNTIME.*legacy" src package.json
-      - run: npm run test:v3
+      - name: V3 suite and known-defect baseline (not repair acceptance)
+        env:
+          DISPATCHER_AUDIT_MODE: baseline
+          DISPATCHER_AUDIT_REPORT: reports/dispatcher-audit-baseline.json
+        run: |
+          mkdir -p reports
+          node --version > reports/runtime.txt
+          npm run test:v3 -- --reporter=default --reporter=json --outputFile=reports/v3-tests.json
+      - name: Preserve test and baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dispatcher-v3-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 14
