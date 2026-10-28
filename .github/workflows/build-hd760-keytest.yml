@@ -24,10 +24,13 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install Android API 34
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+      - name: Ensure Android API 34 (runner SDK)
+        shell: bash
+        run: |
+          SDKROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMGR="$(find "$SDKROOT/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          test -n "$SDKMGR"
+          "$SDKMGR" "platforms;android-34" "build-tools;34.0.0"
       - name: Set up Gradle 8.6
         uses: gradle/actions/setup-gradle@v4
         with:
