@@ -1,0 +1,1864 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "workItem": "03-01",
+  "scopedCodingComplete": true,
+  "scopedMockedValidationPassed": true,
+  "releaseAccepted": false,
+  "implementationCommit": "db111bb7888e0dcb15e1715b4259568cae6b8910",
+  "implementationTree": "a5e8f40701bc8207867161794104afbf0b1fdd7e",
+  "pullRequest": 163,
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "testSource": {
+    "kind": "local working tree, subsequently committed unchanged",
+    "reportedBaseRevision": "239750bcf02478a817108c5fdc034f39534e4684",
+    "completeTreeVerifiedAgainstImplementationCommit": true,
+    "changedFileBlobs": {
+      "src/dispatcher-v3/__tests__/auditBaseline.test.js": "18bd79e8c03e4025809079e15ed372c3f354f8a4",
+      "src/dispatcher-v3/__tests__/deterministicIntent.test.js": "7688ffe57b69cbf8afc6c1d7a2d262215e62acae",
+      "src/dispatcher-v3/__tests__/emergencyReplyContainment.test.js": "91b753e88d7cf5674430fea1aac3f30db3effae1",
+      "src/dispatcher-v3/__tests__/inRouteSpeech.test.js": "d2edea7ea794170b75691539fc53afe003793b72",
+      "src/dispatcher-v3/__tests__/phase4Pipeline.test.js": "4f9c9906c2090fc36bc498b350a8f0e07a0de03b",
+      "src/dispatcher-v3/__tests__/phraseMatchContainment.test.js": "f7de73930d7908d4853e3672cc6da0896dee6929",
+      "src/dispatcher-v3/__tests__/startCallIntent.test.js": "f12f7f302c5df7d10c031f7f43c16e999a2f83c7",
+      "src/dispatcher-v3/conversationGate.js": "f91d8be9c76bb306fa212436c743eba8d39a0419",
+      "src/dispatcher-v3/deterministicIntent.js": "bb2a45d7c8454e8108e7da222d9c2616bdcc62e2",
+      "src/dispatcher-v3/intentPlanner.js": "7ff0dd69d1cc91686b737e58ebf170ca66d6c108",
+      "src/dispatcher-v3/liveRuntime.js": "fef57aaf52e03058681943cd834eafba61099cea"
+    }
+  },
+  "environment": {
+    "runtime": "v20.20.2",
+    "platform": "linux/x64",
+    "generatedAt": "2026-10-29T13:43:32.621Z",
+    "lockfileGitBlob": "95e68c9e83f40b1a085d6fc0da03082e17f6a2cc"
+  },
+  "command": "DISPATCHER_AUDIT_MODE=baseline DISPATCHER_AUDIT_REPORT=/tmp/dispatcher-03-01-audit-final.json npm run test:v3 -- --silent --reporter=json --outputFile=/tmp/dispatcher-03-01-full-final.json",
+  "fullSuite": {
+    "files": 32,
+    "tests": 319,
+    "passed": 318,
+    "failed": 1,
+    "success": false,
+    "processExitCode": 1,
+    "remainingExistingFailures": [
+      {
+        "path": "src/dispatcher-v3/__tests__/phase4Pipeline.test.js",
+        "test": "Dispatcher V3 phase 4 pipeline does not read the generated call number over the air after creating a call",
+        "failure": "AssertionError: expected 'INDIANA-1, unable to verify that chan\u2026' to be 'Ten-four, eleven fifty-nine hours.' // Object.is equality"
+      }
+    ],
+    "reportSha256": "303b2a4e89284f0b6ff5f1951931a6384d770dd310f3528b5f8fd4e612b34da2",
+    "filesAndCases": [
+      {
+        "path": "src/dispatcher-v3/__tests__/actionContracts.test.js",
+        "status": "passed",
+        "tests": 9,
+        "passed": 9,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 action contracts publishes the first supported action set",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts normalizes and freezes a valid status action",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts rejects unknown actions",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts rejects unsupported statuses",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts requires immutable unit IDs for executable unit actions",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts allows zero resolved units for an unassigned call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts deduplicates resolved unit IDs for call creation",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts enforces action scopes before execution",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts requires disposition to close a call",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/actionExecutor.test.js",
+        "status": "passed",
+        "tests": 9,
+        "passed": 9,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3ActionExecutor validates before invoking a handler",
+            "status": "passed"
+          },
+          {
+            "name": "V3ActionExecutor preserves correlation IDs and normalizes success",
+            "status": "passed"
+          },
+          {
+            "name": "V3ActionExecutor returns typed failure when a handler is missing",
+            "status": "passed"
+          },
+          {
+            "name": "default V3 handlers uses a resolved callsign and verifies status from an authoritative follow-up read",
+            "status": "passed"
+          },
+          {
+            "name": "default V3 handlers refuses callsign execution if the second resolution maps elsewhere",
+            "status": "passed"
+          },
+          {
+            "name": "default V3 handlers fails if follow-up CAD state does not match the requested status",
+            "status": "passed"
+          },
+          {
+            "name": "default V3 handlers executes a dedicated backup request and verifies the CAD note when a call exists",
+            "status": "passed"
+          },
+          {
+            "name": "default V3 handlers never allows a dispatcher action to activate the physical emergency system",
+            "status": "passed"
+          },
+          {
+            "name": "default V3 handlers fails closed when Command Comms operational alerts are unavailable",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/auditBaseline.test.js",
+        "status": "passed",
+        "tests": 26,
+        "passed": 26,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R01: stale dialogue crosses speakers and loses attribution in the model payload",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R02: later transcription overtakes earlier speech",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R03: an answer queued while valid executes after the disposition expires",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R04: a transcription finishing after stop can still mutate CAD",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R05: cancellation is appended to an old incident after reassignment",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R06: negations and a question reach semantics without contrary writes",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R07: semantic planning preserves both commands and the clean address",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R08: successful GET_CALL and SEARCH_CALLS results receive only copy",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R09: the CAD deadline ends at headers, leaving the response body unbounded",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R10: a TTS stall blocks the next request until it is five minutes old",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R11: the reply window expires before the question is delivered",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R12: resolution clarification loses the structured original task",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R13: a failed incident-note write is labeled successful and hidden in speech",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R14: a conflicting call reference selects the Walmart alarm",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P01: ordinary consecutive statuses execute and are verified",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P02: another unit can progress while A1 transcription is pending",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P03: duplicate PTT end does not duplicate a command",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P04: wrong-channel and self-generated input are rejected",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P05: identical callsigns in separate centers use separate identities and CAD requests",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P06: unaddressed routine speech does not cause a CAD write",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P07: read-only scopes cannot execute a status write",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P08: ordinary CAD failures are not announced as successful status changes",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P09: a successful HTTP response still requires status read-back verification",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P10: immediate clarification follow-ups are accepted before expiry",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P11: actual PTT resumes after an ordinary stop/start with no in-flight work",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P12: five units complete independent routine requests through PTT",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/cadGateway.test.js",
+        "status": "passed",
+        "tests": 7,
+        "passed": 7,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "CommandLinkGateway injects auth, center, runtime and correlation context on every request",
+            "status": "passed"
+          },
+          {
+            "name": "CommandLinkGateway serializes object bodies and does not retry unsafe writes",
+            "status": "passed"
+          },
+          {
+            "name": "CommandLinkGateway retries a transient safe read once",
+            "status": "passed"
+          },
+          {
+            "name": "CommandLinkGateway normalizes CAD HTTP errors without reporting success",
+            "status": "passed"
+          },
+          {
+            "name": "CommandLinkGateway rejects HTTP 200 application-level failures so V3 cannot speak false success",
+            "status": "passed"
+          },
+          {
+            "name": "CommandLinkGateway rejects invalid non-object JSON success responses",
+            "status": "passed"
+          },
+          {
+            "name": "CommandLinkGateway rejects paths that are not absolute API paths",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/cadParityActions.test.js",
+        "status": "passed",
+        "tests": 6,
+        "passed": 6,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 CAD parity actions allows creating a call with no assigned units",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 CAD parity actions materializes natural call and unit references for primary changes",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 CAD parity actions verifies structured call updates through a fresh parity read",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 CAD parity actions rejects an update acknowledgment when read-back does not match",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 CAD parity actions uses explicit unassign and verifies the unit is absent afterward",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 CAD parity actions sends assignment time corrections and verifies the stored timestamp",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/clearLifecycle.test.js",
+        "status": "passed",
+        "tests": 8,
+        "passed": 8,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 clear lifecycle treats clear-of-call speech as CLEAR_UNIT: I'm clear of the call I was on",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle treats clear-of-call speech as CLEAR_UNIT: clear me from the call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle treats clear-of-call speech as CLEAR_UNIT: show me clear of my call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle requires a disposition before mutating the only active assignment",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle fails safe and asks for a disposition when assignment details are unavailable",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle disposes the call after the only active unit supplies a disposition",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle clears only the unit when other active assignments remain and verifies the target is absent",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle rejects a clear acknowledgment when CAD still shows the unit assigned",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/contextResolution.test.js",
+        "status": "passed",
+        "tests": 5,
+        "passed": 5,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 contextual materialization resolves self unit language to the transmitting callsign: me",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 contextual materialization resolves self unit language to the transmitting callsign: myself",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 contextual materialization resolves self unit language to the transmitting callsign: my unit",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 contextual materialization resolves self unit language to the transmitting callsign: the transmitting unit",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 contextual materialization does not rewrite a specifically named unit to the speaker",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/conversationGate.test.js",
+        "status": "passed",
+        "tests": 13,
+        "passed": 13,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3ConversationGate ignores unrelated channel traffic",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate accepts and strips an addressed transmission",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate does not trigger when a wake word is only mentioned later in unit traffic",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate uses the signaling identity for a correctly transcribed hail",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate still recognizes a hail when STT drops the unit number",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate normalizes common spoken-number STT variants against the signaling identity",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate treats a wake-word-only transmission as a hail from the known transmitting unit",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate does not mistake an actual command for a hail",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate accepts a timed follow-up without another wake word",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate explicit wake word cancels a stale clarification and starts a fresh request",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate cancels a radio-hail follow-up when the unit addresses another callsign",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate does not hijack a bare hail to another same-family unit",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate always passes protected emergency traffic",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/createCallCityInference.test.js",
+        "status": "passed",
+        "tests": 3,
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 create-call locality fallback extracts a city from a comma-delimited spoken address",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 create-call locality fallback extracts a city from a natural spoken address without a comma",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 create-call locality fallback does not invent a city when none was supplied",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/createCallHandler.test.js",
+        "status": "passed",
+        "tests": 5,
+        "passed": 5,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "createResolvedCallHandler resolves a named place, creates the CAD call, and verifies the stored call",
+            "status": "passed"
+          },
+          {
+            "name": "createResolvedCallHandler uses MAI municipality when the Master Address Index provides it",
+            "status": "passed"
+          },
+          {
+            "name": "createResolvedCallHandler verifies an unassigned pending call",
+            "status": "passed"
+          },
+          {
+            "name": "createResolvedCallHandler fails closed when Command Link cannot verify the location",
+            "status": "passed"
+          },
+          {
+            "name": "createResolvedCallHandler rejects a create acknowledgment when the follow-up call is wrong",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/deterministicIntent.test.js",
+        "status": "passed",
+        "tests": 26,
+        "passed": 26,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans radio check locally as RADIO_CHECK",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans what time is it locally as TIME_CHECK",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans what call am I on locally as GET_CURRENT_CALL",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans what calls are on the screen locally as LIST_ACTIVE_CALLS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans what's my status locally as STATUS_CHECK",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans show me en route locally as SET_UNIT_STATUS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans on scene locally as SET_UNIT_STATUS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans show me arriving locally as SET_UNIT_STATUS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans available locally as SET_UNIT_STATUS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans out of service locally as SET_UNIT_STATUS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans off duty locally as SET_UNIT_STATUS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands strips the authenticated speaker callsign before parsing: INDIANA-1, radio check",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands strips the authenticated speaker callsign before parsing: Indiana 1 radio check",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands strips the authenticated speaker callsign before parsing: Indiana one, radio check",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands strips the authenticated speaker callsign before parsing: Indiana won radio check",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands strips the self callsign for other routine commands too",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands does not strip another unit callsign",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands makes an obvious backup request deterministic and urgent",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands leaves complex multi-field language for Azure OpenAI",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands preserves semantically planned named-call assignment and status actions",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands passes named-call context to semantics instead of weak substring selection",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans urgent field traffic as a non-emergency field incident: shots fired",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans urgent field traffic as a non-emergency field incident: I have one running",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands preserves a rich first-person field report through semantic interpretation",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands uses a known disposition for a pending clear but leaves unrelated traffic for semantic planning",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands does not call Azure OpenAI for deterministic commands",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/deterministicIntentSafety.test.js",
+        "status": "passed",
+        "tests": 12,
+        "passed": 12,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 deterministic intent safety recognizes extended en-route phrasing: go en route to the call on my screen",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety recognizes extended en-route phrasing: show me en route to the call on my screen",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety recognizes extended en-route phrasing: put me en route to my current call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety recognizes extended en-route phrasing: mark me en route to the call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety targets the named roster unit instead of the speaker: put Indiana 2 on duty",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety targets the named roster unit instead of the speaker: show Indiana-2 on duty",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety targets the named roster unit instead of the speaker: mark Security 12 out of service",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety targets the named roster unit instead of the speaker: put Security-12 available",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety routes zone-change requests to the zone capability: change me to zone 2",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety routes zone-change requests to the zone capability: switch me to zone 2",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety routes zone-change requests to the zone capability: change zone to north",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety routes zone-change requests to the zone capability: put me on zone 3",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/diagnostics.test.js",
+        "status": "passed",
+        "tests": 4,
+        "passed": 4,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3DiagnosticsJournal redacts sensitive fields and keeps bounded history",
+            "status": "passed"
+          },
+          {
+            "name": "V3DiagnosticsJournal filters by runtime and correlation ID",
+            "status": "passed"
+          },
+          {
+            "name": "V3ActionExecutor diagnostics records received, validated, and completed stages with one correlation ID",
+            "status": "passed"
+          },
+          {
+            "name": "V3ActionExecutor diagnostics records validation failures without invoking a handler",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/emergencyBehavior.test.js",
+        "status": "passed",
+        "tests": 8,
+        "passed": 8,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy routes urgent voice language into CAD field handling, never emergency activation: shots fired",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy routes urgent voice language into CAD field handling, never emergency activation: I have one at gun point",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy routes urgent voice language into CAD field handling, never emergency activation: I have him at taser point",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy routes urgent voice language into CAD field handling, never emergency activation: I'm fighting with him",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy routes urgent voice language into CAD field handling, never emergency activation: 10-33 emergency traffic",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy routes urgent voice language into CAD field handling, never emergency activation: officer down",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy rejects DECLARE_EMERGENCY even if a planner or caller attempts it",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 MDC alert tone builds two seconds of 16 kHz signed PCM matching the existing Tone B duration",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/emergencyReplyContainment.test.js",
+        "status": "passed",
+        "tests": 22,
+        "passed": 22,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: not all good",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: am I okay?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: I said all good yesterday",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: all good except I cannot move",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: Central, not all good",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: Central, \"I am okay\"",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: Control, I am okay",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: Central, B2, I am okay",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency still accepts an exact safe response from the activated unit: Central, A1, I am okay",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency still accepts an exact safe response from the activated unit: 10-4",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not let another authenticated unit supply the safe reply for A1",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency preserves the next hardware status-check timer after an unsafe reply",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency preserves conservative distress escalation when a safe phrase is followed by a request for help",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not assign a responder from a substring or an unrecognized prefix: I am not responding",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not assign a responder from a substring or an unrecognized prefix: is B2 responding?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not assign a responder from a substring or an unrecognized prefix: responding tomorrow",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not assign a responder from a substring or an unrecognized prefix: Central, I am not responding",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not assign a responder from a substring or an unrecognized prefix: Central, B2, responding after I finish this call",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not assign a responder from a substring or an unrecognized prefix: Control, I am responding",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency still assigns an exact affirmative responder to the active hardware incident",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency preserves the explicit hardware/manual clear entry point",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency still prevents urgent voice alone from activating hardware emergency state",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/fieldIncidentCoordinator.test.js",
+        "status": "passed",
+        "tests": 4,
+        "passed": 4,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3FieldIncidentCoordinator acknowledges shots fired, creates CAD activity without emergency activation, and asks for location",
+            "status": "passed"
+          },
+          {
+            "name": "V3FieldIncidentCoordinator creates ASSIST - OFFICER from an unassigned fleeing-subject report and preserves the statement in notes",
+            "status": "passed"
+          },
+          {
+            "name": "V3FieldIncidentCoordinator separates verified address and municipality, records cross streets, then asks for a description",
+            "status": "passed"
+          },
+          {
+            "name": "V3FieldIncidentCoordinator captures changed operational direction without repeating the unanswered location question",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/foundation.test.js",
+        "status": "passed",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "dispatcher-v3 foundation builds and freezes a valid runtime context",
+            "status": "passed"
+          },
+          {
+            "name": "dispatcher-v3 foundation fails closed when a dispatch center is missing",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/inRouteSpeech.test.js",
+        "status": "passed",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 in-route speech normalization preserves in-route wording for semantic interpretation of a self-initiated call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 in-route speech normalization normalizes a simple in-route status request too",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/liveRuntimeFloor.test.js",
+        "status": "passed",
+        "tests": 3,
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3LiveDispatcher outbound floor control acquires the AI floor, transmits, and releases it",
+            "status": "passed"
+          },
+          {
+            "name": "V3LiveDispatcher outbound floor control always releases the floor when audio injection fails",
+            "status": "passed"
+          },
+          {
+            "name": "V3LiveDispatcher outbound floor control does not transmit when the radio floor remains busy",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/mutationVerification.test.js",
+        "status": "passed",
+        "tests": 8,
+        "passed": 8,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Step 5 CAD mutation read-back verifies unit zone from status catalog after the write",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back rejects a zone write when follow-up state is stale",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back verifies a newly assigned unit is present on the call",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back rejects assignment success when the unit never appears on the call",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back verifies primary unit after the primary write",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back verifies call notes after legacy note creation",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back verifies terminal status and disposition after closing a call",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back rejects call closure when CAD still reports an active call",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/operationalAlertService.test.js",
+        "status": "passed",
+        "tests": 4,
+        "passed": 4,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3OperationalAlertService activates emergency state only on the selected channel and suppresses global fan-out",
+            "status": "passed"
+          },
+          {
+            "name": "V3OperationalAlertService rejects a second unit trying to own the same channel emergency state",
+            "status": "passed"
+          },
+          {
+            "name": "V3OperationalAlertService sends backup once to the selected channel with center metadata",
+            "status": "passed"
+          },
+          {
+            "name": "V3OperationalAlertService fails closed if signaling is not initialized",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/operationalContext.test.js",
+        "status": "passed",
+        "tests": 15,
+        "passed": 15,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 operational context includes the center-scoped unit roster and current statuses",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context preserves caller and description context for natural references",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context resolves an implicit call when exactly one active call exists",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context refuses to guess when more than one active call exists",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context prefers the transmitting unit current call when the action is current-call scoped",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context treats explicit self reference as the current call even with other calls active: my call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context treats explicit self reference as the current call even with other calls active: my current call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context treats explicit self reference as the current call even with other calls active: the call I'm on",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context treats explicit self reference as the current call even with other calls active: this call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context does not guess which call \"that call\" means when multiple calls are active",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context resolves a natural call reference by nature or location",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context resolves Smith's call using caller context",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context requires clarification when the descriptive reference matches two calls equally",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context materializes attach-me against the only active call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context materializes 'put 12 on the call I'm on' against the speaker's current call",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/phase3Regression.test.js",
+        "status": "passed",
+        "tests": 8,
+        "passed": 8,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix fails closed when dispatch center is missing",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix fails closed when channel context is missing",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix keeps simultaneous runtime contexts isolated",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix blocks an action when its required scope is missing",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix rejects malformed AI/planner output before any handler runs",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix propagates handler failures without reporting action success",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix keeps diagnostic traces separated by runtime and correlation ID",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix refuses a malformed successful unit-resolution response",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/phase4Pipeline.test.js",
+        "status": "failed",
+        "tests": 8,
+        "passed": 7,
+        "failed": 1,
+        "cases": [
+          {
+            "name": "Dispatcher V3 phase 4 pipeline buffers a PTT transmission and sends PCM to STT",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline recognizes a plain radio hail without sending it to the action planner",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline bypasses the LLM for protected urgent traffic without activating emergency mode",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline bypasses the LLM and CAD for routine radio checks",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline materializes spoken unit references into immutable UUIDs before execution",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline does not falsely promise that backup is en route",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline does not read the generated call number over the air after creating a call",
+            "status": "failed"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline unwraps Command Link payloads through gateway helpers",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/phraseMatchContainment.test.js",
+        "status": "passed",
+        "tests": 63,
+        "passed": 63,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from do not mark B2 available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from don't mark B2 available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from B2 is not on scene",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from B2 is available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from B2 was on scene yesterday",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from When B2 is available call me",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from If B2 is available, send the details",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Did you hear B2 say available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from The caller said B2 was on scene",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Mark B2 available but only after the call closes",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Mark B2 available tomorrow",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Mark B2 available or busy",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Mark B2 and C3 available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Mark B2 available and leave C3 on scene",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from B2 available?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Mark B2 available?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from available?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from show me available?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from \"mark B2 available\"",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from I didn't say mark B2 available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from No shots fired",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Is B2 at gunpoint?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Caller reports shots fired yesterday",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from If there are shots fired, send backup",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from I have nobody at gunpoint",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from I'm not fighting with him",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from officer down was the training scenario",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from shots fired?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from markavailable",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from showme available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from setbusy",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from putin service",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime executes a status question as a read, preserving the requested other unit",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: mark B2 available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: put B2 not available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: show B2 on scene",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: set B2 out of service",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: show me available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: on scene",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: A1, I'm on scene",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: A1, available.",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime accepts a natural positive paraphrase through semantics and verifies the actual write",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not confuse a status word inside a callsign with the requested status",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations creates a call without inventing an assignment when the unit explicitly declines assignment",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations preserves both parts of a compound request and keeps the trailing instruction out of the address",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations preserves named-call assignment followed by status through semantic interpretation",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations retains a richer first-person urgent report through semantic interpretation and verified notes",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations retains a complete urgent declaration without activating the hardware emergency system: shots fired",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations retains a complete urgent declaration without activating the hardware emergency system: Central, shots fired",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations retains a complete urgent declaration without activating the hardware emergency system: Central, A1, 10-33 emergency traffic",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries uses semantics for unknown target instead of silently choosing the speaker",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries uses semantics for ambiguous normalized target instead of silently choosing the speaker",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries uses semantics for two explicit targets instead of silently choosing the speaker",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries uses semantics for missing roster instead of silently choosing the speaker",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries forwards all original sentence evidence to semantics: A1, don't mark B2 available; I asked for the time.",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries forwards all original sentence evidence to semantics: A1, create a building check at Four Corners for B2, then read the notes.",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries forwards all original sentence evidence to semantics: A1, \"B2 is available\" was what the caller said yesterday.",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries does not execute a named status without the existing unit.write permission",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries retains authoritative unknown-target rejection after semantic interpretation",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries keeps identical named targets in their own dispatch centers",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries never falls back to a phrase mutation after provider error",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries never falls back to a phrase mutation after malformed response",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries never uses a phrase mutation when semantic planning reaches its existing timeout",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/primaryIntent.test.js",
+        "status": "passed",
+        "tests": 7,
+        "passed": 7,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 primary-unit intent maps \"make me primary\" directly to MAKE_PRIMARY",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 primary-unit intent maps \"show me primary\" directly to MAKE_PRIMARY",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 primary-unit intent maps \"mark me as the primary unit\" directly to MAKE_PRIMARY",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 primary-unit intent maps \"set my unit as primary\" directly to MAKE_PRIMARY",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 primary-unit intent maps \"primary me\" directly to MAKE_PRIMARY",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 primary-unit intent maps \"make me primary on the current call\" directly to MAKE_PRIMARY",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 primary-unit intent still preserves existing status intent handling",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/responseComposerMilitaryTime.test.js",
+        "status": "passed",
+        "tests": 10,
+        "passed": 10,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 military-time acknowledgements uses ten-four plus current military time for en_route acknowledgements",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements uses ten-four plus current military time for available acknowledgements",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements uses ten-four plus current military time for on_scene acknowledgements",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements uses ten-four plus current military time for out_of_service acknowledgements",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements uses ten-four plus spoken military time for routine CAD acknowledgements",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements does not add a second timestamp to a direct time check",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements formats military time as dispatcher speech instead of a four-digit number",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements keeps radio checks short and never announces voice-triggered emergency activation",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements reads active calls from the CAD screen context",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements asks for disposition instead of acknowledging an unperformed clear",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/runtimeIsolation.test.js",
+        "status": "passed",
+        "tests": 8,
+        "passed": 8,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 runtime isolation normalizes CAD URL and scopes and freezes the context",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation fails closed without CAD credentials",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation keeps async callbacks inside the assigned runtime context",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation binds event callbacks to the originating runtime",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation rejects a dispatch-center mismatch",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation rejects a radio-channel mismatch",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation enforces required scopes and supports wildcard scope",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation creates stable parent-child correlation chains",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/runtimeManagerPreflightContext.test.js",
+        "status": "passed",
+        "tests": 1,
+        "passed": 1,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3 runtime-manager CAD preflight context runs readiness validation inside the selected dispatcher profile context",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/startCallIntent.test.js",
+        "status": "passed",
+        "tests": 5,
+        "passed": 5,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 start-call semantic routing preserves a semantically interpreted warrant service with assignment",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 start-call semantic routing preserves create, assignment and en-route operations for self-initiated service",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 start-call semantic routing preserves other self-initiated call natures through the same semantic path",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 start-call semantic routing does not hardcode the call nature or consume additional instructions as location",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 start-call semantic routing preserves the explicit no-assignment request through semantic interpretation",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/unitIdentity.test.js",
+        "status": "passed",
+        "tests": 4,
+        "passed": 4,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "UnitIdentityService returns immutable unit identity from Command Link",
+            "status": "passed"
+          },
+          {
+            "name": "UnitIdentityService fails closed when Command Link reports ambiguity",
+            "status": "passed"
+          },
+          {
+            "name": "UnitIdentityService fails closed when the unit is not in this center",
+            "status": "passed"
+          },
+          {
+            "name": "UnitIdentityService rejects malformed success responses instead of using the callsign",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/verifiedAcknowledgement.test.js",
+        "status": "passed",
+        "tests": 4,
+        "passed": 4,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 verified mutation acknowledgements does not acknowledge a primary-unit change unless CAD verification succeeded",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 verified mutation acknowledgements allows a verified primary-unit change to receive a positive response",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 verified mutation acknowledgements blocks a multi-action ten-four when any CAD mutation step lacks verification",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 verified mutation acknowledgements keeps non-CAD routine acknowledgements working",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  },
+  "scopedTests": {
+    "newOrdinaryContainment": {
+      "passed": 63,
+      "failed": 0
+    },
+    "newEmergencyReplyContainment": {
+      "passed": 22,
+      "failed": 0
+    },
+    "auditAndHealthyControls": {
+      "passed": 26,
+      "failed": 0
+    }
+  },
+  "auditProgress": {
+    "task": "AI-DISP-V3-001/01-01",
+    "historicalBaseline": "c5ce5feed7a4feadb86ddca3d6d8c89e2c2f90fa",
+    "testedRevision": "239750bcf02478a817108c5fdc034f39534e4684",
+    "runtime": "v20.20.2",
+    "platform": "linux/x64",
+    "mode": "baseline",
+    "generatedAt": "2026-10-29T13:43:32.621Z",
+    "sourceBlobs": {
+      "src/dispatcher-v3/liveRuntime.js": "fef57aaf52e03058681943cd834eafba61099cea",
+      "src/dispatcher-v3/speechPipeline.js": "6747e32e01b051cc1dc327630dd9f843b6448a52",
+      "src/dispatcher-v3/conversationGate.js": "f91d8be9c76bb306fa212436c743eba8d39a0419",
+      "src/dispatcher-v3/intentPlanner.js": "7ff0dd69d1cc91686b737e58ebf170ca66d6c108",
+      "src/dispatcher-v3/deterministicIntent.js": "bb2a45d7c8454e8108e7da222d9c2616bdcc62e2",
+      "src/dispatcher-v3/fieldIncidentCoordinator.js": "6466a8243b28657984640a3e549bb562e678cd3b",
+      "src/dispatcher-v3/operationalContext.js": "e7c511ce88d5371fab2ebc950b586d092e0a88ca",
+      "src/dispatcher-v3/actionExecutor.js": "a8605e50dbd62fcbed6bd451f6c56e6d98f0c81b",
+      "src/dispatcher-v3/responseComposer.js": "3e2301657710d0bf5c2c6931430e1dd2500791c9",
+      "src/dispatcher-v3/cadGateway.js": "c74b560dd31975533333b5bee2edb2436a3fc799",
+      "src/services/azureSpeechService.js": "20430bd4967ff63acb3b9fcc48a643007758d14e",
+      "src/services/aiDispatcherRuntimeManager.js": "15d745a0c834024fb3b01e06bd59f13f91a4b70e",
+      "package-lock.json": "95e68c9e83f40b1a085d6fc0da03082e17f6a2cc"
+    },
+    "expectedReproductions": 14,
+    "recordedReproductions": 14,
+    "requiredRepairedCases": [
+      "R06",
+      "R07"
+    ],
+    "allReproductionsRecorded": true,
+    "repairAcceptancePassed": false,
+    "productionWrites": 0,
+    "radioTransmissions": 0,
+    "paidProviderCalls": 0,
+    "note": "Mixed progress evidence: requiredRepairedCases always assert fixed behavior; other baseline cases still reproduce defects. Consult the Vitest result for fixture/control failures. This is not release acceptance.",
+    "reproductions": [
+      {
+        "id": "R01",
+        "finding": "F1",
+        "expectedFixedBehavior": "Expired A1 dialogue must not be supplied as B2 current conversation.",
+        "observed": {
+          "foreignDialoguePresent": true,
+          "hasSpeaker": false,
+          "hasAge": false
+        },
+        "repairAcceptancePassed": false,
+        "mode": "baseline"
+      },
+      {
+        "id": "R02",
+        "finding": "F2",
+        "expectedFixedBehavior": "Legitimate consecutive statuses must execute in capture order.",
+        "observed": [
+          "available",
+          "en_route"
+        ],
+        "repairAcceptancePassed": false,
+        "mode": "baseline"
+      },
+      {
+        "id": "R03",
+        "finding": "F2",
+        "expectedFixedBehavior": "An expired pending answer must be revalidated and must not mutate its old call.",
+        "observed": {
+          "expiredWrite": true,
+          "target": "OLD-CALL"
+        },
+        "repairAcceptancePassed": false,
+        "mode": "baseline"
+      },
+      {
+        "id": "R04",
+        "finding": "F2",
+        "expectedFixedBehavior": "Stopped generations cannot issue late mutations or speech.",
+        "observed": {
+          "running": false,
+          "postStopWrites": 1
+        },
+        "repairAcceptancePassed": false,
+        "mode": "baseline"
+      },
+      {
+        "id": "R05",
+        "finding": "F4",
+        "expectedFixedBehavior": "Cancellation must retire the intended dialogue, not become an old-call note.",
+        "observed": {
+          "cancellationWritten": true,
+          "target": "OLD-CALL",
+          "currentCall": "NEW-CALL"
+        },
+        "repairAcceptancePassed": false,
+        "mode": "baseline"
+      },
+      {
+        "id": "R06",
+        "finding": "F5",
+        "expectedFixedBehavior": "Negations and questions must not produce the opposite mutation.",
+        "observed": {
+          "writes": [],
+          "modelCalls": 3
+        },
+        "repairAcceptancePassed": true,
+        "mode": "acceptance"
+      },
+      {
+        "id": "R07",
+        "finding": "F5",
+        "expectedFixedBehavior": "Keep the address separate and preserve both requested operations.",
+        "observed": {
+          "actions": [
+            "CREATE_CALL",
+            "SET_UNIT_STATUS"
+          ],
+          "location": "100 Main Street"
+        },
+        "repairAcceptancePassed": true,
+        "mode": "acceptance"
+      },
+      {
+        "id": "R08",
+        "finding": "F7",
+        "expectedFixedBehavior": "Read operations must speak the requested information, not a generic acknowledgment.",
+        "observed": [
+          "A1, copy.",
+          "A1, copy."
+        ],
+        "repairAcceptancePassed": false,
+        "mode": "baseline"
+      },
+      {
+        "id": "R09",
+        "finding": "F3",
+        "expectedFixedBehavior": "A whole CAD operation, including body consumption, must have a deadline.",
+        "observed": {
+          "settledAtDeadline": false,
+          "aborted": false
+        },
+        "repairAcceptancePassed": false,
+        "mode": "baseline"
+      },
+      {
+        "id": "R10",
+        "finding": "F3",
+        "expectedFixedBehavior": "A stalled voice response must not freeze processing and later execute stale work.",
+        "observed": {
+          "progressedBeforeRelease": false,
+          "lateWrite": true
+        },
+        "repairAcceptancePassed": false,
+        "mode": "baseline"
+      },
+      {
+        "id": "R11",
+        "finding": "F6",
+        "expectedFixedBehavior": "An answer immediately after a delivered question must retain its valid reply window.",
+        "observed": {
+          "answerAccepted": false,
+          "modelCalls": 1
+        },
+        "repairAcceptancePassed": false,
+        "mode": "baseline"
+      },
+      {
+        "id": "R12",
+        "finding": "F6",
+        "expectedFixedBehavior": "Clarification must retain the original action and resolved task parameters.",
+        "observed": {
+          "originalTaskRetained": false,
+          "inputKeys": []
+        },
+        "repairAcceptancePassed": false,
+        "mode": "baseline"
+      },
+      {
+        "id": "R13",
+        "finding": "F8",
+        "expectedFixedBehavior": "Separate receipt from persistence and disclose failed, deferred or unconfirmed writes.",
+        "observed": {
+          "executorSuccess": true,
+          "hasPartialError": true,
+          "failureDisclosed": false
+        },
+        "repairAcceptancePassed": false,
+        "mode": "baseline"
+      },
+      {
+        "id": "R14",
+        "finding": "F9",
+        "expectedFixedBehavior": "A contradictory incident reference requires clarification rather than a weak match.",
+        "observed": {
+          "wrongCallSelected": true,
+          "responseDelivered": true
+        },
+        "repairAcceptancePassed": false,
+        "mode": "baseline"
+      }
+    ]
+  },
+  "staticChecks": {
+    "changedJavaScriptSyntaxFiles": 11,
+    "syntaxPassed": true,
+    "diffCheckPassed": true,
+    "legacyEngineFilesRemainAbsent": true
+  },
+  "newCiRunClaimed": false,
+  "remainingWork": {
+    "parents": {
+      "01": "1/8",
+      "02": "0/8",
+      "03": "1/8",
+      "04": "0/8"
+    },
+    "next": "01-02 implementation; read-only intake trace resumed",
+    "gates": {
+      "G-01": false,
+      "G-02": false,
+      "G-03": false,
+      "G-04": false
+    }
+  },
+  "limits": {
+    "actualProvidersValidated": false,
+    "actualAudioValidated": false,
+    "fullRepositoryBuildValidated": false,
+    "mobileBuildValidated": false,
+    "productionRevisionVerified": false,
+    "productionWrites": 0,
+    "radioTransmissions": 0,
+    "paidProviderCalls": 0,
+    "mergePerformed": false,
+    "deploymentPerformed": false
+  }
+}

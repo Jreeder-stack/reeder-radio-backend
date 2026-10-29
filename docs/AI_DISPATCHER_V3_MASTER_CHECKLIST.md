@@ -1,9 +1,9 @@
 # AI Dispatcher V3 master checklist
 
-Plan AI-DISP-V3-001, version 1.1, October 28, 2026.
+Plan AI-DISP-V3-001, version 1.2, October 29, 2026.
 Repository: `Jreeder-stack/reeder-radio-backend`.
 Branch: `test/dispatcher-v3-01-01-baseline-20261028`; PR #163, unmerged.
-Tested implementation: `a06173eabeee64845206e5440bcf1f7aefd1030d`.
+Tested implementation: `db111bb7888e0dcb15e1715b4259568cae6b8910` (03-01; source tree verified against the local Node 20 run).
 Main inspected: `c5ce5feed7a4feadb86ddca3d6d8c89e2c2f90fa`, identical to the audit. Production revision unverified.
 
 ## Fixed objective and boundaries
@@ -20,15 +20,17 @@ Coding completion, scoped validation, pilot verification and release are separat
 | --- | --- | ---: | ---: |
 | 01 | Reliable request processing | 1/8 | 1/8 |
 | 02 | Multi-unit conversation management | 0/8 | 0/8 |
-| 03 | Meaning-based understanding and safe CAD actions | 0/8 | 0/8 |
+| 03 | Meaning-based understanding and safe CAD actions | 1/8 | 1/8 |
 | 04 | Natural conversation and useful responses | 0/8 | 0/8 |
-| Total | Original 32 items | 1/32 | 1/32 |
+| Total | Original 32 items | 2/32 | 2/32 |
 
-Only 01-01 is complete. Its 26 new tests passed on Node v20.20.2 in run40748074485; the full V3 command remains red, 230 passed/3 existing failures/233 total. Fourteen known defects are reproduced, not repaired. Scoped baseline validation is not G-01 release acceptance. Read `dispatcher-v3/01-01-baseline-20261028.md` and `dispatcher-v3/validation/01-01-results.json` for commands, source hashes, limits, evidence and limitations.
+01-01 and urgent 03-01 are complete for coding and scoped mocked validation. The final local Node v20.20.2 V3 run has 318 passed/1 existing failure/319 total across 32 files. All 85 new containment cases and all 26 audit/control cases pass. R06 and R07 now assert repaired behavior in every mode; the other twelve audit defects remain reproduced, not repaired. The remaining failure is the CREATE_CALL response fixture lacking verification evidence; production verification is unchanged. Scoped validation is not G-01 release acceptance.
 
-Next is urgent **03-01**, then 01-02 through 01-08, Task02, remaining Task03, Task04 and gates. No mutating pilot before03-01 is validated. Use one coordinated implementation stream for shared runtime/planner/state files. Write and run focused tests with each change; prefer mocked checks before paid calls and do not rerun unchanged expensive jobs without a diagnosis.
+Read `dispatcher-v3/03-01-phrase-containment-20261029.md` and `dispatcher-v3/validation/03-01-results.json` for the implementation, exact commands, source hashes and limitations. The 01-01 baseline/results remain the historical record and are not rewritten as repair evidence.
 
-The deliverables and acceptance paragraphs below are retained verbatim from version1.0. Repeated pending-evidence boilerplate is consolidated: for every item except01-01, commits/tests/implementation evidence remain pending and live/pilot status remains unverified. Do not silently shorten requirements when implementing an item.
+Next is **01-02**, whose read-only intake trace has resumed in `dispatcher-v3/01-02-intake-trace-20261029.md`; its coding and validation remain pending. Then continue 01-03 through 01-08, Task02, remaining Task03, Task04 and gates. No mutating pilot is authorized by 03-01 completion. Use one coordinated implementation stream for shared runtime/planner/state files. Write and run focused tests with each change; prefer mocked checks before paid calls and do not rerun unchanged expensive jobs without a diagnosis.
+
+The deliverables and acceptance paragraphs below are retained verbatim from version1.0. Repeated pending-evidence boilerplate is consolidated: for every item except01-01 and03-01, commits/tests/implementation evidence remain pending and live/pilot status remains unverified. Do not silently shorten requirements when implementing an item.
 
 ## Task 01: Reliable request processing
 
@@ -156,7 +158,7 @@ The deliverables and acceptance paragraphs below are retained verbatim from vers
 
 | ID | Work item | Coded | Validated |
 | --- | --- | --- | --- |
-| 03-01 | Remove unsafe phrase-match bypasses [urgent] | [ ] | [ ] |
+| 03-01 | Remove unsafe phrase-match bypasses [urgent] | [x] | [x] |
 | 03-02 | Implement one semantic interpretation contract | [ ] | [ ] |
 | 03-03 | Preserve compound requests and action dependencies | [ ] | [ ] |
 | 03-04 | Resolve unit and call references using adequate evidence | [ ] | [ ] |
@@ -170,6 +172,8 @@ The deliverables and acceptance paragraphs below are retained verbatim from vers
 **Deliverable:** After the baseline harness is available, contain and replace broad matchers that confidently mutate based on a unit name plus a status word. Route ambiguous or unconstrained language through semantic interpretation. Keep only genuinely unambiguous fast paths that pass complete-sentence meaning tests. Do not fix this by adding a list of negation exceptions.
 
 **Acceptance:** “Do not mark B2 available,” “Is B2 available?” and “B2 is not on scene” do not create the opposite status change. This protection is required before any pilot that allows real CAD writes. Early containment alone does not mark all of Task 03 complete.
+
+**Completion evidence (October 29, 2026):** implementation `db111bb7888e0dcb15e1715b4259568cae6b8910`; 85/85 new containment tests and 26/26 audit/control cases pass on Node v20.20.2. R06 and the incidentally repaired R07 always assert fixed behavior. Full V3 remains red, 318/319, with the existing unverified CREATE_CALL fixture failure preserved. See `dispatcher-v3/03-01-phrase-containment-20261029.md` and `dispatcher-v3/validation/03-01-results.json`. No live/pilot or release acceptance.
 
 ### 03-02: Implement one semantic interpretation contract
 
@@ -324,6 +328,8 @@ Separate real-audio transcription problems from downstream interpretation proble
 
 ## Exact continuation
 
-01-01 is committed in test implementation a06173eabeee64845206e5440bcf1f7aefd1030d; documentation is a later docs-only checkpoint. GitHub tested temporary merge1e80b36e23986061df6e1c681116f7587153f45f with the identical implementation tree. Do not call it a merge into main. PR163 remains unmerged. Source and lockfile are unchanged from c5ce5feed.
+03-01 implementation is committed as `db111bb7888e0dcb15e1715b4259568cae6b8910`; subsequent evidence/checklist changes are documentation only. The implementation tree is `a5e8f40701bc8207867161794104afbf0b1fdd7e`. Local supported-runtime testing ran on the same source tree before commit creation, then the complete staged tree was compared with the GitHub commit. PR163 remains draft, open and unmerged. The unchanged lockfile still has blob `95e68c9e83f40b1a085d6fc0da03082e17f6a2cc`.
 
-Read this tracker and the01-01 baseline/results, verify the latest branch head, then implement urgent03-01. Repaired cases must stop asserting the old defect and assert the correct outcome, while positive controls still pass. Existing suite failures concern compound CREATE_CALL wording, current-screen en-route routing and a CREATE_CALL response fixture lacking verification. Do not weaken verification to fix a test. Full repository/mobile/provider/audio validation remains unverified. No production changes or paid calls have been made. Update this tracker and the same four-parent counts after each milestone; keep G-01 through G-04 separate.
+Verify the current branch head and read the 03-01 report/results plus `dispatcher-v3/01-02-intake-trace-20261029.md`, then implement 01-02. That trace covers authenticated connection provenance, account-owned channel grants, the configured center mapping, all PTT adapters, duplicate internal events and the limitation of uncorrelated legacy wire events. It is preparation, not completed code.
+
+Counts: 01 = 1/8; 02 = 0/8; 03 = 1/8; 04 = 0/8; total = 2/32. R06/R07 are repaired under mocked boundaries; twelve other audit defects remain. Do not weaken verification to repair the remaining CREATE_CALL fixture failure. Full repository/mobile/provider/audio validation and the production revision remain unverified. No merge, deployment, restart, production-data changes or paid calls are authorized. Keep G-01 through G-04 separate and unchecked.
