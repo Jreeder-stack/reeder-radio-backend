@@ -1,0 +1,97 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "01-04",
+  "date": "2026-10-29",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "c53c45091f426f720795877131446330bbf1fe1f",
+  "implementationCommits": [
+    "53e5a1452ea3d7a9598437523b896dfc69e5b77d",
+    "f23acab51abe055a1c03eb15314c4e9144dc0a0e"
+  ],
+  "validatedSource": "bb9491b48184f9a7cb2fa03bb63a60f0e72ebd1a",
+  "completion": {
+    "coding": true,
+    "scopedSyntheticValidation": true,
+    "realProviderVerified": false,
+    "liveVerified": false,
+    "releaseAccepted": false
+  },
+  "stageTimeoutMs": {
+    "turn": 60000,
+    "transcription": 15000,
+    "model": 6500,
+    "cadHeadersBodyRetries": 8000,
+    "synthesis": 12000,
+    "sdkStopCallback": 2500
+  },
+  "ci": {
+    "runId": 40953141520,
+    "jobId": 123726233504,
+    "headSha": "bb9491b48184f9a7cb2fa03bb63a60f0e72ebd1a",
+    "nodeMajor": 20,
+    "v3": {
+      "total": 375,
+      "passed": 374,
+      "failed": 1,
+      "files": 36
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0
+    },
+    "newDeadlineCases": {
+      "passed": 10,
+      "failed": 0
+    },
+    "artifact": {
+      "id": 12931079806,
+      "gitHubReportedDigest": "sha256:80d042846bcf09cc551b1cea659cd4d169acf6c3ff4dd53e538fce8028141b82",
+      "independentlyHashed": false
+    }
+  },
+  "audit": {
+    "repairedScoped": [
+      "R02",
+      "R03",
+      "R04",
+      "R06",
+      "R07",
+      "R09",
+      "R10"
+    ],
+    "stillReproduced": [
+      "R01",
+      "R05",
+      "R08",
+      "R11",
+      "R12",
+      "R13",
+      "R14"
+    ]
+  },
+  "knownFailure": {
+    "path": "src/dispatcher-v3/__tests__/phase4Pipeline.test.js",
+    "test": "does not read the generated call number over the air after creating a call",
+    "reason": "CREATE_CALL success fixture has no read-back verification evidence",
+    "expected": "Ten-four, eleven fifty-nine hours.",
+    "actual": "INDIANA-1, unable to verify that change in CAD."
+  },
+  "unverified": [
+    "Real providers/audio",
+    "Full repository/mobile testing",
+    "Production live scenario",
+    "Integration with newer main a730aec0c163cf567edd2e66eda18d9cd892d8ee",
+    "Distributed coordination",
+    "Full 01-05 freshness/cancellation and 01-06 outbound scheduling"
+  ],
+  "prohibitedActionsPerformed": [],
+  "nextItem": "01-05",
+  "gates": [
+    "G-01 unchecked",
+    "G-02 unchecked",
+    "G-03 unchecked",
+    "G-04 unchecked"
+  ]
+}
