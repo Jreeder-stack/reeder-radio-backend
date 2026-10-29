@@ -157,6 +157,8 @@ async function send(capture) {
 beforeEach(()=>{
   vi.useFakeTimers();vi.setSystemTime(START_TIME);
   vi.stubEnv('AZURE_OPENAI_DEPLOYMENT','synthetic-local-only');
+  vi.stubEnv('AZURE_OPENAI_API_KEY','synthetic-do-not-call');
+  vi.stubEnv('AZURE_OPENAI_ENDPOINT','https://invalid.example.test');
   state.profiles=[];state.accounts.clear();state.sessions.clear();state.grants.clear();
   state.listeners.clear();state.sttReplies.clear();state.spoken=[];state.requests=[];state.statuses.clear();
   state.stallBody=null;state.synthWait=null;state.fetchCount=0;
