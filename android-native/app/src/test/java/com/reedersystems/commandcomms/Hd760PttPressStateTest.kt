@@ -38,6 +38,17 @@ class Hd760PttPressStateTest {
         assertTrue(p.isCurrentHeld(second))
     }
 
+    @Test fun channelChangeRevokesPendingPermit() {
+        val p = Hd760PttPressState()
+        p.down()
+        val grantedPress = p.currentGeneration()
+        // A channel change uses the same invalidation as physical PTT release.
+        p.up()
+        assertFalse(p.isCurrentHeld(grantedPress))
+        p.down()
+        assertFalse(p.isCurrentHeld(grantedPress))
+    }
+
     @Test fun duplicateCleanupDoesNotRestartTwice() {
         val p = Hd760PttPressState()
         p.down(); p.deferDuringCleanup(); p.deferDuringCleanup()

@@ -382,6 +382,20 @@ class BackgroundAudioService : Service() {
                 val channelName = intent.getStringExtra(EXTRA_CHANNEL_NAME)
                 if (channelId >= 0 && roomKey != null) {
                     val previousRoomKey = servicePrefs.channelRoomKey
+                    if (BuildConfig.FLAVOR == "hd760" &&
+                        previousRoomKey != roomKey &&
+                        (pttState == PttState.CONNECTING ||
+                         pttState == PttState.TRANSMITTING)) {
+                        // Knob/channel changes must never promote an old floor
+                        // grant into live mic audio on the newly selected channel.
+                        hd760Press.up()
+                        hd760PermitJob?.cancel()
+                        hd760PermitJob = null
+                        app.toneEngine.stopTalkPermitTone()
+                        radioEngine?.udpTransport?.suppressSameUnitDuringLocalTx = false
+                        handleRadioPttUp(bypassDebounce = true)
+                        Log.i("CC-HD760", "PTT_ABORTED_CHANNEL_SWITCH previous=" + previousRoomKey)
+                    }
                     servicePrefs.channelId = channelId
                     servicePrefs.channelRoomKey = roomKey
                     if (channelName != null) servicePrefs.channelName = channelName
@@ -991,6 +1005,7 @@ class BackgroundAudioService : Service() {
                             // Play TPT locally to completion before opening AudioRecord.
                             hd760FloorGranted = true
                             val generation = hd760Press.currentGeneration()
+                            val grantedRoomKey = servicePrefs.channelRoomKey
                             hd760PermitJob?.cancel()
                             hd760PermitJob = scope.launch {
                                 try {
@@ -1001,6 +1016,7 @@ class BackgroundAudioService : Service() {
                                     app.toneEngine.playTalkPermitToneAndAwait()
                                     if (!hd760Press.isCurrentHeld(generation) ||
                                         pttState != PttState.CONNECTING ||
+                                        servicePrefs.channelRoomKey != grantedRoomKey ||
                                         pttUpWhileConnecting) {
                                         Log.i("CC-HD760", "TPT_CANCELLED no_live_tx")
                                         return@launch
@@ -1010,6 +1026,7 @@ class BackgroundAudioService : Service() {
                                     val started = engine.startTransmit()
                                     if (!hd760Press.isCurrentHeld(generation) ||
                                         pttState != PttState.CONNECTING ||
+                                        servicePrefs.channelRoomKey != grantedRoomKey ||
                                         pttUpWhileConnecting) {
                                         if (started) engine.stopTransmit()
                                         return@launch
@@ -1057,6 +1074,12 @@ class BackgroundAudioService : Service() {
                         }
                     }
                     FloorControlEvent.DENIED -> {
+                        if (BuildConfig.FLAVOR == "hd760") {
+                            hd760PermitJob?.cancel()
+                            hd760PermitJob = null
+                            app.toneEngine.stopTalkPermitTone()
+                            hd760FloorGranted = false
+                        }
                         cancelPendingFloorTimeout()
                         Log.d(TAG, "Floor DENIED — aborting TX, discarding pre-buffer")
                         engine.abortPreCapture()
@@ -1149,6 +1172,12 @@ class BackgroundAudioService : Service() {
                     is SignalingEvent.TxSilenceWarning -> {
                         val selfUnitId = servicePrefs.unitId ?: app.sessionPrefs.unitId
                         if (event.unitId == selfUnitId) {
+                            if (BuildConfig.FLAVOR == "hd760") {
+                                hd760PermitJob?.cancel()
+                                hd760PermitJob = null
+                                app.toneEngine.stopTalkPermitTone()
+                                hd760FloorGranted = false
+                            }
                             Log.e(TAG, "TX_SILENCE_WARNING_FROM_SERVER channelId=${event.channelId} silenceMs=${event.silenceMs} — playing denied tone and stopping TX")
                             Log.d("[ToneEvent]", """{"tone":"denied","trigger":"tx_silence_warning","channelId":"${event.channelId}","silenceMs":${event.silenceMs},"state":"$pttState","ts":${System.currentTimeMillis()}}""")
                             app.toneEngine.startDeniedTone()
@@ -1171,6 +1200,12 @@ class BackgroundAudioService : Service() {
                     is SignalingEvent.PttRevoked -> {
                         Log.d(TAG, "PTT_REVOKED channelId=${event.channelId} reason=${event.reason} pttState=$pttState")
                         if (pttState == PttState.TRANSMITTING || pttState == PttState.CONNECTING) {
+                            if (BuildConfig.FLAVOR == "hd760") {
+                                hd760PermitJob?.cancel()
+                                hd760PermitJob = null
+                                app.toneEngine.stopTalkPermitTone()
+                                hd760FloorGranted = false
+                            }
                             Log.d("[ToneEvent]", """{"tone":"denied","trigger":"ptt_revoked","channelId":"${event.channelId}","reason":"${event.reason}","state":"$pttState","ts":${System.currentTimeMillis()}}""")
                             app.toneEngine.startDeniedTone()
                             releaseRadioAudioRoute()
