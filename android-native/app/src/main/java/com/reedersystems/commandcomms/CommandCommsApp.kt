@@ -29,6 +29,7 @@ import com.reedersystems.commandcomms.data.model.RadioTransportConfig
 import com.reedersystems.commandcomms.data.repository.AuthRepository
 import com.reedersystems.commandcomms.data.repository.ChannelRepository
 import com.reedersystems.commandcomms.data.repository.RadioConfigRepository
+import com.reedersystems.commandcomms.messaging.NativeRadioPaging
 import com.reedersystems.commandcomms.signaling.SignalingClient
 import com.reedersystems.commandcomms.signaling.SignalingEvent
 import com.reedersystems.commandcomms.signaling.SignalingRepository
@@ -92,6 +93,11 @@ class CommandCommsApp : Application() {
     var radioTransportConfig: RadioTransportConfig? = null
 
     val keyEventFlow = MutableSharedFlow<KeyAction>(extraBufferCapacity = 16)
+    // Absolute knob position is conflated to the latest keycode during rapid turns.
+    val hd760KnobPosition = MutableStateFlow<Int?>(null)
+    // Do not transmit on empty/unprogrammed slots.
+    val hd760SlotActive = MutableStateFlow(true)
+    @Volatile var hd760RadioScreenActive: Boolean = false
     val keyCapturingFlow = MutableStateFlow(false)
 
     override fun onCreate() {
@@ -129,7 +135,12 @@ class CommandCommsApp : Application() {
         channelRepository = ChannelRepository(apiClient)
         val persistedDeviceId = getOrCreateDeviceId()
         signalingClient = SignalingClient(apiClient.baseUrl, storedRadioToken, persistedDeviceId)
+        signalingClient.onNativePage = { page -> NativeRadioPaging.receive(this, page) }
+        signalingClient.onNativeReceiptConfirmed = { id, kind ->
+            NativeRadioPaging.confirmReceipt(this, id, kind)
+        }
         signalingClient.onAuthenticated = {
+            NativeRadioPaging.flushPendingAcks(this)
             Log.d("CommandCommsApp", "Socket authenticated — refreshing and registering FCM token")
             apiClient.refreshAndRegisterFcmToken(appScope)
         }
@@ -290,6 +301,8 @@ class CommandCommsApp : Application() {
     }
 
     private fun createNotificationChannels() {
+        // Android 7.1.2 (HD760) has no NotificationChannel support.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = getSystemService(NotificationManager::class.java)
 
         val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)

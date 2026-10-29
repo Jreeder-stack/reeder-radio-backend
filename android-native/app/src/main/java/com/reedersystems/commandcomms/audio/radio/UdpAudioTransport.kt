@@ -68,6 +68,7 @@ class UdpAudioTransport(
     var channelIndex: Int = 0
     var unitId: String = ""
     var deviceId: String = ""
+    @Volatile var suppressSameUnitDuringLocalTx: Boolean = false
     var onPacketReceived: ((packet: OpusRadioPacket) -> Unit)? = null
     var onSocketRecreated: (() -> Unit)? = null
     val localPort: Int?
@@ -348,8 +349,18 @@ class UdpAudioTransport(
                             // get a defensive exact-device suppression here.
                             val samePhysicalDevice = parsed.senderDeviceId.isNotBlank() &&
                                 deviceId.isNotBlank() && parsed.senderDeviceId == deviceId
-                            if (samePhysicalDevice) {
-                                Log.d(TAG, "SELF_AUDIO_SUPPRESSED senderUnitId=${parsed.senderUnitId} senderDeviceId=${parsed.senderDeviceId} localDeviceId=$deviceId seq=${parsed.sequence}")
+                            // When HD760 is keyed, own-unit legacy/v1 echo
+                            // cannot be distinguished by device ID. Suppress
+                            // it only during this physical device's local TX;
+                            // unkeyed sibling devices with the same callsign
+                            // must still receive one another's traffic.
+                            val ownUnitDuringTx = suppressSameUnitDuringLocalTx &&
+                                unitId.isNotBlank() && parsed.senderUnitId == unitId
+                            if (samePhysicalDevice || ownUnitDuringTx) {
+                                Log.i("CC-HD760", "SELF_AUDIO_SUPPRESSED senderUnitId=" +
+                                    parsed.senderUnitId + " senderDeviceId=" +
+                                    parsed.senderDeviceId + " reason=" +
+                                    if (samePhysicalDevice) "device_id" else "own_tx")
                             } else {
                                 rxPacketCount++
                                 rxSummaryBytes += packet.length

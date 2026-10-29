@@ -101,4 +101,56 @@ describe('audio relay same-unit sibling routing', () => {
     expect(endpoints).not.toContain(`${siblingEndpoint.address}:${siblingEndpoint.port}`);
     expect(endpoints).toEqual([`${otherUnitEndpoint.address}:${otherUnitEndpoint.port}`]);
   });
+  it('suppresses stale registrations for the transmitting device after a port change', () => {
+    const { service, sourceEndpoint, siblingEndpoint, otherUnitEndpoint } = makeService();
+    const staleEndpoint = { address: '10.0.0.10', port: 49999 };
+    service.subscribers.get('OPS__1').set('obsolete-source-socket', {
+      unitId: 'INDIANA-1',
+      deviceId: 'phone-device',
+      ...staleEndpoint,
+      lastSeen: Date.now() - 30_000,
+    });
+    installAudioRelaySiblingDeviceHardening(service);
+    service._handlePacket(Buffer.from([2]), sourceEndpoint);
+
+    const endpoints = service.sends.map(send => `${send.address}:${send.port}`);
+    expect(endpoints).not.toContain(`${sourceEndpoint.address}:${sourceEndpoint.port}`);
+    expect(endpoints).not.toContain(`${staleEndpoint.address}:${staleEndpoint.port}`);
+    expect(endpoints).toContain(`${siblingEndpoint.address}:${siblingEndpoint.port}`);
+    expect(endpoints).toContain(`${otherUnitEndpoint.address}:${otherUnitEndpoint.port}`);
+    expect(endpoints).toHaveLength(2);
+  });
+
+  it('keeps endpoint protection for legacy radios without a device id', () => {
+    const { service, sourceEndpoint, siblingEndpoint, otherUnitEndpoint } = makeService();
+    service._parsePacket = vi.fn(() => ({
+      channelId: 101,
+      senderUnitId: 'INDIANA-1',
+      senderDeviceId: null,
+    }));
+    installAudioRelaySiblingDeviceHardening(service);
+    service._handlePacket(Buffer.from([1]), sourceEndpoint);
+
+    const endpoints = service.sends.map(send => `${send.address}:${send.port}`);
+    expect(endpoints).not.toContain(`${sourceEndpoint.address}:${sourceEndpoint.port}`);
+    expect(endpoints).toContain(`${siblingEndpoint.address}:${siblingEndpoint.port}`);
+    expect(endpoints).toContain(`${otherUnitEndpoint.address}:${otherUnitEndpoint.port}`);
+  });
+
+  it('does not deliver a transmission to a same-device alias behind a second IP', () => {
+    const { service, sourceEndpoint, otherUnitEndpoint } = makeService();
+    service.subscribers.get('OPS__1').set('moved-alias', {
+      unitId: 'INDIANA-1',
+      deviceId: 'phone-device',
+      address: '192.0.2.80',
+      port: 45001,
+      lastSeen: Date.now(),
+    });
+    installAudioRelaySiblingDeviceHardening(service);
+    service._handlePacket(Buffer.from([2]), sourceEndpoint);
+    const endpoints = service.sends.map(send => `${send.address}:${send.port}`);
+    expect(endpoints).not.toContain('192.0.2.80:45001');
+    expect(endpoints).toContain(`${otherUnitEndpoint.address}:${otherUnitEndpoint.port}`);
+  });
+
 });

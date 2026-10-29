@@ -27,7 +27,10 @@ import {
   updateDispatcherPagingList,
   deleteDispatcherPagingList,
   resolveRadioRecipients,
+  resolveNativePageRecipients,
 } from '../services/pagingRosterService.js';
+
+import { queueNativePage, nativePageStatuses } from '../services/nativePageDeliveryService.js';
 
 const router = express.Router();
 
@@ -197,8 +200,10 @@ router.post('/page', requireDispatcher, async (req, res) => {
           )
         : { successCount: 0, failureCount: 0 };
 
+      const nativeSent = await queueNativePage(signalingService, page, recipients, pagingChannelId);
       return res.json({
         page,
+        native: { sent: nativeSent, queued: recipients.filter(r => !r.fcmTokens.length && !r.apnsTokens.length).length },
         fcm: { successCount: fcmResult.successCount, failureCount: fcmResult.failureCount },
         apns: { successCount: apnsResult.successCount, failureCount: apnsResult.failureCount },
         targetedDeviceCount: fcmTokens.length + apnsTokens.length,
@@ -207,6 +212,7 @@ router.post('/page', requireDispatcher, async (req, res) => {
           radioId: r.radioId,
           unitId: r.unitId,
           hasDeliveryToken: r.fcmTokens.length > 0 || r.apnsTokens.length > 0,
+          hasNativePage: !r.fcmTokens.length && !r.apnsTokens.length,
         })),
       });
     }
@@ -234,12 +240,19 @@ router.post('/page', requireDispatcher, async (req, res) => {
         )
       : { successCount: 0, failureCount: 0 };
 
+    const nativeRecipients = await resolveNativePageRecipients({ targetType, targetId });
+    const nativeSent = await queueNativePage(signalingService, page, nativeRecipients, pagingChannelId);
     res.json({
       page,
+      native: { sent: nativeSent, queued: nativeRecipients.filter(r => !r.fcmTokens.length && !r.apnsTokens.length).length },
       fcm: { successCount: fcmResult.successCount, failureCount: fcmResult.failureCount },
       apns: { successCount: apnsResult.successCount, failureCount: apnsResult.failureCount },
       targetedDeviceCount: fcmTokens.length + apnsTokens.length,
-      targetedUnits: tokenRows.map(r => ({ unitId: r.unit_identity || r.radio_id, radioId: r.radio_id, hasDeliveryToken: true })),
+      targetedUnits: nativeRecipients.map(r => ({
+        radioPk: r.radioPk, radioId: r.radioId, unitId: r.unitId,
+        hasDeliveryToken: r.fcmTokens.length > 0 || r.apnsTokens.length > 0,
+        hasNativePage: !r.fcmTokens.length && !r.apnsTokens.length
+      })),
       apnsEnabled: isApnsEnabled(),
     });
   } catch (err) {
@@ -248,10 +261,13 @@ router.post('/page', requireDispatcher, async (req, res) => {
   }
 });
 
-router.get('/page/:id/acks', requireAuth, async (req, res) => {
+router.get('/page/:id/acks', requireDispatcher, async (req, res) => {
   const pageId = parseInt(req.params.id, 10);
   try {
-    res.json({ acks: await getPageAcks(pageId) });
+    res.json({
+      acks: await getPageAcks(pageId),
+      native: await nativePageStatuses(pageId)
+    });
   } catch (err) {
     console.error('[Dispatch] Page ACKs fetch error:', err);
     res.status(500).json({ error: 'Failed to fetch acknowledgments' });
