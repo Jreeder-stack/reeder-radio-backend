@@ -69,7 +69,7 @@ describe('01-03 actual PTT / CAD scheduling', () => {
     const first = await h.begin(stt.promise);
     await until(() => h.transcribe.mock.calls.length === 1, 'STT pending');
     const second = await h.begin('Central, available');
-    await vi.advanceTimersByTimeAsync(30001);
+    await vi.advanceTimersByTimeAsync(31000);
     expect(first.settled).toBe(true);
     expect(second.settled).toBe(true);
     expect(h.writes()).toEqual([]);

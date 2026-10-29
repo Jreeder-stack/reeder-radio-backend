@@ -79,7 +79,7 @@ export class V3LiveDispatcher {
     this._sequence = 1;
     this._recentContext = [];
     this._scheduler = new V3TurnScheduler({ limits: schedulerLimits, onTerminal: (ticket, outcome) => {
-      this._diag('turn_scheduler_terminal', ticket.identity.turnId, outcome.handled, { reason: outcome.reason, code: outcome.code }, null, ticket.identity);
+      this._diag('turn_scheduler_terminal', ticket.identity.turnId, outcome.handled, { reason: outcome.reason, code: outcome.code }, ticket.turnEnvelope || null, ticket.identity);
       if (outcome.reason === 'capture_expired') {
         this._intake.delete(ticket.identity.transmissionId);
         this.speech.cancelTransmission(ticket.identity.speakerRef, ticket.identity.transmissionId);
@@ -295,6 +295,7 @@ export class V3LiveDispatcher {
     const outcome = await this._scheduler.complete(record.ticket, async () => {
       const speaker = await record.speakerPromise;
       const turnEnvelope = completeV3TurnEnvelope(record.identity, metadata, speaker);
+      record.ticket.turnEnvelope = turnEnvelope;
       if (!speaker || !capture) {
         this._diag('turn_identity_rejected', record.identity.turnId, false, { reason: record.speakerError?.code || 'speaker_unresolved' }, turnEnvelope);
         return null;
@@ -305,7 +306,7 @@ export class V3LiveDispatcher {
     }, async (transmission) => runWithV3Turn(transmission.turnEnvelope, () => this._handleCapturedTranscript(transmission)));
     this._diag('turn_completed', record.identity.turnId, outcome.handled, {
       outcome: outcome.reason, code: outcome.code,
-    }, null, record.identity);
+    }, record.ticket.turnEnvelope || null, record.identity);
     return outcome.handled;
   }
 
