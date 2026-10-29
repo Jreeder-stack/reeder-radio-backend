@@ -4,6 +4,16 @@ import { V3IntentPlanner } from '../intentPlanner.js';
 
 const speakerCallsign = 'INDIANA-1';
 
+async function semanticPlan(transcript, reply, operationalContext = null) {
+  expect(planDeterministicV3Intent({ transcript, speakerCallsign, operationalContext })).toBeNull();
+  const create = vi.fn(async () => ({ choices: [{ message: { content: JSON.stringify({ confidence: 1, ...reply }) } }] }));
+  const planner = new V3IntentPlanner({ client: { chat: { completions: { create } } } });
+  const result = await planner.plan({ transcript, speakerCallsign, operationalContext });
+  expect(create).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(create.mock.calls[0][0].messages[1].content)).toMatchObject({ transcript, speakerCallsign });
+  return result;
+}
+
 describe('Dispatcher V3 deterministic routine commands', () => {
   it.each([
     ['radio check', 'RADIO_CHECK', {}],
@@ -62,37 +72,43 @@ describe('Dispatcher V3 deterministic routine commands', () => {
     })).toBeNull();
   });
 
-  it('turns a named-call response into ordered assignment and status actions', () => {
-    expect(planDeterministicV3Intent({ transcript: 'show me en route to the fight', speakerCallsign })).toMatchObject({
+  it('preserves semantically planned named-call assignment and status actions', async () => {
+    const actions = [
+      { action: 'ASSIGN_UNIT', input: { callRef: 'fight', unitRef: speakerCallsign } },
+      { action: 'SET_UNIT_STATUS', input: { unitRef: speakerCallsign, status: 'en_route' } },
+    ];
+    expect(await semanticPlan('show me en route to the fight', { actions })).toMatchObject({
       action: 'MULTI_ACTION',
-      actions: [
-        { action: 'ASSIGN_UNIT', input: { callRef: 'fight', unitRef: speakerCallsign } },
-        { action: 'SET_UNIT_STATUS', input: { unitRef: speakerCallsign, status: 'en_route' } },
-      ],
+      actions,
     });
   });
 
-  it('does not mistake an unrelated current assignment for the named call', () => {
-    expect(planDeterministicV3Intent({
-      transcript: 'show me en route to the fight',
-      speakerCallsign,
-      operationalContext: { currentCall: { id: 'alarm-1', nature: 'BURGLAR ALARM' } },
-    })).toMatchObject({ action: 'MULTI_ACTION', actions: [{ action: 'ASSIGN_UNIT' }, { action: 'SET_UNIT_STATUS' }] });
-    expect(planDeterministicV3Intent({
-      transcript: 'show me en route to the fight',
-      speakerCallsign,
-      operationalContext: { currentCall: { id: 'fight-1', nature: 'FIGHT' } },
-    })).toMatchObject({ action: 'SET_UNIT_STATUS', input: { status: 'en_route' } });
+  it('passes named-call context to semantics instead of weak substring selection', async () => {
+    const transcript = 'show me en route to the fight';
+    const assignment = { actions: [
+      { action: 'ASSIGN_UNIT', input: { callId: 'fight-1', unitRef: speakerCallsign } },
+      { action: 'SET_UNIT_STATUS', input: { unitRef: speakerCallsign, status: 'en_route' } },
+    ] };
+    expect(await semanticPlan(transcript, assignment, { currentCall: { id: 'alarm-1', nature: 'BURGLAR ALARM' } }))
+      .toMatchObject({ action: 'MULTI_ACTION', actions: assignment.actions });
+    const status = { action: 'SET_UNIT_STATUS', input: { unitRef: speakerCallsign, status: 'en_route' } };
+    expect(await semanticPlan(transcript, status, { currentCall: { id: 'fight-1', nature: 'FIGHT' } })).toMatchObject(status);
   });
 
   it.each([
     ['shots fired', 'shots_fired'],
-    ['I have one running by the Ferris Wheel', 'officer_assist'],
+    ['I have one running', 'officer_assist'],
   ])('plans urgent field traffic as a non-emergency field incident: %s', (transcript, eventType) => {
     expect(planDeterministicV3Intent({ transcript, speakerCallsign })).toMatchObject({
       action: 'REPORT_FIELD_INCIDENT',
       input: { unitRef: speakerCallsign, eventType, note: transcript },
     });
+  });
+
+  it('preserves a rich first-person field report through semantic interpretation', async () => {
+    const transcript = 'I have one running by the Ferris Wheel';
+    const report = { action: 'REPORT_FIELD_INCIDENT', input: { unitRef: speakerCallsign, eventType: 'officer_assist', note: transcript } };
+    expect(await semanticPlan(transcript, report)).toMatchObject(report);
   });
 
   it('uses a known disposition for a pending clear but leaves unrelated traffic for semantic planning', () => {

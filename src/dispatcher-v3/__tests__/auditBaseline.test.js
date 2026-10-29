@@ -22,6 +22,9 @@ import { BASE_SHA, START_TIME, NO_ACTION, createHarness, finish, observe, plan, 
 const mode = process.env.DISPATCHER_AUDIT_MODE || 'baseline';
 if (!['baseline', 'acceptance'].includes(mode)) throw new Error(`Unknown DISPATCHER_AUDIT_MODE: ${mode}`);
 const ledger = [];
+// Repaired cases must assert the fixed behavior in EVERY mode. Unrepaired
+// cases retain their pinned baseline until their owning work item is finished.
+const repairedCases = new Set(['R06', 'R07']);
 let harnesses = [];
 let networkGuard;
 
@@ -31,8 +34,9 @@ async function make(options) { const h = await createHarness(options); harnesses
 // Acceptance asserts the required repaired behavior and deliberately fails on the audited revision.
 function record(id, finding, expectedFixedBehavior, observed, baseline, repaired) {
   const repairAcceptancePassed = repaired(observed);
-  ledger.push({ id, finding, expectedFixedBehavior, observed, repairAcceptancePassed, mode });
-  if (mode === 'acceptance') expect(repairAcceptancePassed, `${id}: ${expectedFixedBehavior}`).toBe(true);
+  const assertionMode = mode === 'acceptance' || repairedCases.has(id) ? 'acceptance' : 'baseline';
+  ledger.push({ id, finding, expectedFixedBehavior, observed, repairAcceptancePassed, mode: assertionMode });
+  if (assertionMode === 'acceptance') expect(repairAcceptancePassed, `${id}: ${expectedFixedBehavior}`).toBe(true);
   else expect(observed, `${id}: baseline changed; inspect before crediting a repair`).toEqual(baseline);
 }
 
@@ -81,17 +85,18 @@ afterAll(() => {
     runtime: process.version, platform: `${process.platform}/${process.arch}`, mode,
     generatedAt: new Date().toISOString(), sourceBlobs,
     expectedReproductions: 14, recordedReproductions: ledger.length,
+    requiredRepairedCases: [...repairedCases],
     allReproductionsRecorded: new Set(ledger.map((entry) => entry.id)).size === 14,
     repairAcceptancePassed: ledger.length === 14 && ledger.every((entry) => entry.repairAcceptancePassed),
     productionWrites: 0, radioTransmissions: 0, paidProviderCalls: 0,
-    note: 'Baseline success confirms known defects, NOT repaired behavior. Consult the Vitest result for fixture/control failures.',
+    note: 'Mixed progress evidence: requiredRepairedCases always assert fixed behavior; other baseline cases still reproduce defects. Consult the Vitest result for fixture/control failures. This is not release acceptance.',
     reproductions: [...ledger].sort((a, b) => a.id.localeCompare(b.id)),
   };
   mkdirSync(dirname(resolve(reportPath)), { recursive: true });
   writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
 });
 
-describe('01-01 audit baseline: known defects, NOT repair acceptance', () => {
+describe('01-01 audit regressions: repaired assertions plus remaining known defects', () => {
   it('R01: stale dialogue crosses speakers and loses attribution in the model payload', async () => {
     const h = await make({ llmPlans: [
       { ...plan('CLARIFY', { callId: 'OLD-CALL' }), clarification: 'Which address should I use?' }, NO_ACTION,
@@ -162,15 +167,17 @@ describe('01-01 audit baseline: known defects, NOT repair acceptance', () => {
       { cancellationWritten: true, target: 'OLD-CALL', currentCall: 'NEW-CALL' }, (o) => !o.cancellationWritten);
   });
 
-  it('R06: negations and a question bypass the model and produce contrary writes', async () => {
-    const h = await make();
+  it('R06: negations and a question reach semantics without contrary writes', async () => {
+    const h = await make({ llmPlans: [NO_ACTION, plan('STATUS_CHECK', { unitRef: 'B2' }), NO_ACTION] });
     for (const words of ['do not mark B2 available', 'is B2 available?', 'B2 is not on scene']) await h.send(`Central, ${words}`);
     const observed = { writes: h.writes('/api/radio/status').map((request) => [request.body.unit_id, request.body.status]), modelCalls: h.llm.mock.calls.length };
     record('R06', 'F5', 'Negations and questions must not produce the opposite mutation.', observed,
-      { writes: [['B2', 'available'], ['B2', 'available'], ['B2', 'on_scene']], modelCalls: 0 }, (o) => o.writes.length === 0);
+      { writes: [['B2', 'available'], ['B2', 'available'], ['B2', 'on_scene']], modelCalls: 0 }, (o) => o.writes.length === 0 && o.modelCalls === 3);
+    expect(h.runtime.executor.execute.mock.calls.map(([request]) => request.action)).toEqual(['STATUS_CHECK']);
+    expect((await h.lastResult()).success).toBe(true);
   });
 
-  it('R07: the second command becomes part of the first command address', async () => {
+  it('R07: semantic planning preserves both commands and the clean address', async () => {
     const h = await make({ llmPlans: [{ confidence: 1, actions: [
       { action: 'CREATE_CALL', input: { type: 'BUILDING CHECK', location: '100 Main Street', unitRefs: ['A1'] } },
       { action: 'SET_UNIT_STATUS', input: { unitRef: 'A1', status: 'on_scene' } },
@@ -182,6 +189,9 @@ describe('01-01 audit baseline: known defects, NOT repair acceptance', () => {
     record('R07', 'F5', 'Keep the address separate and preserve both requested operations.', observed,
       { actions: ['CREATE_CALL'], location: '100 Main Street and mark me on scene' },
       (o) => o.location === '100 Main Street' && o.actions.includes('CREATE_CALL') && o.actions.includes('SET_UNIT_STATUS'));
+    expect(h.llm).toHaveBeenCalledTimes(1);
+    expect(h.writes().map((request) => request.path)).toEqual(['/api/radio/v3/cad/calls', '/api/radio/status']);
+    for (const result of h.runtime.executor.execute.mock.results) expect(await result.value).toMatchObject({ success: true, data: { verified: true } });
   });
 
   it('R08: successful GET_CALL and SEARCH_CALLS results receive only copy', async () => {

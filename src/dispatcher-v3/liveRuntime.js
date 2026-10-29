@@ -14,7 +14,8 @@ import { V3ActionExecutor } from './actionExecutor.js';
 import { V3DiagnosticsJournal } from './diagnostics.js';
 import { V3SpeechPipeline } from './speechPipeline.js';
 import { V3IntentPlanner } from './intentPlanner.js';
-import { V3ConversationGate } from './conversationGate.js';
+import { V3ConversationGate, stripV3LeadingAddress } from './conversationGate.js';
+import { normalizeV3CommandText } from './deterministicIntent.js';
 import { materializeV3Plan } from './planMaterializer.js';
 import { composeV3Response } from './responseComposer.js';
 import { createV3CorrelationId } from './correlation.js';
@@ -34,9 +35,9 @@ const PCM_SAMPLE_RATE = 16000;
 const NUMBER_WORD_RX = /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b/i;
 const HAIL_COMMAND_RX = /\b(status|show|mark|put|set|create|start|close|clear|assign|attach|add|note|check|time|backup|emergency|responding|en\s+route|on\s+scene|available|out\s+of\s+service|off\s+duty|on\s+duty|zone|switch|move|copy|radio\s+check)\b/i;
 const REPORTED_EVENT_RX = /\b(caller|complainant|RP|reporting party|someone|subject|victim)\s+(reports?|reported|is reporting|says?|said)\b|\breport(?:ed)?\s+of\b|\bresponding\s+to\b|\bcall\s+for\b/i;
-const SAFE_STATUS_RX = /\b(10\s*[-/]?\s*4|ten\s*four|i(?:'m| am)\s+(?:good|okay|ok|fine)|everything(?:'s| is)\s+(?:okay|ok|fine)|code\s*4|accidental(?:\s+activation)?|false\s+alarm|all\s+good)\b/i;
+const SAFE_STATUS_RX = /^(?:10\s*[-/]?\s*4|ten\s+four|i(?:'m|\s+am)\s+(?:good|okay|ok|fine)|everything(?:'s|\s+is)\s+(?:okay|ok|fine)|code\s*4|accidental(?:\s+activation)?|false\s+alarm|all\s+good)\s*[.!]*$/i;
 const DISTRESS_RX = /\b(i\s+need\s+help|need\s+help|send\s+(?:me\s+)?(?:another\s+)?unit|send\s+units?|step\s+it\s+up|officer\s+down|i(?:'m| am| have been|'ve been)\s+(?:hit|shot|stabbed|injured)|shots?\s+fired|taking\s+fire|under\s+fire|gun\s*point|gunpoint|taser\s*point|taserpoint|fighting\s+with|i(?:'m| am)\s+fighting|struggling\s+with|physical\s+fight|weapon\s+involved)\b/i;
-const RESPONDING_RX = /\b(en\s*route|responding|show\s+me\s+(?:en\s*route|responding)|i(?:'m| am|'ll be| will be)\s+(?:en\s*route|responding|going)|on\s+my\s+way|i(?:'ll| will)\s+take\s+it)\b/i;
+const RESPONDING_RX = /^(?:(?:(?:show|mark|put|set)\s+me\s+)?(?:en\s*route|responding)|i(?:'m|\s+am|'ll\s+be|\s+will\s+be)\s+(?:en\s*route|responding|going)|on\s+my\s+way|i(?:'ll|\s+will)\s+take\s+it)\s*[.!]*$/i;
 const ROUTINE_EMERGENCY_CHAT_RX = /^(10\s*[-/]?\s*4|copy|received|okay|ok|stand\s+by|repeat|go\s+ahead)[.! ]*$/i;
 const OFFLINE_UNIT_RX = /^(offline|off_duty|unavailable|not_available|out_of_service)$/i;
 
@@ -246,10 +247,17 @@ export class V3LiveDispatcher {
     const text = String(transcript || '').trim();
     if (!text) return false;
 
+    // These shortcuts can clear an active emergency or assign a responder.
+    // Match the complete reply after only known address/own-callsign prefixes;
+    // negation, questions, conditions and quoted phrases must not be discarded.
+    const reply = normalizeV3CommandText({
+      transcript: stripV3LeadingAddress(text, this.conversationGate.wakeWords), speakerCallsign,
+    });
+
     const active = this._emergency;
     if (active) {
       if (sameUnit(speakerCallsign, active.callsign)) {
-        if (active.source === 'hardware' && active.stage.startsWith('status_check') && SAFE_STATUS_RX.test(text) && !DISTRESS_RX.test(text)) {
+        if (active.source === 'hardware' && active.stage.startsWith('status_check') && SAFE_STATUS_RX.test(reply) && !DISTRESS_RX.test(text)) {
           this._diag('emergency_status_check_safe_response', correlationId, true, { speakerCallsign, transcript: text });
           await this._clearEmergencyState({ unitId: active.callsign, reason: 'status_check_safe_response', announce: true, clearSignal: true });
           return true;
@@ -267,7 +275,7 @@ export class V3LiveDispatcher {
           }
           return false;
         }
-      } else if (active.stage === 'escalated' && RESPONDING_RX.test(text)) {
+      } else if (active.stage === 'escalated' && RESPONDING_RX.test(reply)) {
         await this._addEmergencyResponder(active, speakerCallsign, correlationId, text);
         return true;
       }
