@@ -4,6 +4,8 @@ import { canonicalChannelKey } from './channelKeyUtils.js';
 
 // Trust lives in this process, never in a request's JSON or a boolean flag.
 const principals = new WeakSet();
+// Credential source never leaves the module or enters turn envelopes/diagnostics.
+const credentialProof = new WeakMap();
 const transmissions = new WeakSet();
 const transmissionRoots = new WeakMap();
 const endedTransmissions = new WeakMap();
@@ -68,8 +70,10 @@ export async function loadSessionPttPrincipal(sessionId, { connectionId } = {}) 
     try { session = JSON.parse(session); } catch (_) { return null; }
   }
   if (session?.user?.id == null) return null;
-  return accountPrincipal(session.user.id, 'session',
+  const principal = await accountPrincipal(session.user.id, 'session',
     connectionId || opaqueConnection('session', sessionId, session.user.id));
+  if (principal) credentialProof.set(principal, Object.freeze({ type: 'session', credential: sessionId }));
+  return principal;
 }
 
 /** A radio ID or assigned callsign is not a credential. Verify the token here. */
@@ -77,8 +81,10 @@ export async function loadRadioPttPrincipal(radioToken, { connectionId } = {}) {
   if (!clean(radioToken)) return null;
   const radio = await getRadioByToken(radioToken);
   if (!radio || radio.is_locked || radio.assigned_unit_id == null) return null;
-  return accountPrincipal(radio.assigned_unit_id, 'radio-token',
+  const principal = await accountPrincipal(radio.assigned_unit_id, 'radio-token',
     connectionId || opaqueConnection('radio', radioToken, radio.assigned_unit_id));
+  if (principal) credentialProof.set(principal, Object.freeze({ type: 'radio-token', credential: radioToken }));
+  return principal;
 }
 
 /** Recheck ACTIVE account, stable actor, and enabled channel grant at action time.
@@ -87,6 +93,22 @@ export async function loadRadioPttPrincipal(radioToken, { connectionId } = {}) {
 export async function revalidatePttActor(transmission, binding) {
   if (!isTrustedPttTransmission(transmission) || !isTrustedPttPrincipal(transmission.principal)) return false;
   const previous = transmission.principal;
+  const proof = credentialProof.get(previous);
+  if (!proof || proof.type !== previous.credentialType) return false;
+  if (proof.type === 'session') {
+    const result = await pool.query(
+      'SELECT sess FROM session WHERE sid = $1 AND expire > NOW()', [proof.credential],
+    );
+    if (result.rows.length !== 1) return false;
+    let session = result.rows[0].sess;
+    if (typeof session === 'string') {
+      try { session = JSON.parse(session); } catch (_) { return false; }
+    }
+    if (String(session?.user?.id ?? '') !== previous.accountId) return false;
+  } else if (proof.type === 'radio-token') {
+    const radio = await getRadioByToken(proof.credential);
+    if (!radio || radio.is_locked || String(radio.assigned_unit_id ?? '') !== previous.accountId) return false;
+  } else return false;
   const fresh = await accountPrincipal(previous.accountId, previous.credentialType, previous.connectionId);
   if (!fresh || fresh.accountId !== previous.accountId || fresh.unitId !== previous.unitId
       || fresh.connectionId !== previous.connectionId) return false;
