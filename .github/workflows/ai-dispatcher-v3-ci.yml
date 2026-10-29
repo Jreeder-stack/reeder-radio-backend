@@ -1,6 +1,12 @@
 name: AI Dispatcher V3 CI
 
 on:
+  push:
+    branches:
+      - test/dispatcher-v3-01-01-baseline-20261028
+    paths:
+      - 'src/dispatcher-v3/**'
+      - '.github/workflows/ai-dispatcher-v3-ci.yml'
   pull_request:
     paths:
       - 'src/dispatcher-v3/**'
@@ -46,6 +52,7 @@ jobs:
           node --check src/services/aiDispatchService.js
           node --check src/services/aiDispatcherSignaling.js
           node --check src/dispatcher-v3/liveRuntime.js
+          node --check src/dispatcher-v3/turnScheduler.js
           node --check src/dispatcher-v3/intentPlanner.js
           node --check src/dispatcher-v3/__tests__/auditBaseline.test.js
           node --check src/dispatcher-v3/__tests__/helpers/auditRuntimeHarness.js
