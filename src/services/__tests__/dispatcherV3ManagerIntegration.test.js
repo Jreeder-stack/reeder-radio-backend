@@ -163,6 +163,7 @@ beforeEach(()=>{
   vi.stubEnv('CAD_API_KEY','synthetic-no-real-network');
   state.profiles=[];state.accounts.clear();state.sessions.clear();state.grants.clear();
   state.listeners.clear();state.sttReplies.clear();state.spoken=[];state.requests=[];state.statuses.clear();
+  audioRelayService.injectAudio.mockClear();
   state.stallBody=null;state.synthWait=null;state.fetchCount=0;
   for (const key of Object.keys(state.callbacks)) state.callbacks[key]=[];
   vi.stubGlobal('fetch',vi.fn(fakeCad));
