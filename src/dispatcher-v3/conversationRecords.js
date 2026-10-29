@@ -33,9 +33,10 @@ function dialogueInput(input) {
 }
 
 export class V3ConversationRecords {
-  constructor({ runtimeContext, now = () => Date.now(), limits = {} } = {}) {
+  constructor({ runtimeContext, getGeneration = () => null, now = () => Date.now(), limits = {} } = {}) {
     if (!runtimeContext) throw new TypeError('runtimeContext is required');
     this.context = runtimeContext;
+    this.getGeneration = getGeneration;
     this.now = now;
     this.limits = Object.freeze({
       ttlMs: positive(limits.ttlMs, V3_CONVERSATION_LIMITS.ttlMs),
@@ -51,11 +52,14 @@ export class V3ConversationRecords {
   // never establishes the speaker or inherits a different session's task.
   scopeKey(envelope) {
     assertV3TurnEnvelope(envelope, this.context);
+    if (envelope.runtimeGeneration !== this.getGeneration()) {
+      throw new TypeError('Conversation turn belongs to a stale dispatcher generation');
+    }
     if (!envelope.accountId || !envelope.connectionId || !envelope.speakerRef || !envelope.speaker.unitId) {
       throw new TypeError('Authenticated speaker and connection are required for conversation custody');
     }
     return JSON.stringify([
-      this.context.runtimeId, envelope.dispatchCenterId,
+      this.context.runtimeId, envelope.runtimeGeneration, envelope.dispatchCenterId,
       envelope.speaker.unitId, envelope.speakerRef, envelope.accountId, envelope.connectionId,
     ]);
   }

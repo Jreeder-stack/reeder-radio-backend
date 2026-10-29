@@ -24,7 +24,7 @@ if (!['baseline', 'acceptance'].includes(mode)) throw new Error(`Unknown DISPATC
 const ledger = [];
 // Repaired cases must assert the fixed behavior in EVERY mode. Unrepaired
 // cases retain their pinned baseline until their owning work item is finished.
-const repairedCases = new Set(['R02', 'R03', 'R04', 'R06', 'R07', 'R09', 'R10']);
+const repairedCases = new Set(['R01', 'R02', 'R03', 'R04', 'R06', 'R07', 'R09', 'R10']);
 let harnesses = [];
 let networkGuard;
 
@@ -68,7 +68,7 @@ afterAll(() => {
   const reportPath = process.env.DISPATCHER_AUDIT_REPORT;
   if (!reportPath) return;
   const sourcePaths = [
-    'src/dispatcher-v3/liveRuntime.js', 'src/dispatcher-v3/speechPipeline.js',
+    'src/dispatcher-v3/liveRuntime.js', 'src/dispatcher-v3/conversationRecords.js', 'src/dispatcher-v3/speechPipeline.js',
     'src/dispatcher-v3/conversationGate.js', 'src/dispatcher-v3/intentPlanner.js',
     'src/dispatcher-v3/deterministicIntent.js', 'src/dispatcher-v3/fieldIncidentCoordinator.js',
     'src/dispatcher-v3/operationalContext.js', 'src/dispatcher-v3/actionExecutor.js',
@@ -119,6 +119,9 @@ describe('01-01 audit regressions: repaired assertions plus remaining known defe
     const payload = JSON.parse(h.llm.mock.calls[1][0].messages[1].content);
     const foreign = payload.recentContext.find((item) => item.input?.callId === 'OLD-CALL');
     const observed = { foreignDialoguePresent: Boolean(foreign), hasSpeaker: Boolean(foreign?.speakerCallsign || foreign?.unitId), hasAge: Boolean(foreign?.timestamp || foreign?.capturedAt) };
+    // 02-01 now deliberately requires the stronger invariant: B2 sees no
+    // A1 dialogue, even when the previous context entry has expired.
+    expect(payload.recentContext).toEqual([]);
     record('R01', 'F1', 'Expired A1 dialogue must not be supplied as B2 current conversation.', observed,
       { foreignDialoguePresent: true, hasSpeaker: false, hasAge: false }, (o) => !o.foreignDialoguePresent);
   });

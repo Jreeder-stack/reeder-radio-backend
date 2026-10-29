@@ -177,6 +177,19 @@ describe('AI-DISP-V3-001 02-01 unit-owned conversations through real V3 runtime'
     expect(h.runtime.conversations.get(envelope).turns[0]).not.toHaveProperty('activeCalls');
   });
 
+  it('does not expose new runtime conversations to stale-generation envelopes', async () => {
+    const h = await make();
+    await h.send('Central, mark me available', 'A1');
+    const stale = plannerEnvelope(h);
+    await h.runtime.stop();
+    await h.runtime.start();
+    await h.send('Central, mark me en route', 'A1');
+    const current = plannerEnvelope(h);
+    expect(current.runtimeGeneration).not.toBe(stale.runtimeGeneration);
+    expect(h.runtime.conversations.get(current).turns).toHaveLength(1);
+    expect(() => h.runtime.conversations.get(stale)).toThrow(/stale dispatcher generation/);
+  });
+
   it('clears conversational state on runtime stop, without changing CAD state', async () => {
     const h = await make();
     await h.send('Central, mark me available', 'A1');

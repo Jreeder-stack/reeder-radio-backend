@@ -166,7 +166,9 @@ export class V3LiveDispatcher {
     this.speech = new V3SpeechPipeline({ runtimeContext: this.context, transcribe, codec: this.codec, diagnostics: this.diagnostics });
     this.planner = planner || new V3IntentPlanner({ diagnostics: this.diagnostics });
     this.conversationGate = conversationGate || new V3ConversationGate();
-    this.conversations = new V3ConversationRecords({ runtimeContext: this.context });
+    this.conversations = new V3ConversationRecords({
+      runtimeContext: this.context, getGeneration: () => this.runtimeGeneration,
+    });
     this.synthesize = synthesize;
     this._audioListener = (frame) => this.speech.pushFrame(frame);
   }
