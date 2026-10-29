@@ -1515,9 +1515,10 @@ _handlePttStart(socket, data) {
       this._emitToChannelAll(key, RADIO_EVENTS.TX_START, payload);
       return true;
     }
+    // A late AI stop must not clear the RX indication of a new floor owner.
+    if (holder) return false;
     this._emitToChannelAll(key, RADIO_EVENTS.TX_STOP, payload);
-    // A subsequent legitimate transmitter must not be marked idle.
-    if (!holder) this._emitToChannelAll(key, RADIO_EVENTS.CHANNEL_IDLE,
+    this._emitToChannelAll(key, RADIO_EVENTS.CHANNEL_IDLE,
       { channelId: key, timestamp: Date.now() });
     return true;
   }

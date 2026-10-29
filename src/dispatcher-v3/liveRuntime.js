@@ -742,7 +742,9 @@ export class V3LiveDispatcher {
 
     let announcedRx = false;
     try {
-      announcedRx = this.signaling.publishAiRadioAudio?.(channel, this.identity, true) === true;
+      const activity = this.signaling.publishAiRadioAudio?.(channel, this.identity, true);
+      if (activity === false) throw new Error('AI alert radio floor lost before transmission');
+      announcedRx = activity === true;
       const tone = buildMdcTonePcm(MDC_TONE_MS);
       const toneFrames = this.codec.encodePcmToOpus(tone);
       for (const frame of toneFrames) {
@@ -791,7 +793,16 @@ export class V3LiveDispatcher {
       const opusFrames = this.codec.encodePcmToOpus(pcm);
       this._diag('tts_ready', correlationId, true, { text, frames: opusFrames.length, latencyMs: Date.now() - started });
       if (opusFrames.length > 0) {
-        announcedRx = this.signaling.publishAiRadioAudio?.(channel, this.identity, true) === true;
+        // Synthesis can take long enough for the previously granted floor
+        // to expire. Reconfirm ownership before the first audible packet.
+        const preflight = this.floorControl.requestFloor(channel, AI_FLOOR_IDENTITY);
+        if (!preflight?.granted) {
+          throw new Error('AI speech radio floor unavailable after synthesis');
+        }
+        lastRearmAt = Date.now();
+        const activity = this.signaling.publishAiRadioAudio?.(channel, this.identity, true);
+        if (activity === false) throw new Error('AI speech radio floor lost before transmission');
+        announcedRx = activity === true;
       }
 
       for (const frame of opusFrames) {

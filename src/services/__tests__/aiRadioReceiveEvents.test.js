@@ -46,7 +46,6 @@ describe('AI Dispatcher radio RX activity notification', () => {
     vi.spyOn(floorControlService, 'getFloorHolder')
       .mockReturnValue({ floorKey: 'INDIANA-2' });
     signalingService.publishAiRadioAudio('Dispatch__OPS1', 'AI-DISPATCHER:TEST', false);
-    expect(rx.emit).toHaveBeenCalledTimes(1);
-    expect(rx.emit).toHaveBeenCalledWith('tx:stop', expect.any(Object));
+    expect(rx.emit).not.toHaveBeenCalled();
   });
 });
