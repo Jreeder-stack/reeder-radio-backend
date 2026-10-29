@@ -186,6 +186,11 @@
   function RadioClient() {
     this._serverUrl = '';
     this._channelId = null;
+    this._activeChannelId = null;
+    this._joinedChannelId = null;
+    this._joiningChannelId = null;
+    this._reception = null;
+    this._channelGeneration = 0;
     this._socket = null;
     this._ws = null;
     this._unitId = null;
@@ -195,20 +200,56 @@
     this._transmitting = false;
     this._txSequence = 0;
     this._capture = null;
+    this._pttAttempt = null;
+    this._pttChannelId = null;
     this._playback = null;
     this._listeners = {};
     this._destroyed = false;
     this._deviceId = getOrCreateDeviceId();
     this._deviceType = 'cad';
+    this._readyPromise = null;
+    this._cancelSignaling = null;
+    this._cancelChannelJoin = null;
+    this._cancelAudioConnect = null;
   }
 
+  function cancelledOperation() {
+    var error = new Error('Radio operation was superseded or cancelled');
+    error.code = 'RADIO_OPERATION_CANCELLED';
+    return error;
+  }
+
+  RadioClient.prototype._assertAlive = function () {
+    if (this._destroyed) throw cancelledOperation();
+  };
+
+  RadioClient.prototype._isCurrentChannel = function (channelId, generation) {
+    return !this._destroyed && this._channelId === channelId &&
+      this._channelGeneration === generation;
+  };
+
+  RadioClient.prototype._acceptChannelEvent = function (data) {
+    return !this._destroyed && this._authenticated && this._activeChannelId !== null &&
+      this._activeChannelId === this._channelId && data &&
+      data.channelId === this._activeChannelId;
+  };
+
+  RadioClient.prototype._acceptSelectedActivity = function (data) {
+    return !this._destroyed && this._authenticated && data && data.channelId === this._channelId &&
+      (data.channelId === this._joinedChannelId || data.channelId === this._joiningChannelId);
+  };
+
   RadioClient.prototype.init = async function (options) {
+    this._assertAlive();
+    if (this._readyPromise) throw new Error('RadioClient is already initialized');
     if (!options || !options.serverUrl) {
       throw new Error('serverUrl is required');
     }
 
     this._serverUrl = options.serverUrl.replace(/\/$/, '');
     this._channelId = options.channelId || null;
+    var channelId = this._channelId;
+    var generation = ++this._channelGeneration;
     if (options.deviceId && UUID_RE.test(options.deviceId)) {
       this._deviceId = options.deviceId;
       try {
@@ -217,14 +258,17 @@
     }
     if (options.deviceType) this._deviceType = options.deviceType;
 
-    await this._fetchUserInfo();
-    await this._connectSignaling();
-    await this._initPlayback();
-
-    if (this._channelId) {
-      await this._joinChannel(this._channelId);
-      await this._connectAudioWs(this._channelId);
-    }
+    var self = this;
+    this._readyPromise = (async function () {
+      await self._fetchUserInfo();
+      self._assertAlive();
+      await self._connectSignaling();
+      self._assertAlive();
+      await self._initPlayback();
+      self._assertAlive();
+    })();
+    await this._readyPromise;
+    await this._activateChannel(channelId, generation);
   };
 
   RadioClient.prototype._fetchUserInfo = async function () {
@@ -235,6 +279,7 @@
       throw new Error('Not authenticated. Call POST /api/auth/cad-login first.');
     }
     var data = await res.json();
+    this._assertAlive();
     var user = data.user;
     this._unitId = user.unit_id || user.username;
     this._username = user.username;
@@ -243,29 +288,51 @@
 
   RadioClient.prototype._connectSignaling = function () {
     var self = this;
-
     return new Promise(function (resolve, reject) {
+      var settled = false;
+      var script = null;
+      var timeout = setTimeout(function () {
+        finish(new Error('Signaling connection timeout'));
+      }, 10000);
+
+      function finish(error) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (self._cancelSignaling === cancel) self._cancelSignaling = null;
+        if (script) {
+          script.onload = null;
+          script.onerror = null;
+        }
+        if (error) reject(error);
+        else resolve();
+      }
+      function cancel() {
+        finish(cancelledOperation());
+      }
+      function connect() {
+        if (settled || self._destroyed) { cancel(); return; }
+        self._doConnect(function () { finish(); }, finish);
+      }
+      self._cancelSignaling = cancel;
       if (typeof io === 'undefined') {
-        var script = document.createElement('script');
+        script = document.createElement('script');
         script.src = self._serverUrl + '/socket.io/socket.io.js';
-        script.onload = function () {
-          self._doConnect(resolve, reject);
-        };
+        script.onload = connect;
         script.onerror = function () {
-          reject(new Error('Failed to load Socket.IO client library'));
+          finish(new Error('Failed to load Socket.IO client library'));
         };
         document.head.appendChild(script);
       } else {
-        self._doConnect(resolve, reject);
+        connect();
       }
     });
   };
 
   RadioClient.prototype._doConnect = function (resolve, reject) {
     var self = this;
-    var settled = false;
-
-    this._socket = io(this._serverUrl, {
+    var hasAuthenticated = false;
+    var socket = io(this._serverUrl, {
       path: '/signaling',
       withCredentials: true,
       transports: ['websocket', 'polling'],
@@ -274,19 +341,16 @@
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
     });
+    this._socket = socket;
 
-    var timeout = setTimeout(function () {
-      if (!settled) {
-        settled = true;
-        reject(new Error('Signaling connection timeout'));
-      }
-    }, 10000);
+    function isCurrentSocket() {
+      return !self._destroyed && self._socket === socket;
+    }
 
-    this._socket.on('connect', function () {
-      clearTimeout(timeout);
-      self._emit('connectionChange', { connected: true });
-
-      self._socket.emit('authenticate', {
+    socket.on('connect', function () {
+      if (!isCurrentSocket()) return;
+      self._emit('connectionChange', { connected: true, ready: false });
+      socket.emit('authenticate', {
         unitId: self._unitId,
         username: self._username,
         agencyId: 'default',
@@ -296,61 +360,137 @@
       });
     });
 
-    this._socket.on('authenticated', function (data) {
+    socket.on('authenticated', function () {
+      if (!isCurrentSocket()) return;
+      var wasAuthenticated = self._authenticated;
       self._authenticated = true;
-      if (!settled) {
-        settled = true;
+      if (!hasAuthenticated) {
+        hasAuthenticated = true;
         resolve();
+      } else if (!wasAuthenticated) {
+        var generation = self._channelGeneration;
+        var channelId = self._channelId;
+        self._readyPromise.then(function () {
+          return self._activateChannel(channelId, generation);
+        }).catch(function (error) {
+          if (error.code !== 'RADIO_OPERATION_CANCELLED' &&
+              self._isCurrentChannel(channelId, generation)) {
+            self._emit('connectionChange', { connected: true, ready: false, error: error.message });
+          }
+        });
       }
     });
 
-    this._socket.on('disconnect', function (reason) {
+    socket.on('disconnect', function (reason) {
+      if (!isCurrentSocket()) return;
       self._authenticated = false;
-      self._emit('connectionChange', { connected: false, reason: reason });
+      if (hasAuthenticated) ++self._channelGeneration;
+      self._reception = null;
+      self.stopPtt();
+      if (self._cancelChannelJoin) self._cancelChannelJoin();
+      self._closeAudioWs();
+      self._joinedChannelId = null;
+      self._emit('connectionChange', { connected: false, ready: false, reason: reason });
     });
 
-    this._socket.on('connect_error', function (err) {
-      if (!settled) {
-        settled = true;
-        clearTimeout(timeout);
-        reject(new Error('Signaling connection failed: ' + err.message));
+    socket.on('connect_error', function (error) {
+      if (isCurrentSocket() && !hasAuthenticated) {
+        reject(new Error('Signaling connection failed: ' + error.message));
       }
     });
 
-    this._socket.on('ptt:start', function (data) {
+    socket.on('ptt:start', function (data) {
+      if (!isCurrentSocket() || !self._acceptSelectedActivity(data)) return;
       if (data.unitId === self._unitId) return;
-      self._emit('pttStart', data);
+      self._reception = data;
+      if (self._acceptChannelEvent(data)) self._emit('pttStart', data);
     });
-    this._socket.on('ptt:end', function (data) {
-      self._emit('pttEnd', data);
+    socket.on('ptt:end', function (data) {
+      if (!isCurrentSocket() || !self._acceptSelectedActivity(data)) return;
+      if (self._reception && (!data.unitId || data.unitId === self._reception.unitId)) {
+        self._reception = null;
+      }
+      if (self._acceptChannelEvent(data)) self._emit('pttEnd', data);
     });
-    this._socket.on('ptt:busy', function (data) {
-      self._emit('pttBusy', data);
+    socket.on('ptt:busy', function (data) {
+      if (isCurrentSocket() && self._acceptChannelEvent(data)) self._emit('pttBusy', data);
     });
-    this._socket.on('ptt:granted', function (data) {
-      self._emit('pttGranted', data);
+    socket.on('ptt:granted', function (data) {
+      var attempt = self._pttAttempt;
+      if (isCurrentSocket() && self._acceptChannelEvent(data) && attempt &&
+          data.requestId === attempt.requestId &&
+          (!data.targetDeviceId || data.targetDeviceId === self._deviceId)) {
+        self._emit('pttGranted', data);
+      }
     });
-    this._socket.on('channel:join', function (data) {
-      self._emit('channelJoin', data);
+    socket.on('channel:join', function (data) {
+      if (isCurrentSocket() && self._acceptChannelEvent(data)) self._emit('channelJoin', data);
     });
-    this._socket.on('channel:leave', function (data) {
-      self._emit('channelLeave', data);
+    socket.on('channel:leave', function (data) {
+      if (isCurrentSocket() && self._acceptChannelEvent(data)) self._emit('channelLeave', data);
     });
-    this._socket.on('channel:members', function (data) {
-      self._emit('channelMembers', data);
+    socket.on('channel:members', function (data) {
+      if (!isCurrentSocket() || !data) return;
+      // Authorization is asynchronous on the server. A cancelled join may be
+      // acknowledged after its leave; remove that obsolete room again.
+      if (data.channelId && (data.channelId !== self._channelId ||
+          (data.channelId !== self._joiningChannelId && data.channelId !== self._joinedChannelId))) {
+        self._leaveChannel(data.channelId);
+        return;
+      }
+      if (self._acceptChannelEvent(data)) self._emit('channelMembers', data);
     });
-    this._socket.on('emergency:start', function (data) {
-      self._emit('emergencyStart', data);
+    socket.on('emergency:start', function (data) {
+      if (isCurrentSocket() && self._acceptChannelEvent(data)) self._emit('emergencyStart', data);
     });
-    this._socket.on('emergency:end', function (data) {
-      self._emit('emergencyEnd', data);
+    socket.on('emergency:end', function (data) {
+      if (isCurrentSocket() && self._acceptChannelEvent(data)) self._emit('emergencyEnd', data);
     });
   };
 
-  RadioClient.prototype._joinChannel = function (channelId) {
-    if (this._socket && this._authenticated) {
-      this._socket.emit('channel:join', { channelId: channelId });
-    }
+  RadioClient.prototype._joinChannel = function (channelId, generation) {
+    var self = this;
+    var socket = this._socket;
+    if (!socket || !this._authenticated) return Promise.reject(new Error('Signaling is disconnected'));
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      self._joiningChannelId = channelId;
+      var timeout = setTimeout(function () {
+        finish(new Error('Channel join timeout'));
+      }, 10000);
+      function finish(error, data) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        socket.off('channel:members', onJoined);
+        socket.off('error', onError);
+        if (self._cancelChannelJoin === cancel) {
+          self._cancelChannelJoin = null;
+          self._joiningChannelId = null;
+        }
+        if (error) reject(error);
+        else resolve(data);
+      }
+      function cancel() { finish(cancelledOperation()); }
+      function onJoined(data) {
+        if (!data || data.channelId !== channelId) return;
+        if (!self._isCurrentChannel(channelId, generation) || self._socket !== socket) {
+          cancel();
+          return;
+        }
+        self._joinedChannelId = channelId;
+        finish(null, data);
+      }
+      function onError(data) {
+        if (data && data.channelId === channelId) {
+          finish(new Error(data.message || 'Channel join failed'));
+        }
+      }
+      self._cancelChannelJoin = cancel;
+      socket.on('channel:members', onJoined);
+      socket.on('error', onError);
+      socket.emit('channel:join', { channelId: channelId });
+    });
   };
 
   RadioClient.prototype._leaveChannel = function (channelId) {
@@ -359,72 +499,131 @@
     }
   };
 
-  RadioClient.prototype._connectAudioWs = function (channelId) {
-    var self = this;
+  RadioClient.prototype._clearPlayback = function () {
+    var playback = this._playback;
+    if (!playback) return;
+    playback.fallbackQueue.length = 0;
+    playback.fallbackOffset = 0;
+    if (playback.workletNode) playback.workletNode.port.postMessage({ type: 'clear' });
+  };
 
-    if (this._ws) {
-      this._ws.onclose = null;
-      this._ws.close();
-      this._ws = null;
+  RadioClient.prototype._closeAudioWs = function () {
+    if (this._cancelAudioConnect) this._cancelAudioConnect();
+    var ws = this._ws;
+    this._ws = null;
+    this._activeChannelId = null;
+    if (ws) {
+      ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null;
+      ws.close();
     }
+    this._clearPlayback();
+  };
 
+  RadioClient.prototype._activateChannel = async function (channelId, generation) {
+    if (!this._isCurrentChannel(channelId, generation)) throw cancelledOperation();
+    if (!channelId) return;
+    try {
+      var members = await this._joinChannel(channelId, generation);
+      if (!this._isCurrentChannel(channelId, generation)) throw cancelledOperation();
+      await this._connectAudioWs(channelId, generation);
+      if (!this._isCurrentChannel(channelId, generation)) throw cancelledOperation();
+      this._emit('channelMembers', members);
+      if (this._reception) this._emit('pttStart', this._reception);
+    } catch (error) {
+      if (this._isCurrentChannel(channelId, generation)) {
+        this._leaveChannel(channelId);
+        this._joinedChannelId = null;
+        this._reception = null;
+        this._emit('connectionChange', { connected: this.isConnected(), ready: false, error: error.message });
+      }
+      throw error;
+    }
+  };
+
+  RadioClient.prototype._connectAudioWs = function (channelId, generation) {
+    var self = this;
+    this._closeAudioWs();
     return new Promise(function (resolve, reject) {
+      var settled = false;
       var proto = self._serverUrl.startsWith('https') ? 'wss:' : 'ws:';
       var host = self._serverUrl.replace(/^https?:\/\//, '');
       var url = proto + '//' + host + '/api/audio-ws?channelId=' +
         encodeURIComponent(channelId) + '&unitId=' + encodeURIComponent(self._unitId);
-
       var ws = new WebSocket(url);
+      // Own the socket while it is CONNECTING, so a newer selection can close it.
+      self._ws = ws;
       ws.binaryType = 'arraybuffer';
+      var timeout = setTimeout(function () {
+        fail(new Error('Audio WebSocket connection timeout'));
+      }, 10000);
+
+      function isCurrent() {
+        return self._ws === ws && self._authenticated &&
+          self._isCurrentChannel(channelId, generation);
+      }
+      function finish(error) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (self._cancelAudioConnect === cancel) self._cancelAudioConnect = null;
+        if (error) reject(error);
+        else resolve();
+      }
+      function cancel() { finish(cancelledOperation()); }
+      function fail(error) {
+        var established = settled && self._activeChannelId === channelId;
+        finish(error);
+        if (self._ws === ws) {
+          self.stopPtt();
+          self._reception = null;
+          self._closeAudioWs();
+          if (established) self._emit('connectionChange', {
+            connected: self.isConnected(), ready: false, reason: 'audio_error', error: error.message,
+          });
+        }
+      }
+      self._cancelAudioConnect = cancel;
 
       ws.onopen = function () {
-        self._ws = ws;
-        resolve();
+        if (!isCurrent()) {
+          finish(cancelledOperation());
+          ws.close();
+          return;
+        }
+        self._activeChannelId = channelId;
+        finish();
+        self._emit('connectionChange', { connected: true, ready: true, channelId: channelId });
       };
-
-      ws.onerror = function () {
-        reject(new Error('Audio WebSocket connection failed'));
-      };
-
-      ws.onmessage = function (evt) {
-        if (evt.data instanceof ArrayBuffer) {
-          var parsed = parseBinaryAudioFrame(evt.data);
-          if (!parsed) return;
+      ws.onerror = function () { fail(new Error('Audio WebSocket connection failed')); };
+      ws.onmessage = function (event) {
+        if (!isCurrent() || self._activeChannelId !== channelId) return;
+        if (event.data instanceof ArrayBuffer) {
+          var parsed = parseBinaryAudioFrame(event.data);
+          if (!parsed || parsed.channelId !== channelId) return;
           if (parsed.senderUnitId && parsed.senderUnitId === self._unitId) return;
-          if (self._playback) {
-            self._playback.enqueue(parsed.samples);
-          }
+          if (self._playback) self._playback.enqueue(parsed.samples);
           return;
         }
-
-        if (typeof evt.data !== 'string') return;
+        if (typeof event.data !== 'string') return;
         var msg;
-        try {
-          msg = JSON.parse(evt.data);
-        } catch (e) {
-          return;
-        }
-
+        try { msg = JSON.parse(event.data); } catch (_) { return; }
         if (msg.type === 'heartbeat') {
-          try {
-            ws.send(JSON.stringify({ type: 'pong', ts: msg.ts }));
-          } catch (_) {}
+          try { ws.send(JSON.stringify({ type: 'pong', ts: msg.ts })); } catch (_) {}
           return;
         }
-
-        if (!validatePcmPacket(msg)) return;
+        if (!validatePcmPacket(msg) || msg.channelId !== channelId) return;
         if (msg.senderUnitId && msg.senderUnitId === self._unitId) return;
-
-        if (self._playback) {
-          var frame = new Int16Array(msg.payload);
-          self._playback.enqueue(frame);
-        }
+        if (self._playback) self._playback.enqueue(new Int16Array(msg.payload));
       };
-
       ws.onclose = function () {
-        if (self._ws === ws) {
-          self._ws = null;
-        }
+        finish(new Error('Audio WebSocket closed'));
+        if (self._ws !== ws) return;
+        self._ws = null;
+        self._activeChannelId = null;
+        self._reception = null;
+        self.stopPtt();
+        self._clearPlayback();
+        self._emit('connectionChange', { connected: self.isConnected(), ready: false, reason: 'audio_closed' });
       };
     });
   };
@@ -432,36 +631,37 @@
   RadioClient.prototype._initPlayback = async function () {
     var AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
-
+    this._assertAlive();
     var ctx = new AudioCtx({ sampleRate: PCM_SPEC.sampleRate });
-    if (ctx.state === 'suspended') {
-      await ctx.resume();
-    }
-
     var self = this;
-    this._playback = {
+    var playback = {
       ctx: ctx,
       workletNode: null,
       fallbackProcessor: null,
       fallbackQueue: [],
       fallbackOffset: 0,
     };
-
+    this._playback = playback;
+    function isCurrent() { return !self._destroyed && self._playback === playback; }
+    if (ctx.state === 'suspended') await ctx.resume();
+    if (!isCurrent()) throw cancelledOperation();
     try {
       await ctx.audioWorklet.addModule(this._serverUrl + '/pcm-playback-worklet.js');
-      this._playback.workletNode = new AudioWorkletNode(ctx, 'pcm-playback-processor', {
+      if (!isCurrent()) throw cancelledOperation();
+      playback.workletNode = new AudioWorkletNode(ctx, 'pcm-playback-processor', {
         outputChannelCount: [1],
       });
-      this._playback.workletNode.connect(ctx.destination);
-    } catch (e) {
+      playback.workletNode.connect(ctx.destination);
+    } catch (error) {
+      if (!isCurrent()) throw cancelledOperation();
       var proc = ctx.createScriptProcessor(1024, 1, 1);
       proc.onaudioprocess = function (event) {
         var output = event.outputBuffer.getChannelData(0);
         var written = 0;
-        var q = self._playback.fallbackQueue;
-        while (written < output.length && q.length > 0) {
+        var q = playback.fallbackQueue;
+        while (isCurrent() && written < output.length && q.length > 0) {
           var current = q[0];
-          var offset = self._playback.fallbackOffset;
+          var offset = playback.fallbackOffset;
           var available = current.length - offset;
           var needed = output.length - written;
           var count = Math.min(available, needed);
@@ -471,87 +671,122 @@
             output[written + i] = sample;
           }
           written += count;
-          self._playback.fallbackOffset += count;
-          if (self._playback.fallbackOffset >= current.length) {
+          playback.fallbackOffset += count;
+          if (playback.fallbackOffset >= current.length) {
             q.shift();
-            self._playback.fallbackOffset = 0;
+            playback.fallbackOffset = 0;
           }
         }
-        for (var j = written; j < output.length; j++) {
-          output[j] = 0;
-        }
+        for (var j = written; j < output.length; j++) output[j] = 0;
       };
       proc.connect(ctx.destination);
-      this._playback.fallbackProcessor = proc;
+      playback.fallbackProcessor = proc;
     }
-
-    this._playback.enqueue = function (int16Frame) {
-      if (self._playback.ctx && self._playback.ctx.state === 'suspended') {
-        self._playback.ctx.resume().catch(function () {});
-      }
-      var samples = (int16Frame instanceof Int16Array) ? int16Frame : new Int16Array(int16Frame);
-      if (self._playback.workletNode) {
-        self._playback.workletNode.port.postMessage({ type: 'enqueue', samples: samples });
-      } else if (self._playback.fallbackProcessor) {
-        self._playback.fallbackQueue.push(samples);
+    playback.enqueue = function (int16Frame) {
+      if (!isCurrent()) return;
+      if (ctx.state === 'suspended') ctx.resume().catch(function () {});
+      var samples = int16Frame instanceof Int16Array ? int16Frame : new Int16Array(int16Frame);
+      if (playback.workletNode) {
+        playback.workletNode.port.postMessage({ type: 'enqueue', samples: samples });
+      } else if (playback.fallbackProcessor) {
+        playback.fallbackQueue.push(samples);
       }
     };
   };
 
+  RadioClient.prototype._isCurrentPtt = function (attempt) {
+    return this._pttAttempt === attempt && this._authenticated &&
+      this._isCurrentChannel(attempt.channelId, attempt.generation) &&
+      this._activeChannelId === attempt.channelId && this._socket === attempt.socket &&
+      this._ws === attempt.ws && attempt.ws.readyState === WebSocket.OPEN;
+  };
+
   RadioClient.prototype.startPtt = async function () {
-    if (this._transmitting || !this._channelId) return false;
-    if (!this._socket || !this._authenticated) return false;
+    if (this._destroyed || this._transmitting || this._pttAttempt || !this._channelId) return false;
+    if (!this._socket || !this._authenticated || this._activeChannelId !== this._channelId) return false;
     if (!this._ws || this._ws.readyState !== WebSocket.OPEN) return false;
-
     var self = this;
-
+    var attempt = {
+      channelId: this._activeChannelId,
+      generation: this._channelGeneration,
+      socket: this._socket,
+      ws: this._ws,
+      requestId: generateUUID(),
+      cancel: null,
+    };
+    this._pttAttempt = attempt;
+    this._pttChannelId = attempt.channelId;
     return new Promise(function (resolve, reject) {
       var settled = false;
-
+      var granted = false;
       var timeout = setTimeout(function () {
-        if (!settled) {
-          settled = true;
-          cleanup();
-          reject(new Error('PTT grant timeout'));
-        }
+        finish(false, new Error('PTT grant timeout'));
+        self.stopPtt();
       }, 3000);
 
       function cleanup() {
         clearTimeout(timeout);
-        self._socket.off('ptt:granted', onGranted);
-        self._socket.off('ptt:busy', onBusy);
+        attempt.socket.off('ptt:granted', onGranted);
+        attempt.socket.off('ptt:busy', onBusy);
       }
-
+      function finish(result, error) {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (error) reject(error);
+        else resolve(result);
+      }
+      attempt.cancel = function () { finish(false); };
       function onGranted(data) {
-        if (data.channelId === self._channelId) {
-          settled = true;
-          cleanup();
-          self._beginCapture().then(function () {
+        if (granted || !self._isCurrentPtt(attempt) || !data ||
+            data.channelId !== attempt.channelId || data.requestId !== attempt.requestId ||
+            (data.targetDeviceId && data.targetDeviceId !== self._deviceId)) return;
+        granted = true;
+        cleanup();
+        self._beginCapture(attempt).then(function (started) {
+          if (started && self._isCurrentPtt(attempt)) {
             self._transmitting = true;
-            resolve(true);
-          }).catch(reject);
-        }
+            finish(true);
+          } else {
+            finish(false);
+          }
+        }).catch(function (error) {
+          finish(false, error);
+          if (self._pttAttempt === attempt) self.stopPtt();
+        });
       }
-
       function onBusy(data) {
-        if (data.channelId === self._channelId) {
-          settled = true;
-          cleanup();
-          self._emit('pttBusy', data);
-          resolve(false);
-        }
+        if (!self._isCurrentPtt(attempt) || !data || data.channelId !== attempt.channelId) return;
+        finish(false);
+        self._pttAttempt = null;
+        self._pttChannelId = null;
       }
-
-      self._socket.once('ptt:granted', onGranted);
-      self._socket.once('ptt:busy', onBusy);
-      self._socket.emit('ptt:start', { channelId: self._channelId });
+      // Unrelated channel events must not consume the awaited grant listener.
+      attempt.socket.on('ptt:granted', onGranted);
+      attempt.socket.on('ptt:busy', onBusy);
+      attempt.socket.emit('ptt:start', { channelId: attempt.channelId, requestId: attempt.requestId });
     });
   };
 
-  RadioClient.prototype._beginCapture = async function () {
-    var self = this;
+  RadioClient.prototype._releaseCapture = function (capture) {
+    if (!capture) return Promise.resolve();
+    if (this._capture === capture) this._capture = null;
+    if (capture.worklet) {
+      capture.worklet.port.onmessage = null;
+      capture.worklet.disconnect();
+    }
+    if (capture.fallback) {
+      capture.fallback.onaudioprocess = null;
+      capture.fallback.disconnect();
+    }
+    if (capture.source) capture.source.disconnect();
+    if (capture.stream) capture.stream.getTracks().forEach(function (track) { track.stop(); });
+    return capture.ctx ? capture.ctx.close().catch(function () {}) : Promise.resolve();
+  };
 
-    this._captureStream = await navigator.mediaDevices.getUserMedia({
+  RadioClient.prototype._beginCapture = async function (attempt) {
+    var self = this;
+    var stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
         sampleRate: PCM_SPEC.sampleRate,
@@ -560,101 +795,95 @@
         autoGainControl: false,
       },
     });
-
-    var AudioCtx = window.AudioContext || window.webkitAudioContext;
-    this._captureCtx = new AudioCtx({ sampleRate: PCM_SPEC.sampleRate });
-    if (this._captureCtx.state === 'suspended') {
-      await this._captureCtx.resume();
+    if (!this._isCurrentPtt(attempt)) {
+      stream.getTracks().forEach(function (track) { track.stop(); });
+      return false;
     }
-
-    this._captureSource = this._captureCtx.createMediaStreamSource(this._captureStream);
-
+    var AudioCtx = window.AudioContext || window.webkitAudioContext;
+    var capture = { stream: stream, ctx: null, source: null, worklet: null, fallback: null };
+    this._capture = capture;
     try {
-      await this._captureCtx.audioWorklet.addModule(this._serverUrl + '/pcm-capture-worklet.js');
-      this._captureWorklet = new AudioWorkletNode(this._captureCtx, 'pcm-capture-processor');
-      this._captureWorklet.port.onmessage = function (event) {
-        if (event.data.type === 'pcmFrame' && self._transmitting && self._ws && self._ws.readyState === WebSocket.OPEN) {
-          var bin = buildBinaryFrame(self._txSequence++, self._channelId, self._unitId, event.data.samples);
-          self._ws.send(bin);
-        }
-      };
-      this._captureSource.connect(this._captureWorklet);
-      this._captureWorklet.connect(this._captureCtx.destination);
-    } catch (e) {
-      this._captureFallback = this._captureCtx.createScriptProcessor(1024, 1, 1);
-      this._captureFallbackBuffer = new Int16Array(0);
-      this._captureFallback.onaudioprocess = function (event) {
-        if (!self._transmitting || !self._ws || self._ws.readyState !== WebSocket.OPEN) return;
-        var input = event.inputBuffer.getChannelData(0);
-        var pcmChunk = new Int16Array(input.length);
-        for (var i = 0; i < input.length; i++) {
-          var s = Math.max(-1, Math.min(1, input[i]));
-          pcmChunk[i] = s < 0 ? s * 32768 : s * 32767;
-        }
-        var merged = new Int16Array(self._captureFallbackBuffer.length + pcmChunk.length);
-        merged.set(self._captureFallbackBuffer, 0);
-        merged.set(pcmChunk, self._captureFallbackBuffer.length);
-        self._captureFallbackBuffer = merged;
-        while (self._captureFallbackBuffer.length >= PCM_SPEC.frameSamples) {
-          var frame = self._captureFallbackBuffer.slice(0, PCM_SPEC.frameSamples);
-          self._captureFallbackBuffer = self._captureFallbackBuffer.slice(PCM_SPEC.frameSamples);
-          var bin = buildBinaryFrame(self._txSequence++, self._channelId, self._unitId, frame);
-          self._ws.send(bin);
-        }
-      };
-      this._captureSource.connect(this._captureFallback);
-      this._captureFallback.connect(this._captureCtx.destination);
+      capture.ctx = new AudioCtx({ sampleRate: PCM_SPEC.sampleRate });
+      if (capture.ctx.state === 'suspended') await capture.ctx.resume();
+      if (!this._isCurrentPtt(attempt)) return false;
+      capture.source = capture.ctx.createMediaStreamSource(stream);
+      function sendFrame(samples) {
+        if (!self._transmitting || !self._isCurrentPtt(attempt)) return;
+        attempt.ws.send(buildBinaryFrame(self._txSequence++, attempt.channelId, self._unitId, samples));
+      }
+      try {
+        await capture.ctx.audioWorklet.addModule(this._serverUrl + '/pcm-capture-worklet.js');
+        if (!this._isCurrentPtt(attempt)) return false;
+        capture.worklet = new AudioWorkletNode(capture.ctx, 'pcm-capture-processor');
+        capture.worklet.port.onmessage = function (event) {
+          if (event.data.type === 'pcmFrame') sendFrame(event.data.samples);
+        };
+        capture.source.connect(capture.worklet);
+        capture.worklet.connect(capture.ctx.destination);
+      } catch (error) {
+        if (!this._isCurrentPtt(attempt)) return false;
+        capture.fallback = capture.ctx.createScriptProcessor(1024, 1, 1);
+        var buffer = new Int16Array(0);
+        capture.fallback.onaudioprocess = function (event) {
+          if (!self._transmitting || !self._isCurrentPtt(attempt)) return;
+          var input = event.inputBuffer.getChannelData(0);
+          var chunk = new Int16Array(input.length);
+          for (var i = 0; i < input.length; i++) {
+            var value = Math.max(-1, Math.min(1, input[i]));
+            chunk[i] = value < 0 ? value * 32768 : value * 32767;
+          }
+          var merged = new Int16Array(buffer.length + chunk.length);
+          merged.set(buffer, 0);
+          merged.set(chunk, buffer.length);
+          buffer = merged;
+          while (buffer.length >= PCM_SPEC.frameSamples) {
+            sendFrame(buffer.slice(0, PCM_SPEC.frameSamples));
+            buffer = buffer.slice(PCM_SPEC.frameSamples);
+          }
+        };
+        capture.source.connect(capture.fallback);
+        capture.fallback.connect(capture.ctx.destination);
+      }
+      return this._isCurrentPtt(attempt);
+    } finally {
+      if (!this._isCurrentPtt(attempt)) await this._releaseCapture(capture);
     }
   };
 
   RadioClient.prototype.stopPtt = async function () {
-    if (!this._transmitting) return;
+    var attempt = this._pttAttempt;
+    var channelId = this._pttChannelId;
+    var socket = attempt ? attempt.socket : this._socket;
     this._transmitting = false;
-
-    if (this._captureWorklet) {
-      this._captureWorklet.disconnect();
-      this._captureWorklet.port.onmessage = null;
-      this._captureWorklet = null;
+    this._pttAttempt = null;
+    this._pttChannelId = null;
+    if (attempt && attempt.cancel) attempt.cancel();
+    // Release the captured channel before awaiting audio teardown or switching.
+    if (channelId && socket && socket === this._socket && this._authenticated && socket.connected) {
+      socket.emit('ptt:end', { channelId: channelId });
     }
-    if (this._captureFallback) {
-      this._captureFallback.disconnect();
-      this._captureFallback.onaudioprocess = null;
-      this._captureFallback = null;
-      this._captureFallbackBuffer = null;
-    }
-    if (this._captureSource) {
-      this._captureSource.disconnect();
-      this._captureSource = null;
-    }
-    if (this._captureStream) {
-      this._captureStream.getTracks().forEach(function (t) { t.stop(); });
-      this._captureStream = null;
-    }
-    if (this._captureCtx) {
-      await this._captureCtx.close().catch(function () {});
-      this._captureCtx = null;
-    }
-
-    if (this._socket && this._channelId) {
-      this._socket.emit('ptt:end', { channelId: this._channelId });
-    }
+    await this._releaseCapture(this._capture);
   };
 
   RadioClient.prototype.setChannel = async function (channelId) {
-    if (this._transmitting) {
-      await this.stopPtt();
-    }
-
-    if (this._channelId) {
-      this._leaveChannel(this._channelId);
-    }
-
+    this._assertAlive();
+    if (!this._readyPromise) throw new Error('RadioClient is not initialized');
+    channelId = channelId || null;
+    var previousChannelId = this._channelId;
+    var generation = ++this._channelGeneration;
     this._channelId = channelId;
-
-    if (channelId) {
-      this._joinChannel(channelId);
-      await this._connectAudioWs(channelId);
+    this._reception = null;
+    this.stopPtt();
+    if (this._cancelChannelJoin) this._cancelChannelJoin();
+    this._closeAudioWs();
+    if (previousChannelId) this._leaveChannel(previousChannelId);
+    if (this._joinedChannelId && this._joinedChannelId !== previousChannelId) {
+      this._leaveChannel(this._joinedChannelId);
     }
+    this._joinedChannelId = null;
+    this._emit('connectionChange', { connected: this.isConnected(), ready: false });
+    await this._readyPromise;
+    await this._activateChannel(channelId, generation);
   };
 
   RadioClient.prototype.getZones = async function () {
@@ -707,39 +936,33 @@
   RadioClient.prototype.destroy = async function () {
     if (this._destroyed) return;
     this._destroyed = true;
-
-    await this.stopPtt();
-
-    if (this._channelId && this._socket) {
-      this._leaveChannel(this._channelId);
+    ++this._channelGeneration;
+    var captureStopped = this.stopPtt();
+    if (this._cancelSignaling) this._cancelSignaling();
+    if (this._cancelChannelJoin) this._cancelChannelJoin();
+    if (this._channelId) this._leaveChannel(this._channelId);
+    if (this._joinedChannelId && this._joinedChannelId !== this._channelId) {
+      this._leaveChannel(this._joinedChannelId);
     }
-
-    if (this._ws) {
-      this._ws.onclose = null;
-      this._ws.close();
-      this._ws = null;
-    }
-
-    if (this._socket) {
-      this._socket.disconnect();
-      this._socket = null;
-    }
-
-    if (this._playback) {
-      if (this._playback.workletNode) {
-        this._playback.workletNode.port.postMessage({ type: 'clear' });
-        this._playback.workletNode.disconnect();
+    this._closeAudioWs();
+    var socket = this._socket;
+    this._socket = null;
+    this._authenticated = false;
+    this._joinedChannelId = null;
+    this._reception = null;
+    if (socket) socket.disconnect();
+    var playback = this._playback;
+    this._playback = null;
+    if (playback) {
+      if (playback.workletNode) playback.workletNode.disconnect();
+      if (playback.fallbackProcessor) {
+        playback.fallbackProcessor.onaudioprocess = null;
+        playback.fallbackProcessor.disconnect();
       }
-      if (this._playback.fallbackProcessor) {
-        this._playback.fallbackProcessor.disconnect();
-      }
-      if (this._playback.ctx) {
-        await this._playback.ctx.close().catch(function () {});
-      }
-      this._playback = null;
+      if (playback.ctx) await playback.ctx.close().catch(function () {});
     }
-
     this._listeners = {};
+    await captureStopped;
   };
 
   RadioClient.prototype.isTransmitting = function () {
@@ -752,6 +975,17 @@
 
   RadioClient.prototype.getChannelId = function () {
     return this._channelId;
+  };
+
+  RadioClient.prototype.getActiveChannelId = function () {
+    return this._activeChannelId;
+  };
+
+  RadioClient.prototype.getReception = function () {
+    return this._acceptChannelEvent(this._reception) ? {
+      channelId: this._reception.channelId,
+      unitId: this._reception.unitId,
+    } : null;
   };
 
   RadioClient.prototype.getUnitId = function () {
@@ -769,3 +1003,4 @@
   global.RadioClient = RadioClient;
 
 })(typeof window !== 'undefined' ? window : this);
+
