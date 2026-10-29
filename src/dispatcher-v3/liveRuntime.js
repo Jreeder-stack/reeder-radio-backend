@@ -23,6 +23,7 @@ import { V3_ACTIONS } from './actionContracts.js';
 import { V3FieldIncidentCoordinator } from './fieldIncidentCoordinator.js';
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { randomUUID } from 'node:crypto';
+import { V3TurnScheduler } from './turnScheduler.js';
 import { hasEndedPttTransmission, samePttTransmission } from '../services/pttProvenance.js';
 import {
   pttBelongsToV3Runtime, createV3TurnIdentity, completeV3TurnEnvelope,
@@ -65,6 +66,7 @@ export class V3LiveDispatcher {
     emergencyPager = pageEmergencyUnits,
     emergencyCheckMs = EMERGENCY_CHECK_MS,
     emergencyPageMs = EMERGENCY_PAGE_MS,
+    schedulerLimits = {},
   } = {}) {
     this.context = buildV3RuntimeContext({ ...runtimeContext, scopes });
     this.runtimeContext = this.context;
@@ -76,7 +78,13 @@ export class V3LiveDispatcher {
     this.connected = false;
     this._sequence = 1;
     this._recentContext = [];
-    this._processing = new Map();
+    this._scheduler = new V3TurnScheduler({ limits: schedulerLimits, onTerminal: (ticket, outcome) => {
+      this._diag('turn_scheduler_terminal', ticket.identity.turnId, outcome.handled, { reason: outcome.reason, code: outcome.code }, null, ticket.identity);
+      if (outcome.reason === 'capture_expired') {
+        this._intake.delete(ticket.identity.transmissionId);
+        this.speech.cancelTransmission(ticket.identity.speakerRef, ticket.identity.transmissionId);
+      }
+    } });
     this._emergency = null;
     this._emergencyTimers = new Set();
     this._rawEmergencyEnds = new Map();
@@ -124,6 +132,7 @@ export class V3LiveDispatcher {
     if (this.isRunning) return true;
     this.runtimeGeneration = randomUUID();
     this._intakeSequence = 0;
+    this._scheduler.start();
     this.audioRelay.addAudioListener(this.context.roomKey, this.identity, this._audioListener);
     if (String(this.context.channelId) !== String(this.context.roomKey)) {
       this.audioRelay.addAudioListener(this.context.channelId, this.identity, this._audioListener);
@@ -143,6 +152,7 @@ export class V3LiveDispatcher {
   async stop() {
     this.audioRelay.removeAllAudioListeners(this.identity);
     this.floorControl.releaseAllForUnit?.(AI_FLOOR_IDENTITY);
+    this._scheduler.stop();
     this.speech.clear();
     for (const record of this._intake.values()) {
       this._diag('turn_capture_stopped', record.identity.turnId, false, { reason: 'runtime_stopped' }, null, record.identity);
@@ -152,7 +162,6 @@ export class V3LiveDispatcher {
     this._ambiguousSourcesOverflow = false;
     this.conversationGate.clearAll();
     this.fieldIncidents.clearAll();
-    this._processing.clear();
     this._clearEmergencyTimers();
     this._emergency = null;
     this._rawEmergencyEnds.clear();
@@ -180,7 +189,8 @@ export class V3LiveDispatcher {
       dispatchCenterId: this.context.dispatchCenterId,
       channelId: this.context.channelId,
       roomKey: this.context.roomKey,
-      processing: this._processing.size,
+      processing: this._scheduler.status().executing,
+      scheduler: this._scheduler.status(),
       emergency: this._emergency ? {
         unitId: this._emergency.callsign,
         source: this._emergency.source,
@@ -223,6 +233,7 @@ export class V3LiveDispatcher {
         if (sources.size < MAX_AMBIGUOUS_AUDIO_OWNERS) sources.set(record.identity.transmissionId, record.metadata);
         else overflow = true;
         this._intake.delete(record.identity.transmissionId);
+        this._scheduler.cancel(record.ticket, 'ambiguous_audio_owner');
         this.speech.cancelTransmission(record.identity.speakerRef, record.identity.transmissionId);
         this._diag('turn_completed', record.identity.turnId, false, { outcome: 'ambiguous_audio_owner' }, null, record.identity);
       }
@@ -236,9 +247,15 @@ export class V3LiveDispatcher {
       runtimeContext: this.context, runtimeGeneration: this.runtimeGeneration,
       intakeSequence: ++this._intakeSequence, transmission: metadata,
     });
-    // Capture and sequence ownership exist before the first asynchronous operation.
+    const reservation = this._scheduler.reserve(identity);
+    if (!reservation.accepted) {
+      this._rememberTransmission(metadata.transmissionId, identity.turnId);
+      this._diag('turn_completed', identity.turnId, false, { outcome: reservation.reason }, null, identity);
+      return false;
+    }
+    // Reserve in intake order before any STT/identity await.
     this.speech.startTransmission({ unitId: metadata.principal.unitId, channelId: this.context.roomKey, correlationId: identity.turnId, turnIdentity: identity });
-    const record = { identity, metadata, speaker: null, speakerError: null };
+    const record = { identity, metadata, speaker: null, speakerError: null, ticket: reservation.ticket };
     this._intake.set(metadata.transmissionId, record);
     this._rememberTransmission(metadata.transmissionId, identity.turnId);
     this._diag('turn_intake_accepted', identity.turnId, true, {}, null, identity);
@@ -275,28 +292,21 @@ export class V3LiveDispatcher {
     // An old drained end cannot consume a newer capture bearing the same callsign.
     this._intake.delete(metadata.transmissionId);
     const capture = this.speech.sealCapture({ unitId: record.identity.speakerRef, transmissionId: metadata.transmissionId });
-    const speaker = await record.speakerPromise;
-    const turnEnvelope = completeV3TurnEnvelope(record.identity, metadata, speaker);
-    return runWithV3Turn(turnEnvelope, async () => {
+    const outcome = await this._scheduler.complete(record.ticket, async () => {
+      const speaker = await record.speakerPromise;
+      const turnEnvelope = completeV3TurnEnvelope(record.identity, metadata, speaker);
       if (!speaker || !capture) {
-        this._diag('turn_identity_rejected', record.identity.turnId, false, { reason: record.speakerError?.code || 'speaker_unresolved' });
-        this._diag('turn_completed', record.identity.turnId, false, { outcome: 'identity_rejected' });
-        return false;
+        this._diag('turn_identity_rejected', record.identity.turnId, false, { reason: record.speakerError?.code || 'speaker_unresolved' }, turnEnvelope);
+        return null;
       }
-      try {
-        const transmission = await this.speech.endTransmission({ unitId: record.identity.speakerRef, capture, turnEnvelope });
-        if (!transmission?.transcript) {
-          this._diag('turn_completed', record.identity.turnId, false, { outcome: 'empty_transcript' });
-          return false;
-        }
-        const handled = await this._handleCapturedTranscript(transmission);
-        this._diag('turn_completed', record.identity.turnId, handled, { outcome: handled ? 'processed' : 'not_addressed' });
-        return handled;
-      } catch (error) {
-        this._diag('turn_completed', record.identity.turnId, false, { outcome: 'failed', code: error.code || null, message: error.message });
-        return false;
-      }
-    });
+      return runWithV3Turn(turnEnvelope, () => this.speech.endTransmission({
+        unitId: record.identity.speakerRef, capture, turnEnvelope,
+      }));
+    }, async (transmission) => runWithV3Turn(transmission.turnEnvelope, () => this._handleCapturedTranscript(transmission)));
+    this._diag('turn_completed', record.identity.turnId, outcome.handled, {
+      outcome: outcome.reason, code: outcome.code,
+    }, null, record.identity);
+    return outcome.handled;
   }
 
   async _handleCapturedTranscript(transmission) {
@@ -328,15 +338,8 @@ export class V3LiveDispatcher {
       }
     }
 
-    const previous = this._processing.get(unitId) || Promise.resolve();
-    const work = previous.catch(() => null).then(() => this._processTranscript(transmission));
-    this._processing.set(unitId, work);
-    try {
-      await work;
-      return true;
-    } finally {
-      if (this._processing.get(unitId) === work) this._processing.delete(unitId);
-    }
+    await this._processTranscript(transmission);
+    return true;
   }
 
   async handleEmergencyStart(channelId, unitId) {

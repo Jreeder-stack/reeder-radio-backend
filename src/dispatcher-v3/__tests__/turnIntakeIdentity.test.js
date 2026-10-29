@@ -137,20 +137,22 @@ describe('01-02 immutable authenticated turns through actual runtime entry point
     expect(new Set(envelopes.map((turn) => turn.turnId)).size).toBe(2);
   });
 
-  it('records original intake order when STT completes in reverse order without claiming scheduling is repaired', async () => {
+  it('reserves execution in intake order despite reversed STT completion', async () => {
     const h = await make();
     const stt = h.hold('Central, en route');
     const first = await h.begin(stt.promise);
     await until(() => h.transcribe.mock.calls.length === 1, 'first STT');
     const second = await h.begin('Central, available');
-    await finish(second);
+    await until(() => h.transcribe.mock.calls.length === 2, 'second STT');
+    expect(h.writes('/api/radio/status')).toHaveLength(0);
     stt.resolve('Central, en route');
     await finish(first);
+    await finish(second);
     const envelopes = transcribedEnvelopes(h);
     expect(envelopes.map((turn) => turn.intakeSequence)).toEqual([1, 2]);
     expect(envelopes[0].turnId).not.toBe(envelopes[1].turnId);
-    expect(h.runtime.planner.plan.mock.calls.map(([input]) => input.turnEnvelope.intakeSequence)).toEqual([2, 1]);
-    expect(h.writes('/api/radio/status')).toHaveLength(2);
+    expect(h.runtime.planner.plan.mock.calls.map(([input]) => input.turnEnvelope.intakeSequence)).toEqual([1, 2]);
+    expect(h.writes('/api/radio/status').map((request) => request.body.status)).toEqual(['en_route', 'available']);
   });
 
   it('suppresses a repeated start without replacing captured audio or allocating another turn', async () => {
