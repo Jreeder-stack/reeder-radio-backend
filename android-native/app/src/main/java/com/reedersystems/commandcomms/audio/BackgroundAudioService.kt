@@ -63,6 +63,39 @@ class BackgroundAudioService : Service() {
     private lateinit var speakerBoostPrefs: SpeakerBoostPrefs
 
     private var dynamicPttReceiver: BroadcastReceiver? = null
+    // Secondary scan memberships never replace the knob-selected TX channel.
+    private val hd760ScanRequested = linkedMapOf<String, Int>()
+    private val hd760ScanJoined = mutableSetOf<String>()
+    private var hd760Scanning = false
+
+    private fun syncHd760ScanRooms() {
+        if (BuildConfig.FLAVOR != "hd760" || radioEngine == null) return
+        val primary = servicePrefs.channelRoomKey
+        val desired = if (hd760Scanning) hd760ScanRequested.filterKeys { it != primary } else emptyMap()
+        for (obsolete in hd760ScanJoined.toList()) {
+            if (obsolete !in desired.keys) {
+                // When the knob selects a previously scanned room, it has
+                // become the TX primary. Never accidentally leave that room.
+                if (obsolete != primary) app.signalingRepository.leaveRadioChannel(obsolete)
+                hd760ScanJoined.remove(obsolete)
+            }
+        }
+        if (app.signalingRepository.connectionState.value == ConnectionState.AUTHENTICATED) {
+            val port = radioEngine?.udpTransport?.localPort
+            if (port != null && port > 0) {
+                val address = radioEngine?.udpTransport?.localAddress
+                for (room in desired.keys) {
+                    if (room !in hd760ScanJoined) {
+                        app.signalingRepository.joinRadioChannel(room, port, address)
+                        Log.i("CC-HD760", "SCAN_JOIN_REQUEST room=" + room)
+                    }
+                }
+            }
+        }
+        // Wait for server authorization/ack before sending UDP scan keepalives.
+        radioEngine?.configureHd760Scan(hd760Scanning,
+            hd760ScanJoined.mapNotNull { desired[it] }.toSet())
+    }
 
     private var pttState = PttState.IDLE
     // Only HD760 defers a held rapid re-press until previous TX cleanup completes.
@@ -357,6 +390,7 @@ class BackgroundAudioService : Service() {
         when (intent?.action) {
             ACTION_PTT_DOWN -> {
                 if (BuildConfig.FLAVOR == "hd760") {
+                    radioEngine?.suspendHd760Scan(true)
                     hd760Press.down()
                     radioEngine?.udpTransport?.suppressSameUnitDuringLocalTx = true
                 }
@@ -412,7 +446,26 @@ class BackgroundAudioService : Service() {
                         }
                     }
                     ensureBackgroundSignalingConnected()
-                    scope.launch { syncBackgroundSignalingChannel() }
+                    scope.launch {
+                        syncBackgroundSignalingChannel()
+                        syncHd760ScanRooms()
+                    }
+                }
+            }
+            ACTION_SET_SCAN_CHANNELS -> {
+                if (BuildConfig.FLAVOR == "hd760") {
+                    val rooms = intent.getStringArrayListExtra(EXTRA_SCAN_ROOM_KEYS).orEmpty()
+                    val ids = intent.getIntegerArrayListExtra(EXTRA_SCAN_NUMERIC_IDS).orEmpty()
+                    hd760Scanning = intent.getBooleanExtra(EXTRA_SCAN_ENABLED, false)
+                    hd760ScanRequested.clear()
+                    for (i in 0 until minOf(rooms.size, ids.size)) {
+                        if (rooms[i].isNotBlank() && ids[i] > 0) {
+                            hd760ScanRequested[rooms[i]] = ids[i]
+                        }
+                    }
+                    syncHd760ScanRooms()
+                    Log.i("CC-HD760", "SCAN_CONFIG enabled=" + hd760Scanning +
+                        " channels=" + hd760ScanRequested.size)
                 }
             }
             ACTION_STOP_SCAN_RX -> {
@@ -550,6 +603,7 @@ class BackgroundAudioService : Service() {
                                 Log.d(TAG, "LATENCY_SIGNALING_FIRST_AUTH")
                             }
                             syncBackgroundSignalingChannel()
+                            if (BuildConfig.FLAVOR == "hd760") syncHd760ScanRooms()
                             hadPriorAuthentication = true
                         }
                         ConnectionState.DISCONNECTED -> {
@@ -560,6 +614,10 @@ class BackgroundAudioService : Service() {
                             }
                             joinedSignalingChannelId = null
                             pendingSignalingChannelId = null
+                            if (BuildConfig.FLAVOR == "hd760") {
+                                hd760ScanJoined.clear()
+                                radioEngine?.configureHd760Scan(false, emptySet())
+                            }
                         }
                         ConnectionState.CONNECTING -> {
                             updateLedState(LedState.AMBER)
@@ -1108,6 +1166,15 @@ class BackgroundAudioService : Service() {
                 val currentRoomKey = servicePrefs.channelRoomKey
                 when (event) {
                     is SignalingEvent.RadioChannelJoined -> {
+                        if (BuildConfig.FLAVOR == "hd760" &&
+                            event.channelId != currentRoomKey &&
+                            event.channelId in hd760ScanRequested.keys && hd760Scanning) {
+                            hd760ScanJoined.add(event.channelId)
+                            syncHd760ScanRooms()
+                            Log.i("CC-HD760", "SCAN_JOIN_CONFIRMED room=" + event.channelId)
+                            return@collectLatest
+                        }
+                        if (event.channelId != currentRoomKey) return@collectLatest
                         joinedSignalingChannelId = event.channelId
                         if (pendingSignalingChannelId == event.channelId) {
                             pendingSignalingChannelId = null
@@ -1518,6 +1585,7 @@ class BackgroundAudioService : Service() {
         pttUpWhileConnecting = true
 
         if (pttState != PttState.TRANSMITTING) {
+            if (BuildConfig.FLAVOR == "hd760") radioEngine?.suspendHd760Scan(false)
             if (pttState == PttState.CONNECTING) {
                 if (BuildConfig.FLAVOR == "hd760" && hd760FloorGranted) {
                     hd760FloorGranted = false
@@ -1568,6 +1636,9 @@ class BackgroundAudioService : Service() {
                 val cleanupDurationMs = if (cleaningUpSinceMs > 0) System.currentTimeMillis() - cleaningUpSinceMs else 0L
                 releaseRadioAudioRoute()
                 transitionPttState(PttState.IDLE)
+                if (BuildConfig.FLAVOR == "hd760" && !hd760Press.isHeld()) {
+                    radioEngine?.suspendHd760Scan(false)
+                }
                 cleaningUpSinceMs = 0L
                 Log.d(TAG, """{"event":"PTT_CLEANUP_COMPLETE","state":"IDLE","cleanupMs":$cleanupDurationMs}""")
                 if (BuildConfig.FLAVOR == "hd760" && hd760Press.takeDeferredIfHeld()) {
@@ -2078,6 +2149,10 @@ class BackgroundAudioService : Service() {
         const val ACTION_UPDATE_CHANNEL = "com.reedersystems.commandcomms.UPDATE_CHANNEL"
         const val ACTION_STOP = "com.reedersystems.commandcomms.STOP"
         const val ACTION_STOP_SCAN_RX = "com.reedersystems.commandcomms.STOP_SCAN_RX"
+        const val ACTION_SET_SCAN_CHANNELS = "com.reedersystems.commandcomms.SET_SCAN_CHANNELS"
+        const val EXTRA_SCAN_ENABLED = "scan_enabled"
+        const val EXTRA_SCAN_ROOM_KEYS = "scan_room_keys"
+        const val EXTRA_SCAN_NUMERIC_IDS = "scan_channel_ids"
         const val ACTION_PTT_TX_FAILED = "com.reedersystems.commandcomms.PTT_TX_FAILED"
         const val ACTION_PTT_TX_ABORTED = "com.reedersystems.commandcomms.PTT_TX_ABORTED"
         const val ACTION_PTT_TX_STARTED = "com.reedersystems.commandcomms.PTT_TX_STARTED"

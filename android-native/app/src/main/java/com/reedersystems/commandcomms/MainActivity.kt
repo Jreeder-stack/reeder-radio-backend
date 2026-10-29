@@ -9,6 +9,8 @@ import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.Bundle
 import android.os.PowerManager
 import android.os.SystemClock
@@ -67,6 +69,51 @@ class MainActivity : ComponentActivity() {
     private val app get() = application as CommandCommsApp
 
     private var starDownTime = 0L
+    private val hd760LockHandler = Handler(Looper.getMainLooper())
+    private var hd760StarHeld = false
+    private var hd760StarTriggered = false
+    private var hd760LockTask: Runnable? = null
+    private var hd760Dimmed = false
+    private val hd760FrontKeys = (KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9).toSet() +
+        setOf(KeyEvent.KEYCODE_POUND, KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_CALL,
+            KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_DEL,
+            KeyEvent.KEYCODE_SOFT_LEFT, KeyEvent.KEYCODE_SOFT_RIGHT,
+            KeyEvent.KEYCODE_SEARCH, KeyEvent.KEYCODE_HOME,
+            KeyEvent.KEYCODE_APP_SWITCH)
+    private fun hd760ToggleDim() {
+        hd760Dimmed = !hd760Dimmed
+        val attributes = window.attributes
+        attributes.screenBrightness = if (hd760Dimmed) 0.035f else
+            WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        window.attributes = attributes
+        Log.i("CC-HD760", "SCREEN_DIM enabled=" + hd760Dimmed)
+    }
+    private fun hd760HandleStar(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            hd760StarHeld = true
+            hd760StarTriggered = false
+            val task = Runnable {
+                if (hd760StarHeld && !hd760StarTriggered && app.hd760RadioScreenActive) {
+                    hd760StarTriggered = true
+                    val locked = !app.hd760KeyLocked.value
+                    app.hd760KeyLocked.value = locked
+                    getSharedPreferences("HD760Hardware", MODE_PRIVATE)
+                        .edit().putBoolean("key_locked", locked).apply()
+                    app.toneEngine.playKeypadConfirmation()
+                    Log.i("CC-HD760", "KEY_LOCK_CHANGED locked=" + locked + " while_held=true")
+                }
+            }
+            hd760LockTask = task
+            hd760LockHandler.postDelayed(task, 1000L)
+        } else if (event.action == KeyEvent.ACTION_UP) {
+            hd760StarHeld = false
+            hd760LockTask?.let { hd760LockHandler.removeCallbacks(it) }
+            hd760LockTask = null
+        }
+        return true
+    }
     private var lastCapturedKeyCode = -1
     private val rootFocusRequester = FocusRequester()
     private var lastT320VolumeDetentAtMs = 0L
@@ -167,6 +214,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        hd760StarHeld = false
+        hd760LockTask?.let { hd760LockHandler.removeCallbacks(it) }
+        hd760LockTask = null
         try {
             unregisterReceiver(remoteKioskReceiver)
         } catch (_: Exception) {
@@ -503,6 +553,23 @@ class MainActivity : ComponentActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (BuildConfig.FLAVOR == "hd760") {
+            // Only enforce the front keypad lock on the active radio screen,
+            // not the registration/permission UI. Side PTT and SOS remain active.
+            if (app.hd760RadioScreenActive) {
+                if (event.keyCode == KeyEvent.KEYCODE_STAR) return hd760HandleStar(event)
+                if (event.keyCode == KeyEvent.KEYCODE_ENDCALL) {
+                    if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                        hd760ToggleDim()
+                    }
+                    return true
+                }
+                if (app.hd760KeyLocked.value &&
+                    event.keyCode in hd760FrontKeys &&
+                    event.keyCode != KeyEvent.KEYCODE_DPAD_LEFT &&
+                    event.keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    return true
+                }
+            }
             val position = Hd760KnobMapping.positionForKeyCode(event.keyCode)
             if (position != null && event.device?.name == "rotate-gpio-keys") {
                 if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {

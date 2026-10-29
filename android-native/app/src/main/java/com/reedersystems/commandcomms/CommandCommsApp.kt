@@ -95,6 +95,8 @@ class CommandCommsApp : Application() {
     val keyEventFlow = MutableSharedFlow<KeyAction>(extraBufferCapacity = 16)
     // Absolute knob position is conflated to the latest keycode during rapid turns.
     val hd760KnobPosition = MutableStateFlow<Int?>(null)
+    // The lock gate is shared with Activity key dispatch and the radio UI.
+    val hd760KeyLocked = MutableStateFlow(false)
     // Do not transmit on empty/unprogrammed slots.
     val hd760SlotActive = MutableStateFlow(true)
     @Volatile var hd760RadioScreenActive: Boolean = false
@@ -109,6 +111,10 @@ class CommandCommsApp : Application() {
         pttKeyPrefs = PttKeyPrefs(this)
         speakerBoostPrefs = SpeakerBoostPrefs(this)
         kioskPrefs = KioskPrefs(this)
+        if (BuildConfig.FLAVOR == "hd760") {
+            hd760KeyLocked.value = getSharedPreferences("HD760Hardware", MODE_PRIVATE)
+                .getBoolean("key_locked", false)
+        }
         kioskPolicyManager = KioskPolicyManager(this)
         val currentVersionCode = packageManager
             .getPackageInfo(packageName, 0)

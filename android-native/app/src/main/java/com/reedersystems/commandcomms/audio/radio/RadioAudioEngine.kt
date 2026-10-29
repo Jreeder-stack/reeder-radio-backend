@@ -13,6 +13,7 @@ import android.media.audiofx.NoiseSuppressor
 import android.os.Build
 import android.util.Log
 import com.reedersystems.commandcomms.BuildConfig
+import com.reedersystems.commandcomms.hd760.Hd760ScanPolicy
 import com.reedersystems.commandcomms.data.prefs.SpeakerBoostPrefs
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
@@ -1832,11 +1833,58 @@ class RadioAudioEngine(private val context: Context) {
 
     private val rxPacketRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5, summaryIntervalMs = 1000L)
     private var rxSummaryDropped: Long = 0
+    private val hd760Scan = Hd760ScanPolicy()
+    @Volatile private var hd760ScanOn = false
+    @Volatile private var hd760ScanPaused = false
+    @Volatile private var hd760ScanChannels: Set<Int> = emptySet()
+    var onHd760ScanReception: ((Int?) -> Unit)? = null
+
+    fun configureHd760Scan(enabled: Boolean, channels: Set<Int>) {
+        if (BuildConfig.FLAVOR != "hd760") return
+        hd760ScanOn = enabled
+        hd760ScanChannels = if (enabled) channels else emptySet()
+        hd760Scan.reset()
+        jitterBuffer.flushAndEnterIdle()
+        audioPlayback.clearStaleFrames()
+        onHd760ScanReception?.invoke(null)
+        udpTransport.updateScanChannels(hd760ScanChannels)
+    }
+
+    fun suspendHd760Scan(suspend: Boolean) {
+        if (BuildConfig.FLAVOR != "hd760") return
+        hd760ScanPaused = suspend
+        hd760Scan.reset()
+        jitterBuffer.flushAndEnterIdle()
+        audioPlayback.clearStaleFrames()
+        onHd760ScanReception?.invoke(null)
+    }
 
     private fun onAudioPacketReceived(packet: OpusRadioPacket) {
         rxSessionStats.packetsReceived++
         rxPacketRateLimiter.tick()
-        if (packet.channelIndex != udpTransport.channelIndex) {
+        if (BuildConfig.FLAVOR == "hd760") {
+            val decision = hd760Scan.onPacket(
+                channelId = packet.channelIndex,
+                primaryId = udpTransport.channelIndex,
+                enabledSecondary = hd760ScanChannels,
+                scanning = hd760ScanOn,
+                transmitting = hd760ScanPaused || isTransmitting || isPreCapturing,
+                nowMs = System.currentTimeMillis()
+            )
+            if (!decision.accept) {
+                rxSessionStats.packetsDropped++
+                return
+            }
+            if (decision.changed) {
+                jitterBuffer.flushAndEnterIdle()
+                audioPlayback.clearStaleFrames()
+                onHd760ScanReception?.invoke(
+                    decision.activeChannel?.takeUnless { it == udpTransport.channelIndex }
+                )
+                Log.i("CC-HD760", "SCAN_RX_CHANNEL id=" + packet.channelIndex +
+                    " primary=" + udpTransport.channelIndex)
+            }
+        } else if (packet.channelIndex != udpTransport.channelIndex) {
             rxSessionStats.packetsDropped++
             rxSummaryDropped++
             if (rxPacketRateLimiter.shouldLogDetail()) {

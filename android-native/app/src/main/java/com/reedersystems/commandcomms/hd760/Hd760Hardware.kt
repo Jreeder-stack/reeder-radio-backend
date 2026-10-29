@@ -17,7 +17,7 @@ object Hd760KnobMapping {
 }
 
 enum class Hd760SideAction(val label: String) {
-    NONE("NONE"), SCAN("SCAN"), SCAN_CHANNEL("SCAN CH"), STATUS("STATUS"), MENU("MENU")
+    NONE("NONE"), SCAN("SCAN"), SCAN_LIST("SCAN LIST"), MENU("MENU")
 }
 
 /** HD760-only settings. Each slot stores its zone's actual channel ID, not list order. */
@@ -65,8 +65,8 @@ class Hd760Preferences(context: Context) {
     fun buttonAction(button: Int, longPress: Boolean): Hd760SideAction {
         val default = when {
             button == 1 && !longPress -> Hd760SideAction.SCAN
-            button == 1 -> Hd760SideAction.SCAN_CHANNEL
-            button == 2 && !longPress -> Hd760SideAction.STATUS
+            button == 1 -> Hd760SideAction.SCAN_LIST
+            button == 2 && !longPress -> Hd760SideAction.NONE
             else -> Hd760SideAction.MENU
         }
         val saved = prefs.getString(buttonKey(button, longPress), default.name)

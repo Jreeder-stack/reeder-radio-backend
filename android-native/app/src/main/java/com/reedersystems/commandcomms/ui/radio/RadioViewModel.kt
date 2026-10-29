@@ -96,6 +96,9 @@ data class RadioUiState(
     val hd760KnobPosition: Int? = null,
     val hd760SlotEmpty: Boolean = false,
     val hd760MenuOpen: Boolean = false,
+    val hd760ScanListOpen: Boolean = false,
+    val hd760ScanListIndex: Int = 0,
+    val hd760LockFeedback: String? = null,
     val hd760MenuIndex: Int = 0,
     val hd760ProgrammingSlot: Boolean = false,
     val hd760ProgramChannelIndex: Int = 0,
@@ -116,18 +119,35 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private val isHd760 = BuildConfig.FLAVOR == "hd760"
     private val hd760Prefs = if (isHd760) Hd760Preferences(application) else null
     private var hd760AnnouncementJob: Job? = null
+    private var hd760LockFeedbackJob: Job? = null
+
+    private fun syncHd760ScanConfig() {
+        if (!isHd760) return
+        val state = _uiState.value
+        val eligible = state.zones.flatMap { it.channels }.associateBy { it.id }
+        val selected = state.scanChannels.filter { it.enabled }
+            .mapNotNull { eligible[it.id] }
+            .distinctBy { it.roomKey }
+        val intent = Intent(getApplication(), BackgroundAudioService::class.java).apply {
+            action = BackgroundAudioService.ACTION_SET_SCAN_CHANNELS
+            putExtra(BackgroundAudioService.EXTRA_SCAN_ENABLED, state.isScanning)
+            putStringArrayListExtra(BackgroundAudioService.EXTRA_SCAN_ROOM_KEYS,
+                ArrayList(selected.map { it.roomKey }))
+            putIntegerArrayListExtra(BackgroundAudioService.EXTRA_SCAN_NUMERIC_IDS,
+                ArrayList(selected.map { it.id }))
+        }
+        ContextCompat.startForegroundService(getApplication<Application>(), intent)
+    }
+
 
     val hd760MenuLabels: List<String>
         get() = listOf(
             "SCAN: " + if (_uiState.value.isScanning) "ON" else "OFF",
-            "SCAN CURRENT CHANNEL",
-            "STATUS: " + _uiState.value.currentStatus.uppercase(),
+            "SCAN LIST",
             "SIDE 1 TAP: " + hd760Prefs?.buttonAction(1, false)?.label,
             "SIDE 1 HOLD: " + hd760Prefs?.buttonAction(1, true)?.label,
             "SIDE 2 TAP: " + hd760Prefs?.buttonAction(2, false)?.label,
             "SIDE 2 HOLD: " + hd760Prefs?.buttonAction(2, true)?.label,
-            "PROGRAM KNOB SLOT",
-            "SETTINGS",
             "CLOSE MENU"
         )
 
@@ -231,6 +251,24 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         observeSignaling()
         collectKeyEvents()
         if (isHd760) {
+            viewModelScope.launch {
+                app.hd760KeyLocked.collect { locked ->
+                    val old = _uiState.value.isKeyLocked
+                    _uiState.update {
+                        it.copy(isKeyLocked = locked, hd760MenuOpen = if (locked) false else it.hd760MenuOpen,
+                            hd760ScanListOpen = if (locked) false else it.hd760ScanListOpen)
+                    }
+                    if (old != locked) {
+                        hd760LockFeedbackJob?.cancel()
+                        _uiState.update { it.copy(hd760LockFeedback =
+                            if (locked) "KEYPAD LOCKED" else "KEYPAD UNLOCKED") }
+                        hd760LockFeedbackJob = viewModelScope.launch {
+                            delay(1600L)
+                            _uiState.update { it.copy(hd760LockFeedback = null) }
+                        }
+                    }
+                }
+            }
             viewModelScope.launch {
                 app.hd760KnobPosition.collect { position ->
                     if (position != null) {
@@ -379,7 +417,10 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 val savedScanning = scanPrefs.getBoolean(KEY_SCAN_ACTIVE, false)
                 if (isHd760) zones.forEach { hd760Prefs?.initializeZone(it) }
                 _uiState.update { it.copy(zones = zones, isLoading = false, scanChannels = scanChannels, isScanning = savedScanning) }
-                if (isHd760) hd760Prefs?.lastPosition()?.let { selectHd760Position(it) }
+                if (isHd760) {
+                    hd760Prefs?.lastPosition()?.let { selectHd760Position(it) }
+                    syncHd760ScanConfig()
+                }
                 connectSignaling()
             } else {
                 Log.e(STARTUP_TAG, "CHANNEL_FETCH_FAILED reason=${result.exceptionOrNull()?.message}")
@@ -450,7 +491,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                                 // - we are in the 2s hold window after previous scanned RX ended (scanClearJob != null),
                                 //   in which case the new transmission takes over and hold timer is cancelled.
                                 // In both cases, priority channel must not be active.
-                                if ((state.scanActiveUnit == null || scanClearJob != null) && state.activeTransmittingUnit == null) {
+                                val inScanList = state.zones.flatMap { it.channels }
+                                    .firstOrNull { it.roomKey == event.channelId }
+                                    ?.id?.let { id -> state.scanChannels.any { it.id == id && it.enabled } } == true
+                                if (inScanList && (state.scanActiveUnit == null || scanClearJob != null) &&
+                                    state.activeTransmittingUnit == null) {
                                     val channelName = state.zones.flatMap { it.channels }
                                         .firstOrNull { it.roomKey == event.channelId }?.name
                                     if (channelName != null) {
@@ -599,12 +644,12 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     is KeyAction.StarLongPress -> toggleKeyLock()
                     is KeyAction.EmergencyDown -> onEmergencyDown()
                     is KeyAction.EmergencyUp -> onEmergencyUp()
-                    is KeyAction.Hd760Up -> if (isHd760) hd760Navigate(-1)
-                    is KeyAction.Hd760Down -> if (isHd760) hd760Navigate(1)
-                    is KeyAction.Hd760Left -> if (isHd760 && !_uiState.value.hd760MenuOpen) prevZone()
-                    is KeyAction.Hd760Right -> if (isHd760 && !_uiState.value.hd760MenuOpen) nextZone()
-                    is KeyAction.Hd760Select -> if (isHd760) hd760Select()
-                    is KeyAction.Hd760Back -> if (isHd760) hd760Back()
+                    is KeyAction.Hd760Up -> if (isHd760 && !locked) hd760Navigate(-1)
+                    is KeyAction.Hd760Down -> if (isHd760 && !locked) hd760Navigate(1)
+                    is KeyAction.Hd760Left -> if (isHd760) prevZone()
+                    is KeyAction.Hd760Right -> if (isHd760) nextZone()
+                    is KeyAction.Hd760Select -> if (isHd760 && !locked) hd760Select()
+                    is KeyAction.Hd760Back -> if (isHd760 && !locked) hd760Back()
                     is KeyAction.Hd760SideButton -> if (isHd760) hd760SidePressed(action.button, action.longPress)
                     else -> {
                         if (!locked) when (action) {
@@ -965,7 +1010,13 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleKeyLock() {
-        _uiState.update { it.copy(isKeyLocked = !it.isKeyLocked) }
+        if (isHd760) {
+            val next = !app.hd760KeyLocked.value
+            app.hd760KeyLocked.value = next
+            getApplication<Application>().getSharedPreferences("HD760Hardware", Context.MODE_PRIVATE)
+                .edit().putBoolean("key_locked", next).apply()
+            app.toneEngine.playKeypadConfirmation()
+        } else _uiState.update { it.copy(isKeyLocked = !it.isKeyLocked) }
     }
 
     fun toggleScanning() {
@@ -975,6 +1026,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             clearScanDisplay()
         }
         _uiState.update { it.copy(isScanning = next) }
+        syncHd760ScanConfig()
     }
 
     fun setShowScanOverlay(show: Boolean) {
@@ -988,13 +1040,20 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             } else ch
         }
         _uiState.update { it.copy(scanChannels = updated) }
+        syncHd760ScanConfig()
     }
 
     private fun loadScanEnabled(channelId: Int): Boolean =
-        scanPrefs.getBoolean("scan_$channelId", true)
+        scanPrefs.getBoolean(scanPrefKey(channelId), true)
+
+    private fun scanPrefKey(channelId: Int): String {
+        if (!isHd760) return "scan_$channelId"
+        val identity = app.radioTokenStore.getAssignedUnitId() ?: _uiState.value.unitId
+        return "hd760:" + identity + ":scan:" + channelId
+    }
 
     private fun saveScanEnabled(channelId: Int, enabled: Boolean) {
-        scanPrefs.edit().putBoolean("scan_$channelId", enabled).apply()
+        scanPrefs.edit().putBoolean(scanPrefKey(channelId), enabled).apply()
     }
 
     private fun updateServiceChannel() {
@@ -1065,25 +1124,26 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(hd760MenuOpen = true, hd760MenuIndex = 0) }
             return
         }
-        if (state.hd760ProgrammingSlot) {
-            val count = (state.currentZone?.channels?.size ?: 0) + 1
-            _uiState.update {
-                it.copy(hd760ProgramChannelIndex =
-                    (it.hd760ProgramChannelIndex + direction + count) % count)
+        if (state.hd760ScanListOpen) {
+            val count = state.scanChannels.size
+            if (count > 0) _uiState.update {
+                it.copy(hd760ScanListIndex =
+                    (it.hd760ScanListIndex + direction + count) % count)
             }
         } else {
             val count = hd760MenuLabels.size
-            _uiState.update { it.copy(hd760MenuIndex =
-                (it.hd760MenuIndex + direction + count) % count) }
+            _uiState.update {
+                it.copy(hd760MenuIndex = (it.hd760MenuIndex + direction + count) % count)
+            }
         }
     }
 
     private fun hd760Back() {
         _uiState.update { state ->
             when {
-                state.hd760ProgrammingSlot -> state.copy(hd760ProgrammingSlot = false)
+                state.hd760ScanListOpen -> state.copy(hd760ScanListOpen = false)
                 state.hd760MenuOpen -> state.copy(hd760MenuOpen = false)
-                else -> state // BACK must never exit the active radio screen.
+                else -> state
             }
         }
     }
@@ -1094,37 +1154,21 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(hd760MenuOpen = true, hd760MenuIndex = 0) }
             return
         }
-        if (state.hd760ProgrammingSlot) {
-            val zone = state.currentZone ?: return
-            val position = state.hd760KnobPosition ?: return
-            val channelId = zone.channels.getOrNull(state.hd760ProgramChannelIndex)?.id
-            hd760Prefs?.programSlot(zone, position, channelId)
-            _uiState.update { it.copy(hd760ProgrammingSlot = false) }
-            selectHd760Position(position)
+        if (state.hd760ScanListOpen) {
+            state.scanChannels.getOrNull(state.hd760ScanListIndex)
+                ?.id?.let(::toggleScanChannel)
             return
         }
         when (state.hd760MenuIndex) {
             0 -> toggleScanning()
-            1 -> state.currentChannel?.id?.let { toggleScanChannel(it) }
-            2 -> cycleStatus()
-            in 3..6 -> {
-                val button = if (state.hd760MenuIndex <= 4) 1 else 2
-                val longPress = state.hd760MenuIndex == 4 || state.hd760MenuIndex == 6
+            1 -> _uiState.update { it.copy(hd760ScanListOpen = true, hd760ScanListIndex = 0) }
+            in 2..5 -> {
+                val button = if (state.hd760MenuIndex <= 3) 1 else 2
+                val longPress = state.hd760MenuIndex == 3 || state.hd760MenuIndex == 5
                 hd760Prefs?.cycleButtonAction(button, longPress)
                 _uiState.update { it.copy(hd760MenuVersion = it.hd760MenuVersion + 1) }
             }
-            7 -> {
-                if (state.hd760KnobPosition != null && state.currentZone != null) {
-                    _uiState.update {
-                        it.copy(hd760ProgrammingSlot = true,
-                            hd760ProgramChannelIndex = it.currentChannelIndex)
-                    }
-                }
-            }
-            8 -> _uiState.update {
-                it.copy(hd760SettingsRequested = true, hd760MenuOpen = false)
-            }
-            9 -> _uiState.update { it.copy(hd760MenuOpen = false) }
+            6 -> _uiState.update { it.copy(hd760MenuOpen = false) }
         }
     }
 
@@ -1134,13 +1178,13 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun hd760SidePressed(button: Int, longPress: Boolean) {
         when (hd760Prefs?.buttonAction(button, longPress)) {
-            Hd760SideAction.NONE, null -> {}
+            Hd760SideAction.NONE, null -> Unit
             Hd760SideAction.SCAN -> toggleScanning()
-            Hd760SideAction.SCAN_CHANNEL ->
-                _uiState.value.currentChannel?.id?.let { toggleScanChannel(it) }
-            Hd760SideAction.STATUS -> cycleStatus()
+            Hd760SideAction.SCAN_LIST -> _uiState.update {
+                it.copy(hd760MenuOpen = true, hd760ScanListOpen = true, hd760ScanListIndex = 0)
+            }
             Hd760SideAction.MENU -> _uiState.update {
-                it.copy(hd760MenuOpen = !it.hd760MenuOpen, hd760ProgrammingSlot = false)
+                it.copy(hd760MenuOpen = !it.hd760MenuOpen, hd760ScanListOpen = false)
             }
         }
     }
