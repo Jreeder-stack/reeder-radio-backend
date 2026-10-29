@@ -227,6 +227,15 @@ export async function createHarness({ center = 'center-a', scopes = ['unit.read'
     runtime, context, cad, relay, floor, codec, transcribe, synthesize, llm, llmPlans, sttReplies, synthesisReplies, turns, deferreds, diagnostics, binding,
     hold(fallback) { const value = deferred(fallback); deferreds.push(value); return value; },
     writes(path) { return cad.requests.filter((request) => request.method !== 'GET' && (!path || request.path === path)); },
+    expireSession(principal) {
+      const match = credentials.find((entry) => entry.id === String(principal.accountId));
+      if (match) credentialDatabase.sessions.delete(match.credential);
+    },
+    lockRadio(principal) {
+      const match = credentials.find((entry) => entry.id === String(principal.accountId));
+      const radio = match && credentialDatabase.radios.get(match.credential);
+      if (radio) radio.is_locked = true;
+    },
     revokeAccount(principal) {
       const account = credentialDatabase.accounts.get(String(principal.accountId));
       if (account) account.status = 'inactive';
