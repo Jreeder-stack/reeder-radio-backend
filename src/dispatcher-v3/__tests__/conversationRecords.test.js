@@ -163,6 +163,24 @@ describe('AI-DISP-V3-001 02-01 unit-owned conversations through real V3 runtime'
     expect([...h.cad.calls.entries()]).toEqual(callsBefore);
   });
 
+  it('expires individual old turns even while the same unit keeps a conversation active', async () => {
+    const h = await make();
+    await h.send('Central, mark me available', 'A1');
+    const first = plannerEnvelope(h);
+    const conversationId = h.runtime.conversations.get(first).id;
+    await vi.advanceTimersByTimeAsync(4 * 60 * 1000);
+    await h.send('Central, mark me on scene', 'A1');
+    const second = plannerEnvelope(h);
+    expect(h.runtime.conversations.get(second).turns).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(2 * 60 * 1000);
+    const current = h.runtime.conversations.get(second);
+    expect(current.id).toBe(conversationId);
+    expect(current.turns).toHaveLength(1);
+    expect(current.turns[0].turnId).toBe(second.turnId);
+    expect(h.runtime.conversations.recent(second)).toHaveLength(1);
+    expect(h.runtime.conversations.recent(second)[0].action).toBe('SET_UNIT_STATUS');
+  });
+
   it('rejects fabricated envelopes and does not expose mutable authoritative records', async () => {
     const h = await make();
     await h.send('Central, mark me available', 'A1');

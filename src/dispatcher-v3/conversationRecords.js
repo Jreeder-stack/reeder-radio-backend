@@ -196,6 +196,9 @@ export class V3ConversationRecords {
     const expired = (task) => this.now() - task.updatedAt > this.limits.ttlMs;
     if (record.activeTask && expired(record.activeTask)) record.activeTask = null;
     record.suspendedTasks = record.suspendedTasks.filter((task) => !expired(task));
+    // Continuing activity must not keep old dialogue relevant indefinitely.
+    // CAD facts live solely in CAD and are never subject to this cache TTL.
+    record.turns = record.turns.filter((turn) => this.now() - turn.recordedAt <= this.limits.ttlMs);
   }
 
   _prune() {
