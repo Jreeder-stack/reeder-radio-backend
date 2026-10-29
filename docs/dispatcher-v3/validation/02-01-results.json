@@ -1,0 +1,139 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "02-01",
+  "date": "2026-10-29",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "350b946d4a7b0278f8ce1c4673a92cc416659d59",
+  "implementationCommits": [
+    "4466823234f60e91574338de34e2f6829b7e9926",
+    "d35136a14369bcc840b230e234d73bf195e34972",
+    "233afa7c1af7ca36c6efae8b292e1f20c323296d"
+  ],
+  "validatedExecutableSource": "233afa7c1af7ca36c6efae8b292e1f20c323296d",
+  "implementation": {
+    "module": "src/dispatcher-v3/conversationRecords.js",
+    "runtime": "src/dispatcher-v3/liveRuntime.js",
+    "existingGate": "src/dispatcher-v3/conversationGate.js",
+    "audit": "src/dispatcher-v3/__tests__/auditBaseline.test.js",
+    "tests": "src/dispatcher-v3/__tests__/conversationRecords.test.js",
+    "scope": "trusted center/verified unit/account/connection/runtime generation",
+    "channel": "routing metadata only",
+    "storage": "bounded in-process memory; no CAD database schema/storage changes",
+    "limits": {
+      "conversationIdleTtlMs": 300000,
+      "individualTurnTtlMs": 300000,
+      "maxConversationsPerRuntime": 128,
+      "maxTurnsPerConversation": 12,
+      "maxSuspendedPerConversation": 3,
+      "maxStoredTranscriptChars": 240
+    },
+    "legacyGlobalRecentContextRemoved": true,
+    "urgentHardwareEmergencyControlsChanged": false
+  },
+  "ci": {
+    "runId": 40973313285,
+    "jobId": 123795153204,
+    "nodeMajor": 20,
+    "conclusion": "failure",
+    "v3": {
+      "passed": 424,
+      "failed": 1,
+      "total": 425,
+      "files": 40
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "manager": {
+      "passed": 7,
+      "failed": 0,
+      "total": 7
+    },
+    "focused02_01": {
+      "passed": 10,
+      "failed": 0,
+      "total": 10
+    },
+    "audit": {
+      "passed": 26,
+      "failed": 0,
+      "total": 26,
+      "repairedR01": true
+    },
+    "artifact": {
+      "id": 12941541182,
+      "reportedSha256": "50693db0636026b65619351b598cae9ac496d26bc4d5234ff2fc9ccc0f006ab5",
+      "independentlyHashed": false
+    }
+  },
+  "acceptance": {
+    "A1AfterB2C3OwnTrafficStopContext": true,
+    "crossUnitPendingInheritanceRejected": true,
+    "sameCallsignDifferentCentersIsolated": true,
+    "sameCallsignDifferentSessionsFollowupDenied": true,
+    "oldRelevanceExpiresWithoutCadDeletion": true,
+    "taskSuspensionBounded": true,
+    "expiredTurnsPrunedDuringActiveConversation": true,
+    "staleRuntimeEnvelopesRejected": true
+  },
+  "knownFixtureFailure": "src/dispatcher-v3/__tests__/phase4Pipeline.test.js expects verified CREATE_CALL announcement without independent CAD read-back; unchanged and still red",
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "fullV3SuiteGreen": false,
+    "fullRepositoryVerified": false,
+    "liveAudioRadioProvidersVerified": false,
+    "mainIntegrated": false,
+    "releaseAccepted": false,
+    "merged": false,
+    "deployed": false,
+    "paidProviderCalls": false,
+    "productionDataChanged": false
+  },
+  "audit": {
+    "nowRepaired": [
+      "R01",
+      "R02",
+      "R03",
+      "R04",
+      "R06",
+      "R07",
+      "R09",
+      "R10"
+    ],
+    "pending": [
+      "R05",
+      "R08",
+      "R11",
+      "R12",
+      "R13",
+      "R14"
+    ]
+  },
+  "counts": {
+    "parent01": 8,
+    "parent02": 1,
+    "parent03": 1,
+    "parent04": 0,
+    "completed": 10,
+    "total": 32
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "caveats": [
+    "Per-callsign legacy field-incident dialogue remains for 02-04/02-08 lifecycle integration",
+    "Natural-language resumption and entire structured task clarification belong to 02-02/02-04",
+    "Prompt delivery answer windows belong to 02-03",
+    "Channel/reconnect and device reassignment continuation policy belongs to 02-07",
+    "No distributed multi-instance conversation synchronization is claimed"
+  ],
+  "next": "02-02: Retain the complete task during clarification"
+}
