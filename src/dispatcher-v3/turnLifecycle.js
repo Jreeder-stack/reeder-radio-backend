@@ -54,6 +54,12 @@ export class V3TurnLifecycle {
     state.pendingOwner = unitId;
     state.pendingIsCurrent = isCurrent;
   }
+  releasePending(state) {
+    this.assert(state);
+    state.pending = null;
+    state.pendingOwner = null;
+    state.pendingIsCurrent = null;
+  }
   async authorize(state) {
     this.assert(state);
     const allowed = await this.validator(state.source, state.identity);

@@ -860,6 +860,10 @@ export class V3LiveDispatcher {
     }
 
     assertV3DeadlineActive();
+    // The reply remains bound through all possible CAD side effects, then may
+    // consume/replace its pending state without invalidating outbound speech.
+    const life = this._lifecycle.get(turnEnvelope.turnId);
+    if (life) this._lifecycle.releasePending(life);
     dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign);
     if (plan.action === 'CLARIFY') {
       this.conversationGate.expectFollowUp(speakerCallsign, { clarification: plan.clarification, input: plan.input || {}, correlationId });
