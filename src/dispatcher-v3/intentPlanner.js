@@ -63,6 +63,13 @@ export class V3IntentPlanner {
       }, { signal }));
       assertV3DeadlineActive();
       const raw = response?.choices?.[0]?.message?.content || '{}';
+      const usage = response?.usage;
+      if (usage) this._diag('model_usage', runtimeContext, correlationId, true, Date.now() - started, {
+        promptTokens: Number.isFinite(usage.prompt_tokens) ? usage.prompt_tokens : null,
+        completionTokens: Number.isFinite(usage.completion_tokens) ? usage.completion_tokens : null,
+        totalTokens: Number.isFinite(usage.total_tokens) ? usage.total_tokens : null,
+        // No pricing guess: cost is unavailable unless an approved tariff exists.
+      }, turnEnvelope);
       const plan = attachTurn(normalizePlan(JSON.parse(raw)));
       this._diag('intent_planned', runtimeContext, correlationId, true, Date.now() - started, { transcript: text, plan }, turnEnvelope);
       return plan;

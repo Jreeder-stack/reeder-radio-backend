@@ -113,7 +113,11 @@ export class V3LiveDispatcher {
       validator: (source) => revalidatePttActor(source, this.context),
     });
     this._scheduler = new V3TurnScheduler({ limits: schedulerLimits, onTerminal: (ticket, outcome) => {
-      this._diag('turn_scheduler_terminal', ticket.identity.turnId, outcome.handled, { reason: outcome.reason, code: outcome.code }, ticket.turnEnvelope || null, ticket.identity);
+      this._diag('turn_scheduler_terminal', ticket.identity.turnId, outcome.handled, {
+        reason: outcome.reason, code: outcome.code,
+        queueAgeMs: ticket.endedAt == null ? null : Math.max(0, Date.now() - ticket.endedAt),
+        totalAgeMs: Math.max(0, Date.now() - ticket.identity.captureStartedAt),
+      }, ticket.turnEnvelope || null, ticket.identity);
       if (outcome.reason !== 'processed' && outcome.reason !== 'not_addressed') {
         this._lifecycle.cancel(ticket.life, outcome.reason);
       }
@@ -245,8 +249,14 @@ export class V3LiveDispatcher {
         responders: [...this._emergency.responders],
         paged: this._emergency.paged === true,
       } : null,
-      recentDiagnostics: this.diagnostics.getRecent({ runtimeId: this.context.runtimeId, limit: 10 }),
+      diagnosticSummary: this.diagnostics.getSummary({ runtimeId: this.context.runtimeId, dispatchCenterId: this.context.dispatchCenterId }),
+      // Diagnostic events require a separately authorized, center-bound read.
+      recentDiagnostics: [],
     };
+  }
+
+  getDiagnosticTrace(turnId, access) {
+    return this.diagnostics.getTrace({ turnId, access });
   }
 
   async handlePttStart(channelId, unitId, _isEmergency = false, metadata = null) {
@@ -387,6 +397,9 @@ export class V3LiveDispatcher {
     if (await this._handleEmergencyTranscript(transmission)) return true;
 
     const gate = this.conversationGate.shouldProcess({ unitId, transcript: transmission.transcript });
+    this._diag('turn_addressed', transmission.correlationId, gate.allowed, {
+      reason: gate.reason, pending: !!gate.pending,
+    }, turnEnvelope);
     if (!gate.allowed) {
       this._diag('transmission_ignored', transmission.correlationId, true, { unitId, reason: gate.reason, transcript: transmission.transcript });
       return false;
@@ -869,6 +882,10 @@ export class V3LiveDispatcher {
         };
       }
       assertV3DeadlineActive();
+      this._diag('conversation_selected', correlationId, true, {
+        reason: plan?.reason || (plan?.action === 'CLARIFY' ? 'clarification' : 'planned'),
+        action: plan?.action || null, pending: !!pendingContext,
+      }, turnEnvelope);
       assertExplicitUnitTargets({ transcript, plan, operationalContext, speakerCallsign });
       if (plan.action !== 'NO_ACTION' && plan.action !== 'CLARIFY' && plan.confidence < MIN_EXECUTION_CONFIDENCE) {
         plan = { action: 'CLARIFY', input: plan.input || {}, confidence: plan.confidence, clarification: 'Repeat your request.', reason: 'low_confidence' };

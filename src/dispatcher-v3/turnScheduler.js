@@ -93,6 +93,7 @@ export class V3TurnScheduler {
       return Promise.resolve({ handled: false, reason: 'not_reserved' });
     }
     ticket.ended = true;
+    ticket.endedAt = Date.now();
     clearTimeout(ticket.timer);
     ticket.deadline = Date.now() + this.limits.maxQueueWaitMs;
     ticket.timer = setTimeout(() => {
@@ -146,6 +147,7 @@ export class V3TurnScheduler {
       return;
     }
     ticket.executing = true;
+    ticket.executionStartedAt = Date.now();
     clearTimeout(ticket.timer);
     try {
       const result = await ticket.execute(ticket.value);
