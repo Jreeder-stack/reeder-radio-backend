@@ -240,6 +240,37 @@ describe('01-08 live manager + actual V3 runtime integration with synthetic CAD'
     await until(()=>pending.every(p=>p.result.settled),'queue drain',2500);
     expect(state.requests.filter(x=>x.method==='POST')).toHaveLength(8);
   });
+  it('suppresses duplicate actual manager PTT-end events before repeating a CAD write', async()=>{
+    const a=profile('a',41);await start([a]);
+    const pkt=await ptt(a,'u-a','A1','Central, available');
+    const data={channelId:a.room_key,unitId:'A1'};
+    const opened=await emit('start',data,pkt.source);
+    expect(opened).toContain(true);
+    state.listeners.get(a.room_key)({unitId:'A1',opusPayload:Buffer.from([8]),codec:'opus'});
+    const ended=finishPttTransmission(pkt.source,Date.now());
+    const original=observe(emit('end',data,ended));
+    const duplicate=await emit('end',data,ended);
+    expect(duplicate.every(v=>v===false)).toBe(true);
+    await until(()=>original.settled,'single completed PTT');
+    expect(state.requests.filter(x=>x.method==='POST')).toHaveLength(1);
+    expect(state.statuses.get('center-a:A1')).toBe('available');
+  });
+  it('continues manager-routed CAD processing while its outbound speech is stalled', async()=>{
+    const a=profile('a',41);await start([a]);
+    const speech=defer();state.synthWait=speech.promise;
+    const first=await send(await ptt(a,'u-a','A1','Central, en route'));
+    await until(()=>first.result.settled,'first command while speech stalls');
+    await until(()=>state.spoken.length>0,'speech synthesis entered');
+    const second=await send(await ptt(a,'u-a','A1','Central, available'));
+    const other=await send(await ptt(a,'u-b','B2','Central, available'));
+    await until(()=>second.result.settled && other.result.settled,'subsequent CAD commands');
+    expect(state.requests.filter(x=>x.method==='POST').map(x=>[x.body.unit_id,x.body.status]))
+      .toEqual([['A1','en_route'],['A1','available'],['B2','available']]);
+    expect(state.spoken).toHaveLength(1);
+    await manager.stopProfile(a.id,{persist:false});
+    speech.resolve(Buffer.alloc(640));await vi.advanceTimersByTimeAsync(1);
+    expect(audioRelayService.injectAudio).not.toHaveBeenCalled();
+  });
   it('times out CAD response body without duplicate mutation through manager path',async()=>{
     const a=profile('a',41);await start([a]);
     const stalled=defer();state.stallBody=stalled.promise;
