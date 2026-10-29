@@ -72,8 +72,8 @@ fun RadioFlavorScreen(
         onPauseOrDispose {}
     }
 
-    val tx = state.pttState == PttState.TRANSMITTING ||
-        state.radioState == RadioState.TRANSMITTING
+    // A granted floor is not live microphone TX until the local TPT has ended.
+    val tx = state.pttState == PttState.TRANSMITTING
     val rx = state.radioState == RadioState.RECEIVING
     val emergency = state.myEmergencyActive
     val accent = when {
@@ -86,6 +86,7 @@ fun RadioFlavorScreen(
         emergency -> "EMERGENCY"
         state.emergencyArming -> "SOS ARMING: " + state.emergencyArmingSecondsRemaining
         tx -> "TRANSMITTING"
+        state.radioState == RadioState.TRANSMITTING -> "TPT / WAIT"
         rx -> "RECEIVING"
         state.isChannelBusy -> "CHANNEL BUSY"
         !state.isConnected -> "CONNECTING"

@@ -6,8 +6,9 @@ on:
       - feature/hd760-hardware-diagnostics-20261028
     paths:
       - "android-native/**"
-      - "src/services/audioRelaySiblingDeviceHardening.js"
-      - "src/services/__tests__/audioRelaySiblingDeviceHardening.test.js"
+      - "src/services/**"
+      - "src/routes/dispatchRouter.js"
+      - "client/src/components/PageModal/index.jsx"
       - ".github/workflows/build-hd760-radio.yml"
   workflow_dispatch:
 
@@ -29,7 +30,15 @@ jobs:
       - name: Verify relay sibling-device echo protection
         run: |
           npm ci --ignore-scripts
-          npx vitest run src/services/__tests__/audioRelaySiblingDeviceHardening.test.js
+          npx vitest run src/services/__tests__/audioRelaySiblingDeviceHardening.test.js src/services/__tests__/nativePageDeliveryService.test.js
+          node --check src/services/nativePageDeliveryService.js
+          node --check src/services/signalingService.js
+          node --check src/services/pagingRosterService.js
+          node --check src/routes/dispatchRouter.js
+      - name: Validate dispatcher UI build
+        run: |
+          npm ci --prefix client --ignore-scripts
+          npm run build --prefix client
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:

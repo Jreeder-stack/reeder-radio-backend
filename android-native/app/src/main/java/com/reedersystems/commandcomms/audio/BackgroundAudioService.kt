@@ -67,6 +67,8 @@ class BackgroundAudioService : Service() {
     private var pttState = PttState.IDLE
     // Only HD760 defers a held rapid re-press until previous TX cleanup completes.
     private val hd760Press = Hd760PttPressState()
+    private var hd760PermitJob: Job? = null
+    @Volatile private var hd760FloorGranted = false
 
     @Volatile private var pttUpWhileConnecting = false
     private var preCaptureSetupJob: Job? = null
@@ -363,6 +365,8 @@ class BackgroundAudioService : Service() {
             ACTION_PTT_UP -> {
                 if (BuildConfig.FLAVOR == "hd760") {
                     hd760Press.up()
+                    hd760PermitJob?.cancel()
+                    hd760PermitJob = null
                     radioEngine?.udpTransport?.suppressSameUnitDuringLocalTx = false
                     app.toneEngine.stopTalkPermitTone()
                 }
@@ -982,6 +986,52 @@ class BackgroundAudioService : Service() {
                             }
                             return@collect
                         }
+                        if (BuildConfig.FLAVOR == "hd760") {
+                            // A floor grant reserves the channel, NOT permission to capture.
+                            // Play TPT locally to completion before opening AudioRecord.
+                            hd760FloorGranted = true
+                            val generation = hd760Press.currentGeneration()
+                            hd760PermitJob?.cancel()
+                            hd760PermitJob = scope.launch {
+                                try {
+                                    if (!hd760Press.isCurrentHeld(generation) ||
+                                        pttState != PttState.CONNECTING) return@launch
+                                    Log.i("CC-HD760", "TPT_START floor_granted=true mic=false")
+                                    // Coroutine resumes only when local tone playback completes.
+                                    app.toneEngine.playTalkPermitToneAndAwait()
+                                    if (!hd760Press.isCurrentHeld(generation) ||
+                                        pttState != PttState.CONNECTING ||
+                                        pttUpWhileConnecting) {
+                                        Log.i("CC-HD760", "TPT_CANCELLED no_live_tx")
+                                        return@launch
+                                    }
+                                    // No pre-capture is permitted on HD760 while the
+                                    // talk-permit tone is audible.
+                                    val started = engine.startTransmit()
+                                    if (!hd760Press.isCurrentHeld(generation) ||
+                                        pttState != PttState.CONNECTING ||
+                                        pttUpWhileConnecting) {
+                                        if (started) engine.stopTransmit()
+                                        return@launch
+                                    }
+                                    if (started) {
+                                        Log.i("CC-HD760", "TPT_COMPLETE_MIC_OPEN")
+                                        transitionPttState(PttState.TRANSMITTING)
+                                        updateNotification("TRANSMITTING")
+                                        sendPttTxStarted()
+                                    } else {
+                                        Log.e("CC-HD760", "TPT_COMPLETE_CAPTURE_FAILED")
+                                        engine.floorControl?.releaseFloor(servicePrefs.channelRoomKey ?: "")
+                                        hd760FloorGranted = false
+                                        transitionPttState(PttState.IDLE)
+                                        sendPttTxFailed()
+                                    }
+                                } catch (_: CancellationException) {
+                                    Log.i("CC-HD760", "TPT_CANCELLED release_or_revoke")
+                                }
+                            }
+                            return@collect
+                        }
                         Log.d(TAG, "Floor GRANTED — promoting pre-capture to live TX")
                         preCaptureSetupJob?.join()
                         preCaptureSetupJob = null
@@ -1288,12 +1338,8 @@ class BackgroundAudioService : Service() {
                 }
                 if (pttState != PttState.CONNECTING || !hd760Press.isHeld() ||
                     pttUpWhileConnecting || servicePrefs.channelRoomKey != roomKey) return@launch
-                preCaptureSetupJob = scope.launch {
-                    val started = engine.startPreCapture()
-                    if (!started) Log.w("CC-HD760", "PTT_PRECAPTURE_UNAVAILABLE")
-                }
-                // Pre-capture is concurrent. The grant handler joins this job
-                // before promoting it to live transmission.
+                // PTT floor requested with AudioRecord CLOSED on HD760.
+                // Mic capture only starts after the granted local TPT completes.
                 if (signaling) app.signalingRepository.transmitPre(roomKey)
                 if (pttState != PttState.CONNECTING || !hd760Press.isHeld() ||
                     pttUpWhileConnecting || servicePrefs.channelRoomKey != roomKey) return@launch
@@ -1438,6 +1484,11 @@ class BackgroundAudioService : Service() {
 
         if (pttState != PttState.TRANSMITTING) {
             if (pttState == PttState.CONNECTING) {
+                if (BuildConfig.FLAVOR == "hd760" && hd760FloorGranted) {
+                    hd760FloorGranted = false
+                    servicePrefs.channelRoomKey?.let { radioEngine?.floorControl?.releaseFloor(it) }
+                    Log.i("CC-HD760", "TPT_RELEASE_BEFORE_MIC floor_released")
+                }
                 cancelPendingFloorTimeout()
                 radioEngine?.floorControl?.cancelPending()
                 radioEngine?.abortPreCapture()
@@ -1458,6 +1509,7 @@ class BackgroundAudioService : Service() {
         val roomKey = servicePrefs.channelRoomKey ?: return
         val wasSignaling = needsSignaling
 
+        if (BuildConfig.FLAVOR == "hd760") hd760FloorGranted = false
         transitionPttState(PttState.CLEANING_UP)
         cleaningUpSinceMs = System.currentTimeMillis()
         updateNotification("Radio — Standby")

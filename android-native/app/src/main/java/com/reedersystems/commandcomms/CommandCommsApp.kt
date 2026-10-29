@@ -29,6 +29,7 @@ import com.reedersystems.commandcomms.data.model.RadioTransportConfig
 import com.reedersystems.commandcomms.data.repository.AuthRepository
 import com.reedersystems.commandcomms.data.repository.ChannelRepository
 import com.reedersystems.commandcomms.data.repository.RadioConfigRepository
+import com.reedersystems.commandcomms.messaging.NativeRadioPaging
 import com.reedersystems.commandcomms.signaling.SignalingClient
 import com.reedersystems.commandcomms.signaling.SignalingEvent
 import com.reedersystems.commandcomms.signaling.SignalingRepository
@@ -134,7 +135,12 @@ class CommandCommsApp : Application() {
         channelRepository = ChannelRepository(apiClient)
         val persistedDeviceId = getOrCreateDeviceId()
         signalingClient = SignalingClient(apiClient.baseUrl, storedRadioToken, persistedDeviceId)
+        signalingClient.onNativePage = { page -> NativeRadioPaging.receive(this, page) }
+        signalingClient.onNativeReceiptConfirmed = { id, kind ->
+            NativeRadioPaging.confirmReceipt(this, id, kind)
+        }
         signalingClient.onAuthenticated = {
+            NativeRadioPaging.flushPendingAcks(this)
             Log.d("CommandCommsApp", "Socket authenticated — refreshing and registering FCM token")
             apiClient.refreshAndRegisterFcmToken(appScope)
         }

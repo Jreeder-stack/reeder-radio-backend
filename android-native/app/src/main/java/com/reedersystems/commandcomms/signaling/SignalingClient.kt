@@ -40,6 +40,17 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
     private var username: String = ""
 
     var onAuthenticated: (() -> Unit)? = null
+    var onNativePage: ((JSONObject) -> Unit)? = null
+    var onNativeReceiptConfirmed: ((String, String) -> Unit)? = null
+
+    fun sendNativePageReceipt(pageId: String, kind: String) {
+        if (_connectionState.value != ConnectionState.AUTHENTICATED ||
+            (kind != "delivered" && kind != "acknowledged")) return
+        socket?.emit("radio:page_receipt", JSONObject().apply {
+            put("pageId", pageId)
+            put("kind", kind)
+        })
+    }
 
     fun setRadioToken(token: String?) {
         radioToken = token
@@ -98,6 +109,21 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
                         s.emit("authenticate", auth)
                     }
                 }
+            }
+        }
+
+        s.on("radio:page") { args ->
+            val data = args.firstOrNull() as? JSONObject ?: return@on
+            if (_connectionState.value == ConnectionState.AUTHENTICATED &&
+                data.optString("pageId").isNotBlank()) {
+                onNativePage?.invoke(data)
+            }
+        }
+
+        s.on("radio:page_receipt_ack") { args ->
+            val data = args.firstOrNull() as? JSONObject ?: return@on
+            if (data.optBoolean("success", false)) {
+                onNativeReceiptConfirmed?.invoke(data.optString("pageId"), data.optString("kind"))
             }
         }
 

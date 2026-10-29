@@ -27,6 +27,17 @@ class Hd760PttPressStateTest {
         assertTrue(p.takeDeferredIfHeld())
     }
 
+    @Test fun oldPermitCompletionCannotStartNewPress() {
+        val p = Hd760PttPressState()
+        p.down()
+        val first = p.currentGeneration()
+        p.up()
+        p.down()
+        val second = p.currentGeneration()
+        assertFalse(p.isCurrentHeld(first))
+        assertTrue(p.isCurrentHeld(second))
+    }
+
     @Test fun duplicateCleanupDoesNotRestartTwice() {
         val p = Hd760PttPressState()
         p.down(); p.deferDuringCleanup(); p.deferDuringCleanup()
