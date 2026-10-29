@@ -155,6 +155,39 @@ describe('01-06 outbound lane and actual V3 integration', () => {
     expect(history.length).toBeGreaterThan(0);
     expect(history.at(-1)).toMatchObject({details:{recipient:'A1',channel:h.context.roomKey}});
   });
+  it('drops a queued old turn after its unit starts a newer trusted intake', async () => {
+    const h=await make();
+    const tts=h.hold(Buffer.alloc(640));
+    h.synthesisReplies.push(tts.promise);
+    const b=await h.begin('Central, available','B2');await finish(b);
+    await until(()=>h.synthesize.mock.calls.length===1,'B2 current speech');
+    const a=await h.begin('Central, en route','A1');await finish(a);
+    const newCapture=await h.capture('A1');h.frame(newCapture);
+    tts.resolve(Buffer.alloc(640));
+    await h.flushOutput();
+    const outcomes=h.diagnostics.record.mock.calls.map(([event])=>event)
+      .filter(event=>event.phase==='outbound_expired' && event.details?.recipient==='A1');
+    expect(outcomes.length).toBeGreaterThan(0);
+    const olderA1=h.transcribe.mock.calls.find(([, opts])=>opts.turnEnvelope?.speakerRef==='A1')?.[1].turnEnvelope;
+    expect(olderA1.intakeSequence).toBeLessThan(h.runtime._intakeSequence);
+    expect(h.writes('/api/radio/status').map(x=>x.body.unit_id)).toEqual(['B2','A1']);
+  });
+  it('rechecks an expired session before broadcasting a queued reply', async () => {
+    const h=await make();
+    const tts=h.hold(Buffer.alloc(640));h.synthesisReplies.push(tts.promise);
+    const b=await h.begin('Central, available','B2');await finish(b);
+    await until(()=>h.synthesize.mock.calls.length===1,'B2 queued speech');
+    const principal=await h.principal('A1');
+    const capture=await h.capture('A1',{principal});h.frame(capture);
+    await finish(h.end(capture,'Central, en route'));
+    h.expireSession(principal);
+    tts.resolve(Buffer.alloc(640));
+    await h.flushOutput();
+    expect(h.diagnostics.record.mock.calls.map(([event])=>event)
+      .some(event=>event.phase==='outbound_failed' && event.details?.recipient==='A1')).toBe(true);
+    expect(h.writes('/api/radio/status').map(x=>x.body.unit_id)).toEqual(['B2','A1']);
+    expect(h.synthesize.mock.calls.length).toBe(1);
+  });
   it('refuses stale generation and wrong-channel entries without calling a transmitter', async () => {
     const emitted=vi.fn(async()=>true);
     const s=scheduler({transmit:emitted,relevant:entry=>entry.channel===config.channel});
