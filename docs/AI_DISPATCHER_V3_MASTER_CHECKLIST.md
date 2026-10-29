@@ -1,10 +1,10 @@
 # AI Dispatcher V3 master checklist
 
-Plan AI-DISP-V3-001, version 1.2, October 29, 2026.
+Plan AI-DISP-V3-001, version 1.3, October 29, 2026.
 Repository: `Jreeder-stack/reeder-radio-backend`.
 Branch: `test/dispatcher-v3-01-01-baseline-20261028`; PR #163, unmerged.
-Tested implementation: `db111bb7888e0dcb15e1715b4259568cae6b8910` (03-01; source tree verified against the local Node 20 run).
-Main inspected: `c5ce5feed7a4feadb86ddca3d6d8c89e2c2f90fa`, identical to the audit. Production revision unverified.
+Tested implementation: `7e9fcdb1982967771e3264328ce9554a8896b48e` (01-02; source tree verified against local Node 20 and GitHub CI evidence).
+Main at the implementation baseline: `c5ce5feed7a4feadb86ddca3d6d8c89e2c2f90fa`, identical to the audit. Final read-only checkpoint observed independently advanced main `fd88b6076dd66f3badada8509ceb287f13c4ab37` (PRs #164/#165); integration with that revision and the production revision remain unverified.
 
 ## Fixed objective and boundaries
 
@@ -18,26 +18,26 @@ Coding completion, scoped validation, pilot verification and release are separat
 
 | Parent | Scope | Coding | Validated |
 | --- | --- | ---: | ---: |
-| 01 | Reliable request processing | 1/8 | 1/8 |
+| 01 | Reliable request processing | 2/8 | 2/8 |
 | 02 | Multi-unit conversation management | 0/8 | 0/8 |
 | 03 | Meaning-based understanding and safe CAD actions | 1/8 | 1/8 |
 | 04 | Natural conversation and useful responses | 0/8 | 0/8 |
-| Total | Original 32 items | 2/32 | 2/32 |
+| Total | Original 32 items | 3/32 | 3/32 |
 
-01-01 and urgent 03-01 are complete for coding and scoped mocked validation. Local validation and GitHub CI run40887096038 on Node v20.20.2 both have 318 passed/1 existing failure/319 total across 32 files. All 85 new containment cases and all 26 audit/control cases pass. R06 and R07 now assert repaired behavior in every mode; the other twelve audit defects remain reproduced, not repaired. The remaining failure is the CREATE_CALL response fixture lacking verification evidence; production verification is unchanged. Scoped validation is not G-01 release acceptance.
+01-01, 01-02 and urgent 03-01 are complete for coding and scoped mocked validation. The 01-02 local validation and GitHub CI run 40917334797 on Node v20.20.2 both have 350 passed/1 existing failure/351 total in V3, plus 81/81 PTT adapter/routing/floor cases. All 103 new 01-02 cases pass (32 runtime, 48 adapter, 23 routing); these groups overlap the suite totals. All 85 existing containment cases and all 26 audit/control cases still pass. R06 and R07 assert repaired behavior in every mode; the other twelve audit defects remain reproduced, not repaired. The remaining failure is the CREATE_CALL response fixture lacking verification evidence; production verification and the failing assertion are unchanged. Scoped validation is not G-01 release acceptance.
 
-Read `dispatcher-v3/03-01-phrase-containment-20261029.md` and `dispatcher-v3/validation/03-01-results.json` for the implementation, exact commands, source hashes and limitations. The 01-01 baseline/results remain the historical record and are not rewritten as repair evidence.
+Read `dispatcher-v3/01-02-intake-trace-20261029.md`, `dispatcher-v3/validation/01-02-results.json` and `dispatcher-v3/validation/01-02-audit-results.json` for current implementation, commands, source hashes, CI comparison and limitations. The earlier `dispatcher-v3/03-01-phrase-containment-20261029.md` and `dispatcher-v3/validation/03-01-results.json` retain their historical evidence; the 01-01 baseline/results are also not rewritten as repair evidence.
 
-Next is **01-02**, whose read-only intake trace has resumed in `dispatcher-v3/01-02-intake-trace-20261029.md`; its coding and validation remain pending. Then continue 01-03 through 01-08, Task02, remaining Task03, Task04 and gates. No mutating pilot is authorized by 03-01 completion. Use one coordinated implementation stream for shared runtime/planner/state files. Write and run focused tests with each change; prefer mocked checks before paid calls and do not rerun unchanged expensive jobs without a diagnosis.
+Next is **01-03: Implement bounded, independent per-unit scheduling**. Intake sequencing is now recorded before asynchronous work; execution still follows the existing scheduling behavior. Continue 01-03 through 01-08, Task02, remaining Task03, Task04 and gates. Complete freshness/cancellation remains 01-05. No mutating pilot is authorized by this completion. Use one coordinated implementation stream for shared runtime/planner/state files. Write and run focused tests with each change; prefer mocked checks before paid calls and do not rerun unchanged expensive jobs without a diagnosis.
 
-The deliverables and acceptance paragraphs below are retained verbatim from version1.0. Repeated pending-evidence boilerplate is consolidated: for every item except01-01 and03-01, commits/tests/implementation evidence remain pending and live/pilot status remains unverified. Do not silently shorten requirements when implementing an item.
+The deliverables and acceptance paragraphs below are retained verbatim from version1.0. Repeated pending-evidence boilerplate is consolidated: for every item except 01-01, 01-02 and 03-01, commits/tests/implementation evidence remain pending and live/pilot status remains unverified for every item. Do not silently shorten requirements when implementing an item.
 
 ## Task 01: Reliable request processing
 
 | ID | Work item | Coded | Validated |
 | --- | --- | --- | --- |
 | 01-01 | Verify the baseline and establish the runtime test harness | [x] | [x] |
-| 01-02 | Give every transmission a trusted identity and ordered turn record | [ ] | [ ] |
+| 01-02 | Give every transmission a trusted identity and ordered turn record | [x] | [x] |
 | 01-03 | Implement bounded, independent per-unit scheduling | [ ] | [ ] |
 | 01-04 | Bound complete external operations | [ ] | [ ] |
 | 01-05 | Enforce expiry, cancellation and runtime-generation checks | [ ] | [ ] |
@@ -56,6 +56,8 @@ The deliverables and acceptance paragraphs below are retained verbatim from vers
 **Deliverable:** Create a consistent turn envelope with dispatcher/runtime generation, dispatch center, authenticated connection and speaker/unit identity, channel, unique turn ID, sequence and capture timestamps. Keep the speaker distinct from a requested target unit. Carry this envelope through transcription, planning, execution, output and diagnostics; suppress duplicate intake events.
 
 **Acceptance:** Transmission order is allocated at intake, not transcription completion. Missing or ambiguous identity cannot authorize a mutation. A duplicate PTT-end event does not create a second action. A spoken callsign cannot override authenticated identity or permissions.
+
+**Completion evidence (October 29, 2026):** implementation `7e9fcdb1982967771e3264328ce9554a8896b48e`; 103/103 new cases pass on Node v20.20.2. Stored-session or assigned-radio proof and account-owned enabled channel grants are bound to an unambiguous configured channel/center before speaker resolution. Private transmission metadata survives normal, drained and forced ends plus both compatibility layers. Immutable intake identity/sequence and completed capture envelopes flow through transcription, planning, execution, output and diagnostics; correlated duplicate events cannot create a second action. Local and inspected GitHub CI run 40917334797 agree on 81/81 PTT cases and 350/351 V3 cases, with the existing unverified CREATE_CALL fixture failure preserved. Server-observed capture timestamps do not claim physical microphone timing; legacy no-ID wire events cannot distinguish every delayed/replayed event. See the 01-02 trace/results/audit evidence above. Execution ordering (01-03), complete freshness/cancellation (01-05), live/pilot and release acceptance remain pending.
 
 ### 01-03: Implement bounded, independent per-unit scheduling
 
@@ -328,8 +330,8 @@ Separate real-audio transcription problems from downstream interpretation proble
 
 ## Exact continuation
 
-03-01 implementation is committed as `db111bb7888e0dcb15e1715b4259568cae6b8910`; subsequent evidence/checklist changes are documentation only. The implementation tree is `a5e8f40701bc8207867161794104afbf0b1fdd7e`. CI run40887096038 independently confirmed the same results; its artifact was downloaded and inspected. GitHub temporary PR test merge `e70085c8e8190a93f2c835763fe2fb824b9857ac` is not a merge into main. Local supported-runtime testing ran on the same source tree before commit creation, then the complete staged tree was compared with the GitHub commit. PR163 remains draft, open and unmerged. The unchanged lockfile still has blob `95e68c9e83f40b1a085d6fc0da03082e17f6a2cc`.
+01-02 implementation is committed as `7e9fcdb1982967771e3264328ce9554a8896b48e`; subsequent evidence/checklist changes are documentation only and do not rerun unchanged tests. The implementation tree is `087e1bb8ce632059a1e5c13377c07591ee5c8f55`. CI run 40917334797 independently confirmed the same results. Its artifact 12916871216 was downloaded, checksum-verified and inspected: all 432 individual test outcomes, all 21 audit source blobs and all 14 audit reproductions match the local evidence. GitHub temporary PR test merge `05e5817e213bfa6bf66d731f934bc1ca7e081ec2` has that same implementation tree and is not a merge into main. Local supported-runtime testing ran on the same source tree before commit creation; the recorded checkout revision remains the actual base `f23498a0a4028dd456f41ac49b0e95fce44e9c18`, with tested source blobs and complete staged-tree equality proving the committed bytes. PR #163 remains draft, open and unmerged. The unchanged lockfile still has blob `95e68c9e83f40b1a085d6fc0da03082e17f6a2cc`. Prior 03-01 implementation remains `db111bb7888e0dcb15e1715b4259568cae6b8910`.
 
-Verify the current branch head and read the 03-01 report/results plus `dispatcher-v3/01-02-intake-trace-20261029.md`, then implement 01-02. That trace covers authenticated connection provenance, account-owned channel grants, the configured center mapping, all PTT adapters, duplicate internal events and the limitation of uncorrelated legacy wire events. It is preparation, not completed code.
+Verify the current branch head and review the independently advanced main `fd88b6076dd66f3badada8509ceb287f13c4ab37` (embedded radio ownership and HD760/native paging changes, including signaling). This branch has not integrated those changes, and its recorded CI predates that main revision. Read this checklist, `dispatcher-v3/01-02-intake-trace-20261029.md`, both 01-02 validation files, the runtime/harness and current scheduler paths, then implement **01-03**. Preserve legitimate per-unit operation order when transcription completes out of order; let other units progress independently under documented global limits; bound queue length and wait time; give overload a safe terminal outcome. Preserve 01-02 trusted envelope/actor isolation and 03-01 containment. Complete freshness/cancellation enforcement remains 01-05; do not claim it from generation/sequence metadata alone.
 
-Counts: 01 = 1/8; 02 = 0/8; 03 = 1/8; 04 = 0/8; total = 2/32. R06/R07 are repaired under mocked boundaries; twelve other audit defects remain. Do not weaken verification to repair the remaining CREATE_CALL fixture failure. Full repository/mobile/provider/audio validation and the production revision remain unverified. No merge, deployment, restart, production-data changes or paid calls are authorized. Keep G-01 through G-04 separate and unchecked.
+Counts: 01 = 2/8; 02 = 0/8; 03 = 1/8; 04 = 0/8; total = 3/32. R06/R07 are repaired under mocked boundaries; twelve other audit defects remain. Do not weaken verification or hide the remaining CREATE_CALL fixture failure. Full repository/mobile/provider/audio validation, integration with the newer main and the production revision remain unverified. No merge, deployment, restart, production-data changes or paid calls are authorized. Keep G-01 through G-04 separate and unchecked.

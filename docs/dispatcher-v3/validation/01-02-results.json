@@ -1,0 +1,2312 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "workItem": "01-02",
+  "date": "2026-10-29",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pullRequest": 163,
+  "baseRevision": "f23498a0a4028dd456f41ac49b0e95fce44e9c18",
+  "implementationCommit": "7e9fcdb1982967771e3264328ce9554a8896b48e",
+  "implementationTree": "087e1bb8ce632059a1e5c13377c07591ee5c8f55",
+  "mainInspected": "c5ce5feed7a4feadb86ddca3d6d8c89e2c2f90fa",
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "liveVerification": false,
+    "releaseAcceptance": false
+  },
+  "environment": {
+    "runtime": "v20.20.2",
+    "platform": "linux/x64",
+    "lockfileBlob": "95e68c9e83f40b1a085d6fc0da03082e17f6a2cc",
+    "dependenciesChanged": false,
+    "localInstall": "npm ci --offline --cache /tmp/ptt-npm-cache --ignore-scripts --no-audit --no-fund; existing .npmrc legacy-peer-deps=true",
+    "boundaries": "Synthetic session/account/grant/radio database responses, CAD HTTP, speech/model, audio relay and paging; real runtime, adapters, issuer, materializer and executor"
+  },
+  "localTestSource": {
+    "checkoutRevisionAtExecution": "f23498a0a4028dd456f41ac49b0e95fce44e9c18",
+    "sourceWasUncommittedDuringRun": true,
+    "sourceTreeVerifiedAgainstCommittedTree": true,
+    "note": "The reconstructed checkout and every downloaded source blob were hash-verified against connected GitHub. The staged implementation tree and GitHub-created tree are identical. Source hashes retain the actual tested bytes; the checkout revision is not relabeled as an execution at a future commit."
+  },
+  "commands": [
+    "DISPATCHER_AUDIT_MODE=baseline DISPATCHER_AUDIT_REVISION=f23498a0a4028dd456f41ac49b0e95fce44e9c18 DISPATCHER_AUDIT_REPORT=/tmp/dispatcher-01-02-audit-final.json npm run test:v3 -- --reporter=default --reporter=json --outputFile=/tmp/dispatcher-01-02-v3-verified.json",
+    "npm test -- src/services/__tests__/pttIntakeAdapters.test.js src/services/__tests__/pttRuntimeRouting.test.js src/services/__tests__/signalingFloorIdentityHardening.test.js src/services/__tests__/audioRelaySiblingDeviceHardening.test.js src/services/__tests__/floorControlService.aiWatchdog.test.js --reporter=default --reporter=json --outputFile=/tmp/dispatcher-01-02-ptt-final.json",
+    "node --check <each of 24 changed JavaScript files>; git diff --check; verify eight removed legacy-engine paths remain absent"
+  ],
+  "newScopedTests": {
+    "immutableTurnAndRuntime": 32,
+    "credentialAndPttAdapters": 48,
+    "configuredRoutingAndCompatibility": 23,
+    "passed": 103,
+    "failed": 0
+  },
+  "existingControls": {
+    "auditAndHealthyControls": 26,
+    "ordinaryPhraseContainment": 63,
+    "emergencyReplyContainment": 22,
+    "floorAndSiblingDeviceControls": 10,
+    "note": "These groups are included in the complete results below, not additional test totals."
+  },
+  "fullV3": {
+    "files": 33,
+    "passed": 350,
+    "failed": 1,
+    "total": 351,
+    "fileResults": [
+      {
+        "path": "src/dispatcher-v3/__tests__/actionContracts.test.js",
+        "status": "passed",
+        "passed": 9,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 action contracts publishes the first supported action set",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts normalizes and freezes a valid status action",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts rejects unknown actions",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts rejects unsupported statuses",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts requires immutable unit IDs for executable unit actions",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts allows zero resolved units for an unassigned call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts deduplicates resolved unit IDs for call creation",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts enforces action scopes before execution",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 action contracts requires disposition to close a call",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/actionExecutor.test.js",
+        "status": "passed",
+        "passed": 9,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3ActionExecutor validates before invoking a handler",
+            "status": "passed"
+          },
+          {
+            "name": "V3ActionExecutor preserves correlation IDs and normalizes success",
+            "status": "passed"
+          },
+          {
+            "name": "V3ActionExecutor returns typed failure when a handler is missing",
+            "status": "passed"
+          },
+          {
+            "name": "default V3 handlers uses a resolved callsign and verifies status from an authoritative follow-up read",
+            "status": "passed"
+          },
+          {
+            "name": "default V3 handlers refuses callsign execution if the second resolution maps elsewhere",
+            "status": "passed"
+          },
+          {
+            "name": "default V3 handlers fails if follow-up CAD state does not match the requested status",
+            "status": "passed"
+          },
+          {
+            "name": "default V3 handlers executes a dedicated backup request and verifies the CAD note when a call exists",
+            "status": "passed"
+          },
+          {
+            "name": "default V3 handlers never allows a dispatcher action to activate the physical emergency system",
+            "status": "passed"
+          },
+          {
+            "name": "default V3 handlers fails closed when Command Comms operational alerts are unavailable",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/auditBaseline.test.js",
+        "status": "passed",
+        "passed": 26,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R01: stale dialogue crosses speakers and loses attribution in the model payload",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R02: later transcription overtakes earlier speech",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R03: an answer queued while valid executes after the disposition expires",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R04: a transcription finishing after stop can still mutate CAD",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R05: cancellation is appended to an old incident after reassignment",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R06: negations and a question reach semantics without contrary writes",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R07: semantic planning preserves both commands and the clean address",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R08: successful GET_CALL and SEARCH_CALLS results receive only copy",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R09: the CAD deadline ends at headers, leaving the response body unbounded",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R10: a TTS stall blocks the next request until it is five minutes old",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R11: the reply window expires before the question is delivered",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R12: resolution clarification loses the structured original task",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R13: a failed incident-note write is labeled successful and hidden in speech",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 audit regressions: repaired assertions plus remaining known defects R14: a conflicting call reference selects the Walmart alarm",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P01: ordinary consecutive statuses execute and are verified",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P02: another unit can progress while A1 transcription is pending",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P03: duplicate PTT end does not duplicate a command",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P04: wrong-channel and self-generated input are rejected",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P05: identical callsigns in separate centers use separate identities and CAD requests",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P06: unaddressed routine speech does not cause a CAD write",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P07: read-only scopes cannot execute a status write",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P08: ordinary CAD failures are not announced as successful status changes",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P09: a successful HTTP response still requires status read-back verification",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P10: immediate clarification follow-ups are accepted before expiry",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P11: actual PTT resumes after an ordinary stop/start with no in-flight work",
+            "status": "passed"
+          },
+          {
+            "name": "01-01 healthy controls that repairs must preserve P12: five units complete independent routine requests through PTT",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/cadGateway.test.js",
+        "status": "passed",
+        "passed": 7,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "CommandLinkGateway injects auth, center, runtime and correlation context on every request",
+            "status": "passed"
+          },
+          {
+            "name": "CommandLinkGateway serializes object bodies and does not retry unsafe writes",
+            "status": "passed"
+          },
+          {
+            "name": "CommandLinkGateway retries a transient safe read once",
+            "status": "passed"
+          },
+          {
+            "name": "CommandLinkGateway normalizes CAD HTTP errors without reporting success",
+            "status": "passed"
+          },
+          {
+            "name": "CommandLinkGateway rejects HTTP 200 application-level failures so V3 cannot speak false success",
+            "status": "passed"
+          },
+          {
+            "name": "CommandLinkGateway rejects invalid non-object JSON success responses",
+            "status": "passed"
+          },
+          {
+            "name": "CommandLinkGateway rejects paths that are not absolute API paths",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/cadParityActions.test.js",
+        "status": "passed",
+        "passed": 6,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 CAD parity actions allows creating a call with no assigned units",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 CAD parity actions materializes natural call and unit references for primary changes",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 CAD parity actions verifies structured call updates through a fresh parity read",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 CAD parity actions rejects an update acknowledgment when read-back does not match",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 CAD parity actions uses explicit unassign and verifies the unit is absent afterward",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 CAD parity actions sends assignment time corrections and verifies the stored timestamp",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/clearLifecycle.test.js",
+        "status": "passed",
+        "passed": 8,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 clear lifecycle treats clear-of-call speech as CLEAR_UNIT: I'm clear of the call I was on",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle treats clear-of-call speech as CLEAR_UNIT: clear me from the call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle treats clear-of-call speech as CLEAR_UNIT: show me clear of my call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle requires a disposition before mutating the only active assignment",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle fails safe and asks for a disposition when assignment details are unavailable",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle disposes the call after the only active unit supplies a disposition",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle clears only the unit when other active assignments remain and verifies the target is absent",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 clear lifecycle rejects a clear acknowledgment when CAD still shows the unit assigned",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/contextResolution.test.js",
+        "status": "passed",
+        "passed": 5,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 contextual materialization resolves self unit language to the transmitting callsign: me",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 contextual materialization resolves self unit language to the transmitting callsign: myself",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 contextual materialization resolves self unit language to the transmitting callsign: my unit",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 contextual materialization resolves self unit language to the transmitting callsign: the transmitting unit",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 contextual materialization does not rewrite a specifically named unit to the speaker",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/conversationGate.test.js",
+        "status": "passed",
+        "passed": 13,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3ConversationGate ignores unrelated channel traffic",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate accepts and strips an addressed transmission",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate does not trigger when a wake word is only mentioned later in unit traffic",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate uses the signaling identity for a correctly transcribed hail",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate still recognizes a hail when STT drops the unit number",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate normalizes common spoken-number STT variants against the signaling identity",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate treats a wake-word-only transmission as a hail from the known transmitting unit",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate does not mistake an actual command for a hail",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate accepts a timed follow-up without another wake word",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate explicit wake word cancels a stale clarification and starts a fresh request",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate cancels a radio-hail follow-up when the unit addresses another callsign",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate does not hijack a bare hail to another same-family unit",
+            "status": "passed"
+          },
+          {
+            "name": "V3ConversationGate always passes protected emergency traffic",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/createCallCityInference.test.js",
+        "status": "passed",
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 create-call locality fallback extracts a city from a comma-delimited spoken address",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 create-call locality fallback extracts a city from a natural spoken address without a comma",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 create-call locality fallback does not invent a city when none was supplied",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/createCallHandler.test.js",
+        "status": "passed",
+        "passed": 5,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "createResolvedCallHandler resolves a named place, creates the CAD call, and verifies the stored call",
+            "status": "passed"
+          },
+          {
+            "name": "createResolvedCallHandler uses MAI municipality when the Master Address Index provides it",
+            "status": "passed"
+          },
+          {
+            "name": "createResolvedCallHandler verifies an unassigned pending call",
+            "status": "passed"
+          },
+          {
+            "name": "createResolvedCallHandler fails closed when Command Link cannot verify the location",
+            "status": "passed"
+          },
+          {
+            "name": "createResolvedCallHandler rejects a create acknowledgment when the follow-up call is wrong",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/deterministicIntent.test.js",
+        "status": "passed",
+        "passed": 26,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans radio check locally as RADIO_CHECK",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans what time is it locally as TIME_CHECK",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans what call am I on locally as GET_CURRENT_CALL",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans what calls are on the screen locally as LIST_ACTIVE_CALLS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans what's my status locally as STATUS_CHECK",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans show me en route locally as SET_UNIT_STATUS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans on scene locally as SET_UNIT_STATUS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans show me arriving locally as SET_UNIT_STATUS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans available locally as SET_UNIT_STATUS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans out of service locally as SET_UNIT_STATUS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans off duty locally as SET_UNIT_STATUS",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands strips the authenticated speaker callsign before parsing: INDIANA-1, radio check",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands strips the authenticated speaker callsign before parsing: Indiana 1 radio check",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands strips the authenticated speaker callsign before parsing: Indiana one, radio check",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands strips the authenticated speaker callsign before parsing: Indiana won radio check",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands strips the self callsign for other routine commands too",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands does not strip another unit callsign",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands makes an obvious backup request deterministic and urgent",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands leaves complex multi-field language for Azure OpenAI",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands preserves semantically planned named-call assignment and status actions",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands passes named-call context to semantics instead of weak substring selection",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans urgent field traffic as a non-emergency field incident: shots fired",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands plans urgent field traffic as a non-emergency field incident: I have one running",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands preserves a rich first-person field report through semantic interpretation",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands uses a known disposition for a pending clear but leaves unrelated traffic for semantic planning",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic routine commands does not call Azure OpenAI for deterministic commands",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/deterministicIntentSafety.test.js",
+        "status": "passed",
+        "passed": 12,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 deterministic intent safety recognizes extended en-route phrasing: go en route to the call on my screen",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety recognizes extended en-route phrasing: show me en route to the call on my screen",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety recognizes extended en-route phrasing: put me en route to my current call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety recognizes extended en-route phrasing: mark me en route to the call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety targets the named roster unit instead of the speaker: put Indiana 2 on duty",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety targets the named roster unit instead of the speaker: show Indiana-2 on duty",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety targets the named roster unit instead of the speaker: mark Security 12 out of service",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety targets the named roster unit instead of the speaker: put Security-12 available",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety routes zone-change requests to the zone capability: change me to zone 2",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety routes zone-change requests to the zone capability: switch me to zone 2",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety routes zone-change requests to the zone capability: change zone to north",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 deterministic intent safety routes zone-change requests to the zone capability: put me on zone 3",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/diagnostics.test.js",
+        "status": "passed",
+        "passed": 4,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3DiagnosticsJournal redacts sensitive fields and keeps bounded history",
+            "status": "passed"
+          },
+          {
+            "name": "V3DiagnosticsJournal filters by runtime and correlation ID",
+            "status": "passed"
+          },
+          {
+            "name": "V3ActionExecutor diagnostics records received, validated, and completed stages with one correlation ID",
+            "status": "passed"
+          },
+          {
+            "name": "V3ActionExecutor diagnostics records validation failures without invoking a handler",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/emergencyBehavior.test.js",
+        "status": "passed",
+        "passed": 8,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy routes urgent voice language into CAD field handling, never emergency activation: shots fired",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy routes urgent voice language into CAD field handling, never emergency activation: I have one at gun point",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy routes urgent voice language into CAD field handling, never emergency activation: I have him at taser point",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy routes urgent voice language into CAD field handling, never emergency activation: I'm fighting with him",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy routes urgent voice language into CAD field handling, never emergency activation: 10-33 emergency traffic",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy routes urgent voice language into CAD field handling, never emergency activation: officer down",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 physical-button-only emergency policy rejects DECLARE_EMERGENCY even if a planner or caller attempts it",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 MDC alert tone builds two seconds of 16 kHz signed PCM matching the existing Tone B duration",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/emergencyReplyContainment.test.js",
+        "status": "passed",
+        "passed": 22,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: not all good",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: am I okay?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: I said all good yesterday",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: all good except I cannot move",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: Central, not all good",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: Central, \"I am okay\"",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: Control, I am okay",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not clear a hardware emergency from an unsafe or ambiguous reply: Central, B2, I am okay",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency still accepts an exact safe response from the activated unit: Central, A1, I am okay",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency still accepts an exact safe response from the activated unit: 10-4",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not let another authenticated unit supply the safe reply for A1",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency preserves the next hardware status-check timer after an unsafe reply",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency preserves conservative distress escalation when a safe phrase is followed by a request for help",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not assign a responder from a substring or an unrecognized prefix: I am not responding",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not assign a responder from a substring or an unrecognized prefix: is B2 responding?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not assign a responder from a substring or an unrecognized prefix: responding tomorrow",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not assign a responder from a substring or an unrecognized prefix: Central, I am not responding",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not assign a responder from a substring or an unrecognized prefix: Central, B2, responding after I finish this call",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency does not assign a responder from a substring or an unrecognized prefix: Control, I am responding",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency still assigns an exact affirmative responder to the active hardware incident",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency preserves the explicit hardware/manual clear entry point",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 whole-sentence replies during a physical emergency still prevents urgent voice alone from activating hardware emergency state",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/fieldIncidentCoordinator.test.js",
+        "status": "passed",
+        "passed": 4,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3FieldIncidentCoordinator acknowledges shots fired, creates CAD activity without emergency activation, and asks for location",
+            "status": "passed"
+          },
+          {
+            "name": "V3FieldIncidentCoordinator creates ASSIST - OFFICER from an unassigned fleeing-subject report and preserves the statement in notes",
+            "status": "passed"
+          },
+          {
+            "name": "V3FieldIncidentCoordinator separates verified address and municipality, records cross streets, then asks for a description",
+            "status": "passed"
+          },
+          {
+            "name": "V3FieldIncidentCoordinator captures changed operational direction without repeating the unanswered location question",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/foundation.test.js",
+        "status": "passed",
+        "passed": 2,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "dispatcher-v3 foundation builds and freezes a valid runtime context",
+            "status": "passed"
+          },
+          {
+            "name": "dispatcher-v3 foundation fails closed when a dispatch center is missing",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/inRouteSpeech.test.js",
+        "status": "passed",
+        "passed": 2,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 in-route speech normalization preserves in-route wording for semantic interpretation of a self-initiated call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 in-route speech normalization normalizes a simple in-route status request too",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/liveRuntimeFloor.test.js",
+        "status": "passed",
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3LiveDispatcher outbound floor control acquires the AI floor, transmits, and releases it",
+            "status": "passed"
+          },
+          {
+            "name": "V3LiveDispatcher outbound floor control always releases the floor when audio injection fails",
+            "status": "passed"
+          },
+          {
+            "name": "V3LiveDispatcher outbound floor control does not transmit when the radio floor remains busy",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/mutationVerification.test.js",
+        "status": "passed",
+        "passed": 8,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Step 5 CAD mutation read-back verifies unit zone from status catalog after the write",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back rejects a zone write when follow-up state is stale",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back verifies a newly assigned unit is present on the call",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back rejects assignment success when the unit never appears on the call",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back verifies primary unit after the primary write",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back verifies call notes after legacy note creation",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back verifies terminal status and disposition after closing a call",
+            "status": "passed"
+          },
+          {
+            "name": "Step 5 CAD mutation read-back rejects call closure when CAD still reports an active call",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/operationalAlertService.test.js",
+        "status": "passed",
+        "passed": 4,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3OperationalAlertService activates emergency state only on the selected channel and suppresses global fan-out",
+            "status": "passed"
+          },
+          {
+            "name": "V3OperationalAlertService rejects a second unit trying to own the same channel emergency state",
+            "status": "passed"
+          },
+          {
+            "name": "V3OperationalAlertService sends backup once to the selected channel with center metadata",
+            "status": "passed"
+          },
+          {
+            "name": "V3OperationalAlertService fails closed if signaling is not initialized",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/operationalContext.test.js",
+        "status": "passed",
+        "passed": 15,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 operational context includes the center-scoped unit roster and current statuses",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context preserves caller and description context for natural references",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context resolves an implicit call when exactly one active call exists",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context refuses to guess when more than one active call exists",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context prefers the transmitting unit current call when the action is current-call scoped",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context treats explicit self reference as the current call even with other calls active: my call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context treats explicit self reference as the current call even with other calls active: my current call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context treats explicit self reference as the current call even with other calls active: the call I'm on",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context treats explicit self reference as the current call even with other calls active: this call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context does not guess which call \"that call\" means when multiple calls are active",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context resolves a natural call reference by nature or location",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context resolves Smith's call using caller context",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context requires clarification when the descriptive reference matches two calls equally",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context materializes attach-me against the only active call",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 operational context materializes 'put 12 on the call I'm on' against the speaker's current call",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/phase3Regression.test.js",
+        "status": "passed",
+        "passed": 8,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix fails closed when dispatch center is missing",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix fails closed when channel context is missing",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix keeps simultaneous runtime contexts isolated",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix blocks an action when its required scope is missing",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix rejects malformed AI/planner output before any handler runs",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix propagates handler failures without reporting action success",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix keeps diagnostic traces separated by runtime and correlation ID",
+            "status": "passed"
+          },
+          {
+            "name": "AI Dispatcher V3 phase 3 regression matrix refuses a malformed successful unit-resolution response",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/phase4Pipeline.test.js",
+        "status": "failed",
+        "passed": 7,
+        "failed": 1,
+        "cases": [
+          {
+            "name": "Dispatcher V3 phase 4 pipeline buffers a PTT transmission and sends PCM to STT",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline recognizes a plain radio hail without sending it to the action planner",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline bypasses the LLM for protected urgent traffic without activating emergency mode",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline bypasses the LLM and CAD for routine radio checks",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline materializes spoken unit references into immutable UUIDs before execution",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline does not falsely promise that backup is en route",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline does not read the generated call number over the air after creating a call",
+            "status": "failed",
+            "failure": "AssertionError: expected 'INDIANA-1, unable to verify that chan\u2026' to be 'Ten-four, eleven fifty-nine hours.' // Object.is equality"
+          },
+          {
+            "name": "Dispatcher V3 phase 4 pipeline unwraps Command Link payloads through gateway helpers",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/phraseMatchContainment.test.js",
+        "status": "passed",
+        "passed": 63,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from do not mark B2 available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from don't mark B2 available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from B2 is not on scene",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from B2 is available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from B2 was on scene yesterday",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from When B2 is available call me",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from If B2 is available, send the details",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Did you hear B2 say available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from The caller said B2 was on scene",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Mark B2 available but only after the call closes",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Mark B2 available tomorrow",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Mark B2 available or busy",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Mark B2 and C3 available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Mark B2 available and leave C3 on scene",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from B2 available?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Mark B2 available?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from available?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from show me available?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from \"mark B2 available\"",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from I didn't say mark B2 available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from No shots fired",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Is B2 at gunpoint?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from Caller reports shots fired yesterday",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from If there are shots fired, send backup",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from I have nobody at gunpoint",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from I'm not fighting with him",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from officer down was the training scenario",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from shots fired?",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from markavailable",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from showme available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from setbusy",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not invent a mutation from putin service",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime executes a status question as a read, preserving the requested other unit",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: mark B2 available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: put B2 not available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: show B2 on scene",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: set B2 out of service",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: show me available",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: on scene",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: A1, I'm on scene",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime preserves an unambiguous positive command: A1, available.",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime accepts a natural positive paraphrase through semantics and verifies the actual write",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 full-sentence meaning containment through the actual PTT runtime does not confuse a status word inside a callsign with the requested status",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations creates a call without inventing an assignment when the unit explicitly declines assignment",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations preserves both parts of a compound request and keeps the trailing instruction out of the address",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations preserves named-call assignment followed by status through semantic interpretation",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations retains a richer first-person urgent report through semantic interpretation and verified notes",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations retains a complete urgent declaration without activating the hardware emergency system: shots fired",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations retains a complete urgent declaration without activating the hardware emergency system: Central, shots fired",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 removed open-slot shortcuts preserve legitimate semantic operations retains a complete urgent declaration without activating the hardware emergency system: Central, A1, 10-33 emergency traffic",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries uses semantics for unknown target instead of silently choosing the speaker",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries uses semantics for ambiguous normalized target instead of silently choosing the speaker",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries uses semantics for two explicit targets instead of silently choosing the speaker",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries uses semantics for missing roster instead of silently choosing the speaker",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries forwards all original sentence evidence to semantics: A1, don't mark B2 available; I asked for the time.",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries forwards all original sentence evidence to semantics: A1, create a building check at Four Corners for B2, then read the notes.",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries forwards all original sentence evidence to semantics: A1, \"B2 is available\" was what the caller said yesterday.",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries does not execute a named status without the existing unit.write permission",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries retains authoritative unknown-target rejection after semantic interpretation",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries keeps identical named targets in their own dispatch centers",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries never falls back to a phrase mutation after provider error",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries never falls back to a phrase mutation after malformed response",
+            "status": "passed"
+          },
+          {
+            "name": "03-01 semantic fallback and existing authorization boundaries never uses a phrase mutation when semantic planning reaches its existing timeout",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/primaryIntent.test.js",
+        "status": "passed",
+        "passed": 7,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 primary-unit intent maps \"make me primary\" directly to MAKE_PRIMARY",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 primary-unit intent maps \"show me primary\" directly to MAKE_PRIMARY",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 primary-unit intent maps \"mark me as the primary unit\" directly to MAKE_PRIMARY",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 primary-unit intent maps \"set my unit as primary\" directly to MAKE_PRIMARY",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 primary-unit intent maps \"primary me\" directly to MAKE_PRIMARY",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 primary-unit intent maps \"make me primary on the current call\" directly to MAKE_PRIMARY",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 primary-unit intent still preserves existing status intent handling",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/responseComposerMilitaryTime.test.js",
+        "status": "passed",
+        "passed": 10,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 military-time acknowledgements uses ten-four plus current military time for en_route acknowledgements",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements uses ten-four plus current military time for available acknowledgements",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements uses ten-four plus current military time for on_scene acknowledgements",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements uses ten-four plus current military time for out_of_service acknowledgements",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements uses ten-four plus spoken military time for routine CAD acknowledgements",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements does not add a second timestamp to a direct time check",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements formats military time as dispatcher speech instead of a four-digit number",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements keeps radio checks short and never announces voice-triggered emergency activation",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements reads active calls from the CAD screen context",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 military-time acknowledgements asks for disposition instead of acknowledging an unperformed clear",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/runtimeIsolation.test.js",
+        "status": "passed",
+        "passed": 8,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 runtime isolation normalizes CAD URL and scopes and freezes the context",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation fails closed without CAD credentials",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation keeps async callbacks inside the assigned runtime context",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation binds event callbacks to the originating runtime",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation rejects a dispatch-center mismatch",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation rejects a radio-channel mismatch",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation enforces required scopes and supports wildcard scope",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 runtime isolation creates stable parent-child correlation chains",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/runtimeManagerPreflightContext.test.js",
+        "status": "passed",
+        "passed": 1,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "V3 runtime-manager CAD preflight context runs readiness validation inside the selected dispatcher profile context",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/startCallIntent.test.js",
+        "status": "passed",
+        "passed": 5,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 start-call semantic routing preserves a semantically interpreted warrant service with assignment",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 start-call semantic routing preserves create, assignment and en-route operations for self-initiated service",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 start-call semantic routing preserves other self-initiated call natures through the same semantic path",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 start-call semantic routing does not hardcode the call nature or consume additional instructions as location",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 start-call semantic routing preserves the explicit no-assignment request through semantic interpretation",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/turnIntakeIdentity.test.js",
+        "status": "passed",
+        "passed": 32,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points keeps one finalized envelope through transcription, planning, materialization, execution, response and output",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points uses an assigned radio account and its server-read channel grant",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points allocates sequence before asynchronous speaker resolution finishes",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points records original intake order when STT completes in reverse order without claiming scheduling is repaired",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points suppresses a repeated start without replacing captured audio or allocating another turn",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points suppresses duplicate end while transcription is still pending and after completion",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points rejects an internally replayed completed start with the original transmission identity",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points rejects a completed source replay after bounded history eviction while accepting a genuinely new source",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points keeps an old end from consuming or removing a newer capture for the same callsign",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points preserves an old drained completion timestamp and the newer same-connection capture",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points preserves separate connection identities when the same callsign transmits sequentially",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points invalidates overlapping connections sharing a callsign because unlabelled audio cannot prove its source",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points keeps a callsign blocked through every ambiguous connection end before accepting a clean capture",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points isolates identical callsigns and channel names across configured centers",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 immutable authenticated turns through actual runtime entry points creates a new runtime generation after ordinary stop/start",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions rejects missing metadata before speech capture or action processing",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions rejects client-authenticated boolean before speech capture or action processing",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions rejects a serialized copy of genuine metadata because JSON cannot retain issuer proof",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions does not accept a source principal without an account-owned channel grant",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions rejects a valid principal bound to a different configured center",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions rejects an event callsign that differs from the authenticated account",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions cannot substitute a resolvable requested target when the authenticated actor is missingUnits",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions cannot substitute a resolvable requested target when the authenticated actor is ambiguousUnits",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions keeps the authenticated speaker A1 while the explicit requested target is B2",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions ignores model-supplied actor and envelope fields while preserving a permitted target",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions carries the same originating envelope through every operation of a compound request",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions cannot gain write permission by speaking another callsign",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions requires genuine envelope proof at the runtime executor even when a target is already resolved",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 missing or ambiguous ownership never authorizes CAD actions does not allow a plain end event to consume an authenticated capture",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 terminal paths retain capture ownership retains the frozen finalized envelope for an empty capture",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 terminal paths retain capture ownership retains capture identity when STT fails without allowing an action",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 terminal paths retain capture ownership retains the originating turn when output fails after a verified action",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/unitIdentity.test.js",
+        "status": "passed",
+        "passed": 4,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "UnitIdentityService returns immutable unit identity from Command Link",
+            "status": "passed"
+          },
+          {
+            "name": "UnitIdentityService fails closed when Command Link reports ambiguity",
+            "status": "passed"
+          },
+          {
+            "name": "UnitIdentityService fails closed when the unit is not in this center",
+            "status": "passed"
+          },
+          {
+            "name": "UnitIdentityService rejects malformed success responses instead of using the callsign",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/dispatcher-v3/__tests__/verifiedAcknowledgement.test.js",
+        "status": "passed",
+        "passed": 4,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "Dispatcher V3 verified mutation acknowledgements does not acknowledge a primary-unit change unless CAD verification succeeded",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 verified mutation acknowledgements allows a verified primary-unit change to receive a positive response",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 verified mutation acknowledgements blocks a multi-action ten-four when any CAD mutation step lacks verification",
+            "status": "passed"
+          },
+          {
+            "name": "Dispatcher V3 verified mutation acknowledgements keeps non-CAD routine acknowledgements working",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  },
+  "pttAdaptersRoutingAndFloor": {
+    "files": 5,
+    "passed": 81,
+    "failed": 0,
+    "total": 81,
+    "fileResults": [
+      {
+        "path": "src/services/__tests__/audioRelaySiblingDeviceHardening.test.js",
+        "status": "passed",
+        "passed": 2,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "audio relay same-unit sibling routing delivers phone audio to a sibling T320 without echoing to the source endpoint",
+            "status": "passed"
+          },
+          {
+            "name": "audio relay same-unit sibling routing does not alter unit-level suppression for non-UDP injected broadcasts",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/services/__tests__/floorControlService.aiWatchdog.test.js",
+        "status": "passed",
+        "passed": 3,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "FloorControlService AI watchdog (Task #515) AI grant times out after 3 s when no release fires",
+            "status": "passed"
+          },
+          {
+            "name": "FloorControlService AI watchdog (Task #515) field-unit grant still times out at 30 s, not 3 s",
+            "status": "passed"
+          },
+          {
+            "name": "FloorControlService AI watchdog (Task #515) re-arm on AI re-request resets to 3 s",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/services/__tests__/pttIntakeAdapters.test.js",
+        "status": "passed",
+        "passed": 48,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "01-02 credential proof and private transmission metadata loads the active account and grants by the stored-session account ID",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata rejects a missing session source",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata rejects a expired session source",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata rejects a no-account session source",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata rejects a disabled account even when the session remains present",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata requires an unlocked token assigned to a resolvable active account",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata does not invent account proof from unusable radio assignment null",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata does not invent account proof from unusable radio assignment {\"radio_id\":\"R1\",\"assigned_unit_id\":1,\"is_locked\":true}",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata does not invent account proof from unusable radio assignment {\"radio_id\":\"R1\",\"assigned_unit_id\":null}",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata does not invent account proof from unusable radio assignment {\"radio_id\":\"R1\",\"assigned_unit_id\":999}",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata rejects client JSON flags, serialized principals and serialized transmissions",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata freezes all principal grants and identity fields and never serializes event proof",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata rejects unauthorized channels and ambiguous display names",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata keeps connection/account ownership separate even for repeated callsigns",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata returns the same completed transmission for duplicate end and validates bound identity",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata retains optional request IDs only for their proven account, connection and channel",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 credential proof and private transmission metadata bounds optional request ID retention when a source produces many transmissions",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths a canonical callsign lookup without a signed session never authenticates an AI actor",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths does not treat a unsigned cookie as session proof",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths does not treat a invalid-signature cookie as session proof",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths signed stored-session auth overrides a claimed speaker with the actual account",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths actual radio-token connection issues proof from its enabled assigned account",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths unassigned token radio retains no authenticated CAD speaker",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths legacy start/end/drain forwards one immutable identity in private callback metadata",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths an old drain callback cannot end a newer capture or replace its identity",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths release retains the accepted source metadata",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths tx-stop retains the accepted source metadata",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths forced retains the accepted source metadata",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths leave retains the accepted source metadata",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths disconnect-cleanup retains the accepted source metadata",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths timeout retains the accepted source metadata",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths a sibling connection with the same callsign and claimed device cannot end the owner capture",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths a same-callsign foreign connection cannot cancel a legacy drain",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths a same-callsign foreign connection cannot cancel a radio drain",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths repeated clear-air start retains the original capture",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths installed legacy hardening preserves duplicate active radio starts and emits proof when clearing a stale floor",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths installed consistency sweep emits the original tagged terminal identity once",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths known request IDs suppress completed legacy replays and reject mismatched ends",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths known request IDs suppress completed radio replays and reject mismatched ends",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths legacy no-ID transmissions remain distinct after completion because no replay evidence exists",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths HTTP presence alone cannot supply identity proof",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths HTTP session account cannot borrow another account channel grant or callsign",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths HTTP duplicate start/end creates exactly one private transmission",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths HTTP another session cannot end the owner even with same callsign/device",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths HTTP optional request IDs reject wrong ends and suppress known-ID replay after completion",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths notify-PTT proves canonical account and preserves metadata through its compatibility entry",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths notify-PTT refuses a supplied identity without real session proof",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 actual signaling and HTTP entry paths notify-PTT suppresses concurrent duplicate starts and known-ID replay after completion",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/services/__tests__/pttRuntimeRouting.test.js",
+        "status": "passed",
+        "passed": 23,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "01-02 configured channel/center binding binds a proved account grant using unambiguous 41",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding binds a proved account grant using unambiguous a__OPS1",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding binds a proved account grant using unambiguous OPS1",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding rejects unproved metadata 0",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding rejects unproved metadata 1",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding rejects unproved metadata 2",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding rejects serialized provenance even when every JSON field is copied",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding does not infer configuration ownership from a running runtime alone",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding rejects a channel mapped to two centers, including a disabled second profile",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding requires a matching room key as well as a granted channel ID",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding keeps identical callsigns and display names isolated across centers",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding rejects stale runtime/context mismatches even with a matching grant",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding does not overwrite the complete mapping with an older single-profile read during startup",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding refreshes the complete mapping when configuration is read again",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding fails closed on a configuration read failure until a complete refresh succeeds",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding includes newly created disabled profile mappings immediately and removes deleted mappings",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 configured channel/center binding updates disabled profile mappings without waiting for another runtime to start",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 manager callbacks and compatibility forwarding preserves transmission ownership and capture times on normal, drained and forced ends",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 manager callbacks and compatibility forwarding reads private event metadata when the internal callback has only its legacy data argument",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 manager callbacks and compatibility forwarding never fans a proved transmission into another center with a matching display name",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 manager callbacks and compatibility forwarding carries both positional compatibility layers to the matching non-primary runtime",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 manager callbacks and compatibility forwarding rejects missing metadata through managed events and both compatibility layers",
+            "status": "passed"
+          },
+          {
+            "name": "01-02 manager callbacks and compatibility forwarding keeps the existing hardware-emergency channel callbacks independent of speech metadata",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "src/services/__tests__/signalingFloorIdentityHardening.test.js",
+        "status": "passed",
+        "passed": 5,
+        "failed": 0,
+        "cases": [
+          {
+            "name": "signaling floor identity hardening keeps an active transmission when its device floor key owns the floor",
+            "status": "passed"
+          },
+          {
+            "name": "signaling floor identity hardening normalizes a joined floor holder from device key to human unit id",
+            "status": "passed"
+          },
+          {
+            "name": "signaling floor identity hardening clears a same-device stale transmission before evaluating a new PTT request",
+            "status": "passed"
+          },
+          {
+            "name": "signaling floor identity hardening does not clear another device transmission for the same unit",
+            "status": "passed"
+          },
+          {
+            "name": "signaling floor identity hardening maps a token-radio grant back to the exact client device id that requested it",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  },
+  "knownRemainingFailure": {
+    "path": "src/dispatcher-v3/__tests__/phase4Pipeline.test.js",
+    "test": "does not read the generated call number over the air after creating a call",
+    "expected": "Ten-four, eleven fifty-nine hours.",
+    "actual": "INDIANA-1, unable to verify that change in CAD.",
+    "cause": "Existing CREATE_CALL response fixture supplies no verification evidence but expects successful acknowledgment. Verification and the failing assertion are unchanged."
+  },
+  "audit": {
+    "historicalBaseline": "c5ce5feed7a4feadb86ddca3d6d8c89e2c2f90fa",
+    "requiredRepairedCases": [
+      "R06",
+      "R07"
+    ],
+    "recordedReproductions": 14,
+    "remainingDefects": [
+      "R01",
+      "R02",
+      "R03",
+      "R04",
+      "R05",
+      "R08",
+      "R09",
+      "R10",
+      "R11",
+      "R12",
+      "R13",
+      "R14"
+    ],
+    "allAuditDefectsRepaired": false,
+    "evidenceFile": "01-02-audit-results.json"
+  },
+  "duplicateLimits": {
+    "optionalExistingClientRequestIdHistory": {
+      "maxEntries": 2048,
+      "ttlMs": 600000,
+      "scope": "account + authenticated connection + canonical channel",
+      "pruning": "on access/insertion"
+    },
+    "completedInternalSourceReplay": "Rejected using private weak root-completion association even after bounded runtime history eviction",
+    "ambiguousAudioOwnerTracking": {
+      "maxCallsigns": 128,
+      "maxSourcesPerCallsign": 128,
+      "overflow": "Fail closed until runtime stop; never infer ownership from missing records"
+    },
+    "legacyEventsWithoutRequestId": "Cannot distinguish every delayed/replayed same-connection start/end from a new physical transmission; no identity evidence is invented."
+  },
+  "clientEvidence": [
+    {
+      "path": "android-native/app/src/main/java/com/reedersystems/commandcomms/signaling/SignalingClient.kt",
+      "blob": "6a2fa7502327968544f1e4485424e7076dc0626f",
+      "finding": "ptt:request has UUID requestId; ptt:release omits it"
+    },
+    {
+      "path": "client/src/signaling/SignalingManager.js",
+      "blob": "9a8b5d37f633845e525497976ce1b0e86ddb7ff9",
+      "finding": "Queued and delayed ptt:end retries send channelId only"
+    },
+    {
+      "path": "ios-native/CommandComms/Networking/SignalingClient.swift",
+      "blob": "7006d6c60244821584179afd497d61cb1c44afad",
+      "finding": "ptt:request, ptt:release and tx:stop omit request IDs"
+    }
+  ],
+  "captureTimestamps": "Server-observed accepted capture start and stop; original stop sealed before drain, not physical microphone timestamps.",
+  "validationCorrections": [
+    {
+      "issue": "Initial audit evidence export could not spawn git under sandbox (EPERM); all 26 audit/control assertions passed",
+      "resolution": "Added validated explicit DISPATCHER_AUDIT_REVISION input for constrained runners; supplied independently verified checkout SHA and reran full V3 suite. Source blob hashes still prove actual tested bytes. CI retains ordinary git checkout discovery."
+    },
+    {
+      "issue": "Existing floor-control test fixture omitted three methods now consumed by installed hardening",
+      "resolution": "Added fixture methods only; assertions unchanged; all ten existing floor/sibling controls pass."
+    }
+  ],
+  "sourceBlobs": {
+    ".github/workflows/ai-dispatcher-v3-ci.yml": "11ca15d1e18e80d46f19364489663f6625dabaf6",
+    "src/controllers/dispatchController.js": "597a1b71b263eb89be5b1d167ebc37029ca63f38",
+    "src/dispatcher-v3/__tests__/auditBaseline.test.js": "6b442bcdcd6eca5e3ffb2b20a0632f3e8835f67e",
+    "src/dispatcher-v3/__tests__/helpers/auditRuntimeHarness.js": "d964bad9fdd868637715d81aeabc32c1d10b4ef2",
+    "src/dispatcher-v3/__tests__/runtimeManagerPreflightContext.test.js": "6cfad0a8efb969f041c9503f562fe222f5c308c4",
+    "src/dispatcher-v3/__tests__/turnIntakeIdentity.test.js": "b7da23c39d1e70b06cf1ca08cf00cf56115ac456",
+    "src/dispatcher-v3/actionExecutor.js": "28df5c14b4b90138afc086560cf2cde40319de96",
+    "src/dispatcher-v3/cadGateway.js": "94dee854fed22c89eedc35ff522107f5692a6308",
+    "src/dispatcher-v3/diagnostics.js": "d392e0da8befda64ed8de45c96fadd82d734bd4b",
+    "src/dispatcher-v3/intentPlanner.js": "2341ff5fa7ad850d88a4bfacfb220a66b17e870d",
+    "src/dispatcher-v3/liveRuntime.js": "d43112db7aa135d0496fab587c5737b524e7a684",
+    "src/dispatcher-v3/planMaterializer.js": "4a2023ba1848cb7072597f65ca73038499ecff9c",
+    "src/dispatcher-v3/responseComposer.js": "487065b5ccd58ad8d14aa23402d5332ed09de73e",
+    "src/dispatcher-v3/speechPipeline.js": "0780d92efca9bbcf2752a4fc2c65c07f85a78200",
+    "src/dispatcher-v3/turnEnvelope.js": "c708859abb090ac5d5ad3eb3c0646a2d99e970e3",
+    "src/routes/pttRoutes.js": "823169bdc18b51129c9837cccce0f606fc5ecbd5",
+    "src/services/__tests__/pttIntakeAdapters.test.js": "3da4645d4cc8921523f8f523cb71648b1672f96d",
+    "src/services/__tests__/pttRuntimeRouting.test.js": "c390fa05caf74454fafb6ef3c8e104e5c9055f84",
+    "src/services/__tests__/signalingFloorIdentityHardening.test.js": "49e8d72ac498b8cdc3b03852018b87fa36e44950",
+    "src/services/aiDispatchService.js": "17e4ff027e328279cc9f01e13a1aedd1b5d6984b",
+    "src/services/aiDispatcherRuntimeManager.js": "6c69b5f7553205ff37355f95b527c2528e596efe",
+    "src/services/aiDispatcherSignaling.js": "8f899a2d23b9d77b689686fd9d53bb436f6ca73f",
+    "src/services/pttProvenance.js": "0802b124a209bea14b0764debd325b1798419e48",
+    "src/services/signalingFloorIdentityHardening.js": "a125b4db51cd9549afbb67cf30fc32ca64440e96",
+    "src/services/signalingService.js": "80c7e1816316f78cdba4e182ef01636184cd382d"
+  },
+  "ci": {
+    "runId": 40917334797,
+    "url": "https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/40917334797",
+    "headSha": "7e9fcdb1982967771e3264328ce9554a8896b48e",
+    "status": "completed",
+    "conclusion": "failure",
+    "failureReason": "The one existing CREATE_CALL response fixture still lacks verification evidence; all 01-02 tests and preserved audit/containment controls pass.",
+    "jobId": 123600946816,
+    "node": "v20.20.2",
+    "testedTemporaryPullRequestMerge": "05e5817e213bfa6bf66d731f934bc1ca7e081ec2",
+    "testedTree": "087e1bb8ce632059a1e5c13377c07591ee5c8f55",
+    "temporaryMergeTreeMatchesImplementation": true,
+    "mergedIntoMain": false,
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81,
+      "files": 5
+    },
+    "v3": {
+      "passed": 350,
+      "failed": 1,
+      "total": 351,
+      "files": 33
+    },
+    "artifact": {
+      "id": 12916871216,
+      "name": "dispatcher-v3-evidence-40917334797-1",
+      "url": "https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/40917334797/artifacts/12916871216",
+      "sizeBytes": 23590,
+      "sha256": "ea590cf69614b0251cc1afdbe1320d450a950282e1aa44690e6e5d2e274ff0f6",
+      "downloadedAndInspected": true,
+      "downloadedBytesMatchGitHubDigest": true,
+      "files": [
+        "runtime.txt",
+        "ptt-tests.json",
+        "v3-tests.json",
+        "dispatcher-audit-baseline.json"
+      ],
+      "comparisonWithLocal": {
+        "v3-tests.json": {
+          "allCaseNamesAndOutcomesMatchLocal": true,
+          "casesCompared": 351,
+          "passed": 350,
+          "failed": 1
+        },
+        "ptt-tests.json": {
+          "allCaseNamesAndOutcomesMatchLocal": true,
+          "casesCompared": 81,
+          "passed": 81,
+          "failed": 0
+        },
+        "audit": {
+          "all21SourceBlobsMatchLocal": true,
+          "all14ReproductionsMatchLocal": true,
+          "ciTestedRevision": "05e5817e213bfa6bf66d731f934bc1ca7e081ec2",
+          "requiredRepairedCases": [
+            "R06",
+            "R07"
+          ]
+        },
+        "runtime": "v20.20.2",
+        "artifactSha256": "ea590cf69614b0251cc1afdbe1320d450a950282e1aa44690e6e5d2e274ff0f6"
+      }
+    }
+  },
+  "notCompletedByThisItem": [
+    "01-03 execution scheduling",
+    "01-05 full freshness/cancellation",
+    "02 multi-unit conversation lifecycle",
+    "remaining 03 and 04 items",
+    "G-01",
+    "G-02",
+    "G-03",
+    "G-04"
+  ],
+  "unverified": [
+    "Real providers and audio",
+    "Full repository/mobile correctness",
+    "Production revision and original live scenario",
+    "Integration with independently advanced main fd88b6076dd66f3badada8509ceb287f13c4ab37"
+  ],
+  "productionActions": {
+    "merge": false,
+    "deploy": false,
+    "restart": false,
+    "dataChanges": false,
+    "paidProviderTests": false
+  },
+  "evidenceUpdate": "This evidence/checklist update changes documentation only after the tested implementation commit; unchanged tests are not rerun for the documentation commit.",
+  "mainObservedAtFinalCheckpoint": {
+    "revision": "fd88b6076dd66f3badada8509ceb287f13c4ab37",
+    "advancedIndependently": true,
+    "commitsAheadOfInspectedBase": 12,
+    "mergedPullRequests": [
+      164,
+      165
+    ],
+    "summary": "Embedded radio channel ownership and HD760 radio/native paging changes advanced main independently while 01-02 was being finalized.",
+    "overlappingAreas": [
+      "src/services/signalingService.js",
+      "src/services/audioRelaySiblingDeviceHardening.js",
+      "src/services/__tests__/audioRelaySiblingDeviceHardening.test.js",
+      "android-native/app/src/main/java/com/reedersystems/commandcomms/signaling/SignalingClient.kt",
+      "src/routes/dispatchRouter.js",
+      "public/radio-client.js"
+    ],
+    "integratedIntoThisBranch": false,
+    "compatibilityWithThisImplementationValidated": false,
+    "nextAction": "Review the newer main PTT/signaling changes before continuing 01-03; preserve both sets of behavior when integration is authorized/needed."
+  }
+}
