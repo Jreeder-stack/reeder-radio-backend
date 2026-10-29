@@ -146,7 +146,7 @@ export class V3LiveDispatcher {
     this.emergencyCheckMs = Number(emergencyCheckMs) > 0 ? Number(emergencyCheckMs) : EMERGENCY_CHECK_MS;
     this.emergencyPageMs = Number(emergencyPageMs) > 0 ? Number(emergencyPageMs) : EMERGENCY_PAGE_MS;
     this.diagnostics = diagnostics || new V3DiagnosticsJournal();
-    this.gateway = new CommandLinkGateway(this.context);
+    this.gateway = new CommandLinkGateway(this.context, { diagnostics: this.diagnostics });
     this.unitIdentityService = new UnitIdentityService({ gateway: this.gateway, context: this.context });
     this.operationalContextService = new V3OperationalContextService({ gateway: this.gateway, unitIdentityService: this.unitIdentityService });
     this.operationalAlertService = new V3OperationalAlertService({ signalingService: this.signaling });
@@ -253,10 +253,6 @@ export class V3LiveDispatcher {
       // Diagnostic events require a separately authorized, center-bound read.
       recentDiagnostics: [],
     };
-  }
-
-  getDiagnosticTrace(turnId, access) {
-    return this.diagnostics.getTrace({ turnId, access });
   }
 
   async handlePttStart(channelId, unitId, _isEmergency = false, metadata = null) {

@@ -15,6 +15,7 @@ export class CommandLinkGateway {
     this.fetchImpl = options.fetchImpl || globalThis.fetch;
     this.timeoutMs = Number.isFinite(options.timeoutMs) && options.timeoutMs > 0 ? options.timeoutMs : DEFAULT_TIMEOUT_MS;
     this.maxSafeRetries = Number.isInteger(options.maxSafeRetries) ? Math.max(0, options.maxSafeRetries) : 1;
+    this.diagnostics = options.diagnostics || null;
 
     if (typeof this.fetchImpl !== 'function') {
       throw new DispatcherV3Error(
@@ -59,7 +60,11 @@ export class CommandLinkGateway {
 
     // One budget across retries AND the full response body, not only response headers.
     assertV3DeadlineActive();
-    return withV3Stage('cad', requestTimeoutMs, async ({ signal }) => {
+    const started = Date.now();
+    this._diag('cad_request_started', correlationId, turnEnvelope, true, null,
+      { method, timeoutMs: requestTimeoutMs });
+    try {
+    const response = await withV3Stage('cad', requestTimeoutMs, async ({ signal }) => {
       let lastError = null;
       for (let attempt = 1; attempt <= attempts; attempt += 1) {
         assertV3DeadlineActive();
@@ -74,6 +79,22 @@ export class CommandLinkGateway {
         }
       }
       throw lastError;
+    });
+    this._diag('cad_request_completed', correlationId, turnEnvelope, true, Date.now() - started,
+      { method, statusCode: response.statusCode });
+    return response;
+    } catch (error) {
+      this._diag('cad_request_failed', correlationId, turnEnvelope, false, Date.now() - started,
+        { method, code: error?.code || 'CAD_UNAVAILABLE', statusCode: error?.statusCode ?? null });
+      throw error;
+    }
+  }
+
+  _diag(phase, correlationId, turnEnvelope, success, latencyMs, details) {
+    this.diagnostics?.record?.({
+      phase, correlationId, turnEnvelope, runtimeId: this.context.runtimeId,
+      dispatchCenterId: this.context.dispatchCenterId, channelId: this.context.channelId,
+      success, latencyMs, details,
     });
   }
 

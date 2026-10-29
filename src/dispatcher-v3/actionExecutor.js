@@ -77,6 +77,14 @@ export class V3ActionExecutor {
       });
 
       assertV3DeadlineActive();
+      if (typeof data?.verified === 'boolean') {
+        recordV3Diagnostic(this.diagnostics, {
+          ...baseDiagnostic, action: validated.action,
+          phase: 'cad_verification_outcome', success: data.verified,
+          latencyMs: this.now() - startedAt,
+          details: { verified: data.verified, code: data.verified ? null : 'UNVERIFIED' },
+        });
+      }
       const result = Object.freeze({
         success: true,
         action: validated.action,

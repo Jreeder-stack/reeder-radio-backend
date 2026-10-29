@@ -141,7 +141,7 @@ export class V3DiagnosticsJournal {
       if (!this.terminalTurns.has(turnId)) this.terminalTurns.set(turnId, { at: now, classification, phase, runtimeId, dispatchCenterId });
     }
     // The console receives only structural markers, never full event or details.
-    if (this.logger?.info && (terminal || (!rate || rate.count === 1))) {
+    if (this.logger?.info && (!rate || rate.count === 1)) {
       this.logger.info('[AI-V3-DIAG]', JSON.stringify({
         phase, classification, turnId, runtimeId, dispatchCenterId,
         success: entry.success, latencyMs: entry.latencyMs,
