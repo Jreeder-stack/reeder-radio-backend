@@ -53,7 +53,7 @@ describe('01-06 outbound lane and actual V3 integration', () => {
     await finish(second);
     expect(h.writes('/api/radio/status').map(x=>x.body.status)).toEqual(['en_route','available']);
     synthesis.resolve(Buffer.alloc(640));
-    await h.runtime._outbound.whenIdle();
+    await h.flushOutput();
     expect(h.runtime.getPipelineStatus().outbound.queued).toBe(0);
   });
   it('does not treat an interrupted prompt as completed transmission', async () => {
@@ -64,7 +64,7 @@ describe('01-06 outbound lane and actual V3 integration', () => {
     await until(()=>h.synthesize.mock.calls.length===1,'blocked TTS');
     const envelope=h.transcribe.mock.calls[0][1].turnEnvelope;
     expect(h.runtime._outbound.cancelByTurn(envelope.turnId,'superseded')).toBe(1);
-    await h.runtime._outbound.whenIdle();
+    await h.flushOutput();
     expect(h.runtime.getPipelineStatus().outbound.totals.interrupted).toBeGreaterThan(0);
     expect(h.relay.injectAudio).not.toHaveBeenCalled();
     tts.resolve(Buffer.alloc(640));await finish(turn);
@@ -134,7 +134,8 @@ describe('01-06 outbound lane and actual V3 integration', () => {
   it('stopping a runtime terminates queued and in-progress replies without stale relays', async () => {
     const h=await make();
     const hold=h.hold(Buffer.alloc(640));h.synthesisReplies.push(hold.promise);
-    await h.send('Central, en route');
+    const original=await h.begin('Central, en route');
+    await finish(original);
     await until(()=>h.synthesize.mock.calls.length===1,'stalled speech');
     const startGeneration=h.runtime.runtimeGeneration;
     await h.runtime.stop();

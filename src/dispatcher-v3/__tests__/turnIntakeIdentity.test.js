@@ -70,6 +70,7 @@ describe('01-02 immutable authenticated turns through actual runtime entry point
     h.frame(capture);
     await vi.advanceTimersByTimeAsync(17);
     await finish(h.end(capture, 'Central, available'));
+    await h.flushOutput();
 
     const envelope = transcribedEnvelopes(h)[0];
     expect(envelope).toMatchObject({
@@ -497,6 +498,7 @@ describe('01-02 terminal paths retain capture ownership', () => {
     await until(() => h.synthesize.mock.calls.length === 1, 'failing synthesis');
     speech.reject(new Error('synthetic TTS failure'));
     await finish(turn);
+    await h.flushOutput();
     const envelope = transcribedEnvelopes(h)[0];
     expect((await h.lastResult()).data.verified).toBe(true);
     expect(diagnostic(h, 'speech_transmit_failed').at(-1)?.turnEnvelope).toBe(envelope);

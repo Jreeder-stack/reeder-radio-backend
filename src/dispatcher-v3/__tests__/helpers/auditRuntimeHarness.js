@@ -297,13 +297,23 @@ export async function createHarness({ center = 'center-a', scopes = ['unit.read'
       h.frame(capture);
       return h.end(capture, text);
     },
-    async send(text, unit = 'A1') { return finish(await h.begin(text, unit)); },
+    async flushOutput() {
+      await until(() => runtime._outbound.status().speaking === 0 && runtime._outbound.status().queued === 0
+        && !runtime._outbound.draining, 'outbound delivery', 1500);
+    },
+    async send(text, unit = 'A1') {
+      const handled = await finish(await h.begin(text, unit));
+      await h.flushOutput();
+      return handled;
+    },
     async lastPlan() { return runtime.planner.plan.mock.results.at(-1)?.value; },
     async lastResult() { return runtime.executor.execute.mock.results.at(-1)?.value; },
     async close() {
       for (const pending of deferreds) pending.resolve(pending.fallback);
       await until(() => turns.every((turn) => turn.settled), 'fixture cleanup', 1500);
       await runtime.stop();
+      await until(() => runtime._outbound.status().speaking === 0 && !runtime._outbound.draining,
+        'outbound shutdown', 1500);
       for (const { id, credential } of credentials) {
         credentialDatabase.sessions.delete(credential);
         credentialDatabase.radios.delete(credential);
