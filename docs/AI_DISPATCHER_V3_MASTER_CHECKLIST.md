@@ -24,7 +24,7 @@ Coding completion, scoped validation, pilot verification and release are separat
 | 04 | Natural conversation and useful responses | 0/8 | 0/8 |
 | Total | Original 32 items | 2/32 | 2/32 |
 
-01-01 and urgent 03-01 are complete for coding and scoped mocked validation. The final local Node v20.20.2 V3 run has 318 passed/1 existing failure/319 total across 32 files. All 85 new containment cases and all 26 audit/control cases pass. R06 and R07 now assert repaired behavior in every mode; the other twelve audit defects remain reproduced, not repaired. The remaining failure is the CREATE_CALL response fixture lacking verification evidence; production verification is unchanged. Scoped validation is not G-01 release acceptance.
+01-01 and urgent 03-01 are complete for coding and scoped mocked validation. Local validation and GitHub CI run40887096038 on Node v20.20.2 both have 318 passed/1 existing failure/319 total across 32 files. All 85 new containment cases and all 26 audit/control cases pass. R06 and R07 now assert repaired behavior in every mode; the other twelve audit defects remain reproduced, not repaired. The remaining failure is the CREATE_CALL response fixture lacking verification evidence; production verification is unchanged. Scoped validation is not G-01 release acceptance.
 
 Read `dispatcher-v3/03-01-phrase-containment-20261029.md` and `dispatcher-v3/validation/03-01-results.json` for the implementation, exact commands, source hashes and limitations. The 01-01 baseline/results remain the historical record and are not rewritten as repair evidence.
 
@@ -328,7 +328,7 @@ Separate real-audio transcription problems from downstream interpretation proble
 
 ## Exact continuation
 
-03-01 implementation is committed as `db111bb7888e0dcb15e1715b4259568cae6b8910`; subsequent evidence/checklist changes are documentation only. The implementation tree is `a5e8f40701bc8207867161794104afbf0b1fdd7e`. Local supported-runtime testing ran on the same source tree before commit creation, then the complete staged tree was compared with the GitHub commit. PR163 remains draft, open and unmerged. The unchanged lockfile still has blob `95e68c9e83f40b1a085d6fc0da03082e17f6a2cc`.
+03-01 implementation is committed as `db111bb7888e0dcb15e1715b4259568cae6b8910`; subsequent evidence/checklist changes are documentation only. The implementation tree is `a5e8f40701bc8207867161794104afbf0b1fdd7e`. CI run40887096038 independently confirmed the same results; its artifact was downloaded and inspected. GitHub temporary PR test merge `e70085c8e8190a93f2c835763fe2fb824b9857ac` is not a merge into main. Local supported-runtime testing ran on the same source tree before commit creation, then the complete staged tree was compared with the GitHub commit. PR163 remains draft, open and unmerged. The unchanged lockfile still has blob `95e68c9e83f40b1a085d6fc0da03082e17f6a2cc`.
 
 Verify the current branch head and read the 03-01 report/results plus `dispatcher-v3/01-02-intake-trace-20261029.md`, then implement 01-02. That trace covers authenticated connection provenance, account-owned channel grants, the configured center mapping, all PTT adapters, duplicate internal events and the limitation of uncorrelated legacy wire events. It is preparation, not completed code.
 

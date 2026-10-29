@@ -52,6 +52,16 @@ All 11 changed JavaScript files passed syntax checks; `git diff --check` passed;
 
 An initial local evidence-export attempt could not spawn the reporter's read-only Git revision lookup under the sandbox (`EPERM`). The final supported-runtime invocation with that read permission completed the audit export. The final report has 26/26 audit cases and no audit hook failure. No implementation workaround or reporter bypass was added.
 
+## GitHub CI confirmation
+
+[Run 40887096038](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/40887096038), attempt 1, job 123493652604, reproduced the same **318 passed/1 existing failure/319 total** on Node v20.20.2. All 85 new containment tests and 26 audit/control tests passed. Syntax and legacy-engine absence steps passed. The run remains failed; it is not a green-suite or release claim.
+
+GitHub checked out temporary PR test merge `e70085c8e8190a93f2c835763fe2fb824b9857ac`, with the same tree `d3a4c1016662e5b60b2d99d4a56ed5884b3ba9d2` as branch head `c233bc8a12cc51aa8a57265a34e32da5a509ab0a`. This is not a merge into main. Every audited source blob matches implementation `db111bb7`; every test-case outcome matches the local report.
+
+The uploaded artifact was downloaded and independently parsed, not inferred solely from logs. Artifact ID `12901974844`, name `dispatcher-v3-evidence-40887096038-1`, ZIP SHA-256 `d866d67c1615ea680d20b8a7a6ed25dc969d9770503112f12dc27bfe3ca99c55`, 17,305 bytes, retention through November 12, 2026. Essential CI results and the audit report are retained in `validation/03-01-results.json`.
+
+Other automatic PR workflows are not certified by this task: iOS project generation check failed; T320 failed during Android SDK setup before compilation; Android Phone/Bridge was still running at evidence capture. No mobile files were changed or unrelated workflows rerun. The CI-evidence update is documentation only and deliberately does not rerun unchanged code.
+
 ## Remaining limits and controlled release
 
 G-01 through G-04 remain unchecked. Full repository/mobile builds, actual speech/model/audio behavior and the production revision are unverified. Twelve audit defects remain, including stale conversation/incident handling, operation ordering, lifetime bounds and truthful partial outcomes. Active-emergency conservative distress interpretation and broader semantic integration remain subject to the later Task 03/04 evaluations; this item does not certify the whole emergency lifecycle.
