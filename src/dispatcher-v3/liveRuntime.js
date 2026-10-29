@@ -88,7 +88,7 @@ export class V3LiveDispatcher {
       relevant: (entry) => this.isRunning && entry.generation === this.runtimeGeneration
         && entry.channel === this.context.roomKey
         && (!entry.envelope || (entry.envelope.runtimeGeneration === this.runtimeGeneration
-          && this._unitLatestIntake.get(entry.envelope.speakerRef) === entry.envelope.intakeSequence)),
+          && (entry.kind === 'alert' || this._unitLatestIntake.get(entry.envelope.speakerRef) === entry.envelope.intakeSequence))),
       transmit: async (entry, check) => {
         check();
         if (entry.source) {
