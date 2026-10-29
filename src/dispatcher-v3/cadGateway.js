@@ -3,6 +3,7 @@ import { ensureV3CorrelationId } from './correlation.js';
 import { validateV3RuntimeContext } from './runtimeContract.js';
 import { assertV3TurnEnvelope, currentV3TurnEnvelope } from './turnEnvelope.js';
 import { assertV3DeadlineActive, withV3Stage } from './operationDeadline.js';
+import { authorizeV3Life, noteV3CadSubmitted, noteV3CadResponded } from './turnLifecycle.js';
 
 const DEFAULT_TIMEOUT_MS = 8000;
 const SAFE_RETRY_METHODS = new Set(['GET', 'HEAD']);
@@ -63,6 +64,8 @@ export class CommandLinkGateway {
       for (let attempt = 1; attempt <= attempts; attempt += 1) {
         assertV3DeadlineActive();
         if (signal.aborted) throw new DispatcherV3Error(V3_ERROR_CODES.OPERATION_TIMEOUT, 'CAD operation canceled');
+        if (!SAFE_RETRY_METHODS.has(method)) await authorizeV3Life();
+        assertV3DeadlineActive();
         try {
           return await this._execute({ url, method, headers, body, correlationId, attempt, signal, turnEnvelope });
         } catch (error) {
@@ -114,6 +117,7 @@ export class CommandLinkGateway {
   async _execute({ url, method, headers, body, correlationId, attempt, signal, turnEnvelope = null }) {
     assertV3DeadlineActive();
     let response;
+    const write = noteV3CadSubmitted(method);
     try {
       response = await this.fetchImpl(url, { method, headers, body, signal });
     } catch (error) {
@@ -122,6 +126,9 @@ export class CommandLinkGateway {
         V3_ERROR_CODES.CAD_UNAVAILABLE, 'Command Link request failed',
         { retryable: true, cause: error, details: { correlationId, attempt, method, url: redactUrl(url) } },
       );
+    } finally {
+      // Transport completion alone is not proof of a verified CAD mutation.
+      noteV3CadResponded(write);
     }
     const payload = await parseResponseBody(response);
     assertV3DeadlineActive();

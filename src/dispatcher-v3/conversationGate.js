@@ -64,6 +64,11 @@ export class V3ConversationGate {
     this.pending.set(unit, { ...context, expiresAt: this.now() + this.pendingMs });
   }
 
+  isCurrentPending(unitId, pending) {
+    const unit = clean(unitId);
+    return !!unit && !!pending && this.pending.get(unit) === pending && pending.expiresAt >= this.now();
+  }
+
   clear(unitId) {
     this.pending.delete(clean(unitId));
   }

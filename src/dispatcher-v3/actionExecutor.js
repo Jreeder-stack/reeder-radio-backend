@@ -4,6 +4,7 @@ import { ensureV3CorrelationId } from './correlation.js';
 import { recordV3Diagnostic } from './diagnostics.js';
 import { assertV3TurnEnvelope, currentV3TurnEnvelope } from './turnEnvelope.js';
 import { assertV3DeadlineActive } from './operationDeadline.js';
+import { authorizeV3Life } from './turnLifecycle.js';
 
 export class V3ActionExecutor {
   constructor({ runtimeContext, handlers = {}, diagnostics = null, now = () => Date.now(), requireTurnIdentity = false } = {}) {
@@ -64,7 +65,8 @@ export class V3ActionExecutor {
         );
       }
 
-      // A timed-out provider completion may not start a new CAD mutation.
+      // Revalidate actor/channel grant after planning and before every action.
+      await authorizeV3Life();
       assertV3DeadlineActive();
       const data = await handler({
         action: validated.action,

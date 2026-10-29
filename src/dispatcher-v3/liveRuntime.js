@@ -24,6 +24,8 @@ import { V3FieldIncidentCoordinator } from './fieldIncidentCoordinator.js';
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { randomUUID } from 'node:crypto';
 import { V3TurnScheduler } from './turnScheduler.js';
+import { V3TurnLifecycle, runWithV3Life } from './turnLifecycle.js';
+import { revalidatePttActor } from '../services/pttProvenance.js';
 import { createV3TurnBudget, runWithV3Budget, assertV3DeadlineActive, withV3Stage, V3_DEADLINES } from './operationDeadline.js';
 import { hasEndedPttTransmission, samePttTransmission } from '../services/pttProvenance.js';
 import {
@@ -79,8 +81,15 @@ export class V3LiveDispatcher {
     this.connected = false;
     this._sequence = 1;
     this._recentContext = [];
+    this._lifecycle = new V3TurnLifecycle({
+      getGeneration: () => this.isRunning ? this.runtimeGeneration : null,
+      validator: (source) => revalidatePttActor(source, this.context),
+    });
     this._scheduler = new V3TurnScheduler({ limits: schedulerLimits, onTerminal: (ticket, outcome) => {
       this._diag('turn_scheduler_terminal', ticket.identity.turnId, outcome.handled, { reason: outcome.reason, code: outcome.code }, ticket.turnEnvelope || null, ticket.identity);
+      if (outcome.reason !== 'processed' && outcome.reason !== 'not_addressed') {
+        this._lifecycle.cancel(ticket.life, outcome.reason);
+      }
       if (outcome.reason === 'capture_expired') {
         this._intake.delete(ticket.identity.transmissionId);
         this.speech.cancelTransmission(ticket.identity.speakerRef, ticket.identity.transmissionId);
@@ -151,6 +160,8 @@ export class V3LiveDispatcher {
   }
 
   async stop() {
+    this.isRunning = false;
+    this._lifecycle.invalidateAll('runtime_stopped');
     this.audioRelay.removeAllAudioListeners(this.identity);
     this.floorControl.releaseAllForUnit?.(AI_FLOOR_IDENTITY);
     this._scheduler.stop();
@@ -254,9 +265,12 @@ export class V3LiveDispatcher {
       this._diag('turn_completed', identity.turnId, false, { outcome: reservation.reason }, null, identity);
       return false;
     }
+    const life = this._lifecycle.accept(identity, metadata);
+    life.owner = this._lifecycle;
+    reservation.ticket.life = life;
     // Reserve in intake order before any STT/identity await.
     this.speech.startTransmission({ unitId: metadata.principal.unitId, channelId: this.context.roomKey, correlationId: identity.turnId, turnIdentity: identity });
-    const record = { identity, metadata, speaker: null, speakerError: null, ticket: reservation.ticket };
+    const record = { identity, metadata, speaker: null, speakerError: null, ticket: reservation.ticket, life };
     this._intake.set(metadata.transmissionId, record);
     this._rememberTransmission(metadata.transmissionId, identity.turnId);
     this._diag('turn_intake_accepted', identity.turnId, true, {}, null, identity);
@@ -264,6 +278,18 @@ export class V3LiveDispatcher {
       .then((speaker) => { record.speaker = speaker; return speaker; })
       .catch((error) => { record.speakerError = error; return null; });
     return true;
+  }
+
+  // Internal trusted call site: cancels precisely one not-yet-committed task.
+  // Never claims to roll back a submitted CAD mutation.
+  cancelTurnById(turnId, reason = 'explicit_supersession') {
+    const state = this._lifecycle.get(turnId);
+    if (!state) return null;
+    const outcome = this._lifecycle.cancelById(turnId, reason);
+    const ticket = [...this._scheduler.tickets].find((item) => item.identity.turnId === turnId);
+    if (ticket && !ticket.executing) this._scheduler.cancel(ticket, reason);
+    this._diag('turn_superseded', turnId, false, outcome || {}, state.envelope || null, state.identity);
+    return outcome;
   }
 
   _rememberTransmission(transmissionId, turnId = null) {
@@ -294,7 +320,8 @@ export class V3LiveDispatcher {
     this._intake.delete(metadata.transmissionId);
     const capture = this.speech.sealCapture({ unitId: record.identity.speakerRef, transmissionId: metadata.transmissionId });
     const budget = createV3TurnBudget({ captureEndedAt: metadata.captureEndedAt });
-    const outcome = await this._scheduler.complete(record.ticket, async () => runWithV3Budget(budget, async () => {
+    const outcome = await this._scheduler.complete(record.ticket, async () => runWithV3Life(record.life,
+      () => runWithV3Budget(budget, async () => {
       const speaker = await record.speakerPromise;
       const turnEnvelope = completeV3TurnEnvelope(record.identity, metadata, speaker);
       record.ticket.turnEnvelope = turnEnvelope;
@@ -302,14 +329,16 @@ export class V3LiveDispatcher {
         this._diag('turn_identity_rejected', record.identity.turnId, false, { reason: record.speakerError?.code || 'speaker_unresolved' }, turnEnvelope);
         return null;
       }
+      this._lifecycle.complete(record.life, turnEnvelope);
       return runWithV3Turn(turnEnvelope, () => this.speech.endTransmission({
         unitId: record.identity.speakerRef, capture, turnEnvelope,
       }));
-    }), async (transmission) => runWithV3Budget(budget,
+    }))), async (transmission) => runWithV3Life(record.life, () => runWithV3Budget(budget,
       () => runWithV3Turn(transmission.turnEnvelope,
         () => withV3Stage('turn_processing', V3_DEADLINES.turnMs,
-          () => this._handleCapturedTranscript(transmission)))));
+          () => this._handleCapturedTranscript(transmission))))));
     budget.finish();
+    this._lifecycle.retire(record.life);
     this._diag('turn_completed', record.identity.turnId, outcome.handled, {
       outcome: outcome.reason, code: outcome.code,
     }, record.ticket.turnEnvelope || null, record.identity);
@@ -329,6 +358,11 @@ export class V3LiveDispatcher {
     }
     transmission.transcript = gate.transcript || transmission.transcript;
     transmission.pendingContext = gate.pending || null;
+    if (gate.reason === 'follow_up' && gate.pending) {
+      const state = this._lifecycle.get(turnEnvelope.turnId);
+      this._lifecycle.bindPending(state, unitId, gate.pending,
+        (owner, pending) => this.conversationGate.isCurrentPending(owner, pending));
+    }
 
     if (gate.reason === 'wake_word') {
       const hail = normalizeV3RadioHail(transmission.transcript);
@@ -851,9 +885,11 @@ export class V3LiveDispatcher {
 
   async _executeMultiActionPlan(plan, { speakerCallsign, operationalContext, correlationId, turnEnvelope }) {
     assertV3TurnEnvelope(turnEnvelope, this.context);
+    assertV3DeadlineActive();
     const steps = [];
     let context = operationalContext;
     for (const actionPlan of plan.actions || []) {
+      assertV3DeadlineActive();
       const materialized = await materializeV3Plan({ ...actionPlan, confidence: plan.confidence }, {
         speakerCallsign,
         unitIdentityService: this.unitIdentityService,
@@ -882,8 +918,10 @@ export class V3LiveDispatcher {
   }
 
   async _alert(text, correlationId, turnEnvelope = currentV3TurnEnvelope()) {
+    assertV3DeadlineActive();
     const channel = this.context.roomKey;
     const acquired = await this._acquireFloor(channel, correlationId);
+    assertV3DeadlineActive();
     if (!acquired) {
       this._diag('alert_skipped_channel_busy', correlationId, false, { text, channel });
       return false;
@@ -893,6 +931,7 @@ export class V3LiveDispatcher {
       const tone = buildMdcTonePcm(MDC_TONE_MS);
       const toneFrames = this.codec.encodePcmToOpus(tone);
       for (const frame of toneFrames) {
+        assertV3DeadlineActive();
         this.audioRelay.injectAudio(channel, this.identity, this._sequence++, frame);
         await sleep(TX_FRAME_MS);
       }

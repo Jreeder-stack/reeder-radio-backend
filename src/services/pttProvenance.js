@@ -81,6 +81,21 @@ export async function loadRadioPttPrincipal(radioToken, { connectionId } = {}) {
     connectionId || opaqueConnection('radio', radioToken, radio.assigned_unit_id));
 }
 
+/** Recheck ACTIVE account, stable actor, and enabled channel grant at action time.
+ * Credentials were verified at intake. No raw secret is retained for later replay.
+ */
+export async function revalidatePttActor(transmission, binding) {
+  if (!isTrustedPttTransmission(transmission) || !isTrustedPttPrincipal(transmission.principal)) return false;
+  const previous = transmission.principal;
+  const fresh = await accountPrincipal(previous.accountId, previous.credentialType, previous.connectionId);
+  if (!fresh || fresh.accountId !== previous.accountId || fresh.unitId !== previous.unitId
+      || fresh.connectionId !== previous.connectionId) return false;
+  const grant = matchPttChannelGrant(fresh, binding?.channelId);
+  return !!grant && grant.channelId === String(binding?.channelId) && grant.roomKey === binding?.roomKey
+    && binding?.dispatchCenterId === transmission.binding?.dispatchCenterId
+    && binding?.profileId === transmission.binding?.profileId;
+}
+
 export function isTrustedPttPrincipal(principal) {
   return !!principal && principals.has(principal);
 }
