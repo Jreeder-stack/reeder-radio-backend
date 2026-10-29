@@ -155,4 +155,23 @@ describe('01-05 actual authenticated V3 turn freshness and authorization', () =>
     expect(await finish(h.end(capture,'Central, available'))).toBe(false);
     expect(h.writes()).toEqual([]);
   });
+  it('an expired session rejects an otherwise active account at CAD action time', async () => {
+    const h=await make();
+    const principal=await h.principal('A1');
+    const capture=await h.capture('A1',{principal});h.frame(capture);
+    h.expireSession(principal);
+    await finish(h.end(capture,'Central, available'));
+    expect(h.writes()).toEqual([]);
+    expect((await h.lastResult()).error.code).toBe('UNAUTHORIZED');
+  });
+  it('a locked radio token blocks a subsequent CAD mutation without weakening intake', async () => {
+    const h=await make();
+    const principal=await h.principal('B2',{credentialType:'radio-token',connectionId:'radio-locked-fixture'});
+    const capture=await h.capture('B2',{principal,source:'radio'});h.frame(capture);
+    h.lockRadio(principal);
+    await finish(h.end(capture,'Central, available'));
+    expect(h.writes()).toEqual([]);
+    expect((await h.lastResult()).error.code).toBe('UNAUTHORIZED');
+  });
+
 });
