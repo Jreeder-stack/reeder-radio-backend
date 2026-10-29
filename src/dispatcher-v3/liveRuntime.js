@@ -333,7 +333,7 @@ export class V3LiveDispatcher {
       return runWithV3Turn(turnEnvelope, () => this.speech.endTransmission({
         unitId: record.identity.speakerRef, capture, turnEnvelope,
       }));
-    }))), async (transmission) => runWithV3Life(record.life, () => runWithV3Budget(budget,
+    })), async (transmission) => runWithV3Life(record.life, () => runWithV3Budget(budget,
       () => runWithV3Turn(transmission.turnEnvelope,
         () => withV3Stage('turn_processing', V3_DEADLINES.turnMs,
           () => this._handleCapturedTranscript(transmission))))));
