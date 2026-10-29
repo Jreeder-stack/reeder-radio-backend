@@ -227,6 +227,17 @@ export async function createHarness({ center = 'center-a', scopes = ['unit.read'
     runtime, context, cad, relay, floor, codec, transcribe, synthesize, llm, llmPlans, sttReplies, synthesisReplies, turns, deferreds, diagnostics, binding,
     hold(fallback) { const value = deferred(fallback); deferreds.push(value); return value; },
     writes(path) { return cad.requests.filter((request) => request.method !== 'GET' && (!path || request.path === path)); },
+    revokeAccount(principal) {
+      const account = credentialDatabase.accounts.get(String(principal.accountId));
+      if (account) account.status = 'inactive';
+    },
+    revokeChannelGrant(principal) {
+      credentialDatabase.grants.set(String(principal.accountId), []);
+    },
+    changeAccountUnit(principal, unitId) {
+      const account = credentialDatabase.accounts.get(String(principal.accountId));
+      if (account) account.unit_id = unitId;
+    },
     spoken() { return synthesize.mock.calls.map(([text]) => text); },
     async principal(unit = 'A1', options = {}) {
       const cacheKey = `${unit}:${options.connectionId || 'default'}:${options.credentialType || 'session'}`;
