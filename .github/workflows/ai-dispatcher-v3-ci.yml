@@ -12,10 +12,22 @@ on:
       - 'src/services/audioRelayService.js'
       - 'src/services/floorControlService.js'
       - 'src/services/signalingService.js'
+      - 'src/services/signalingFloorIdentityHardening.js'
+      - 'src/services/pttProvenance.js'
+      - 'src/services/__tests__/ptt*.test.js'
+      - 'src/routes/pttRoutes.js'
+      - 'src/controllers/dispatchController.js'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/ai-dispatcher-v3-ci.yml'
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dispatcher-v3-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test-v3:
@@ -35,6 +47,16 @@ jobs:
           node --check src/services/aiDispatcherSignaling.js
           node --check src/dispatcher-v3/liveRuntime.js
           node --check src/dispatcher-v3/intentPlanner.js
+          node --check src/dispatcher-v3/__tests__/auditBaseline.test.js
+          node --check src/dispatcher-v3/__tests__/helpers/auditRuntimeHarness.js
+          node --check src/services/pttProvenance.js
+          node --check src/services/signalingService.js
+          node --check src/services/signalingFloorIdentityHardening.js
+          node --check src/routes/pttRoutes.js
+          node --check src/controllers/dispatchController.js
+          node --check src/dispatcher-v3/turnEnvelope.js
+          node --check src/dispatcher-v3/speechPipeline.js
+          node --check src/dispatcher-v3/actionExecutor.js
       - name: Verify legacy dispatcher engine is absent
         run: |
           test ! -e src/services/commandMatcher.js
@@ -46,4 +68,24 @@ jobs:
           test ! -e src/services/strictCenterIsolationBootstrap.js
           test ! -e src/services/aiDispatcherV3RuntimeInstaller.js
           ! grep -R "AI_DISPATCHER_RUNTIME.*legacy" src package.json
-      - run: npm run test:v3
+      - name: PTT credential adapters, configured routing and floor controls
+        run: |
+          mkdir -p reports
+          npm test -- src/services/__tests__/pttIntakeAdapters.test.js src/services/__tests__/pttRuntimeRouting.test.js src/services/__tests__/signalingFloorIdentityHardening.test.js src/services/__tests__/audioRelaySiblingDeviceHardening.test.js src/services/__tests__/floorControlService.aiWatchdog.test.js --reporter=default --reporter=json --outputFile=reports/ptt-tests.json
+      - name: V3 suite and known-defect baseline (not release acceptance)
+        if: ${{ !cancelled() }}
+        env:
+          DISPATCHER_AUDIT_MODE: baseline
+          DISPATCHER_AUDIT_REPORT: reports/dispatcher-audit-baseline.json
+        run: |
+          mkdir -p reports
+          node --version > reports/runtime.txt
+          npm run test:v3 -- --reporter=default --reporter=json --outputFile=reports/v3-tests.json
+      - name: Preserve test and baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dispatcher-v3-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 14

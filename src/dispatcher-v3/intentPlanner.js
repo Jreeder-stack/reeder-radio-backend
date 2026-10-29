@@ -3,6 +3,7 @@ import { V3_ACTIONS, V3_UNIT_STATUSES, V3_CALL_STATUSES, listV3Actions } from '.
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { planDeterministicV3Intent } from './deterministicIntent.js';
 import { sanitizeV3OperationalContext } from './operationalContext.js';
+import { assertV3TurnEnvelope } from './turnEnvelope.js';
 
 const DEFAULT_TIMEOUT_MS = 6500;
 const CONTROL_ACTIONS = new Set(['NO_ACTION', 'CLARIFY']);
@@ -20,14 +21,20 @@ export class V3IntentPlanner {
     this.diagnostics = diagnostics;
   }
 
-  async plan({ transcript, speakerCallsign, runtimeContext, correlationId, recentContext = [], operationalContext = null, pendingContext = null, dialogueContext = null } = {}) {
+  async plan({ transcript, speakerCallsign, runtimeContext, correlationId, recentContext = [], operationalContext = null, pendingContext = null, dialogueContext = null, turnEnvelope = null } = {}) {
+    if (turnEnvelope) {
+      assertV3TurnEnvelope(turnEnvelope, runtimeContext);
+      speakerCallsign = turnEnvelope.speaker.callsign;
+    }
+    const attachTurn = (plan) => turnEnvelope ? Object.freeze({ ...plan, turnEnvelope }) : plan;
     const text = String(transcript || '').trim();
-    if (!text) return Object.freeze({ action: 'NO_ACTION', input: {}, confidence: 1, reason: 'empty_transcript' });
+    if (!text) return attachTurn(Object.freeze({ action: 'NO_ACTION', input: {}, confidence: 1, reason: 'empty_transcript' }));
 
     const deterministic = planDeterministicV3Intent({ transcript: text, speakerCallsign, operationalContext, pendingContext });
     if (deterministic) {
-      this._diag('intent_planned_deterministic', runtimeContext, correlationId, true, 0, { transcript: text, plan: deterministic });
-      return deterministic;
+      const plan = attachTurn(deterministic);
+      this._diag('intent_planned_deterministic', runtimeContext, correlationId, true, 0, { transcript: text, plan: deterministic }, turnEnvelope);
+      return plan;
     }
 
     const client = this.client || getDefaultClient();
@@ -56,20 +63,20 @@ export class V3IntentPlanner {
         ],
       }, { signal: controller.signal });
       const raw = response?.choices?.[0]?.message?.content || '{}';
-      const plan = normalizePlan(JSON.parse(raw));
-      this._diag('intent_planned', runtimeContext, correlationId, true, Date.now() - started, { transcript: text, plan });
+      const plan = attachTurn(normalizePlan(JSON.parse(raw)));
+      this._diag('intent_planned', runtimeContext, correlationId, true, Date.now() - started, { transcript: text, plan }, turnEnvelope);
       return plan;
     } catch (error) {
       const timeout = error?.name === 'AbortError';
-      this._diag('intent_failed', runtimeContext, correlationId, false, Date.now() - started, { transcript: text, message: error.message, timeout });
+      this._diag('intent_failed', runtimeContext, correlationId, false, Date.now() - started, { transcript: text, message: error.message, timeout }, turnEnvelope);
       throw new DispatcherV3Error(V3_ERROR_CODES.CAD_UNAVAILABLE, timeout ? 'Dispatcher V3 intent planning timed out' : 'Dispatcher V3 intent planning failed', { statusCode: 503, retryable: true, cause: error });
     } finally {
       clearTimeout(timer);
     }
   }
 
-  _diag(phase, runtimeContext, correlationId, success, latencyMs, details) {
-    this.diagnostics?.record?.({ phase, correlationId, runtimeId: runtimeContext?.runtimeId || null, dispatchCenterId: runtimeContext?.dispatchCenterId || null, channelId: runtimeContext?.channelId || null, success, latencyMs, details });
+  _diag(phase, runtimeContext, correlationId, success, latencyMs, details, turnEnvelope = null) {
+    this.diagnostics?.record?.({ phase, correlationId, runtimeId: runtimeContext?.runtimeId || null, dispatchCenterId: runtimeContext?.dispatchCenterId || null, channelId: runtimeContext?.channelId || null, success, latencyMs, details, turnEnvelope });
   }
 }
 
@@ -112,6 +119,8 @@ Canonical unit statuses: ${V3_UNIT_STATUSES.join(', ')}. Canonical call statuses
 
 Act like an experienced human dispatcher. Understand meaning, grammar, inflection, and operational context instead of requiring scripted phrases. Evaluate every transmission independently. A previous question is a follow-up goal, never a gate. If the unit gives different operational information or changes direction, capture the new information and choose the appropriate action. Do not repeat a question merely because the newest transmission did not answer it.
 
+Interpret the COMPLETE transmission before selecting an operation. A callsign beside a status word is not evidence of a command. Preserve negation, questions, tense, conditions, quotations, corrections, and all requested clauses. A status question uses STATUS_CHECK, never SET_UNIT_STATUS. A prohibition, hypothetical, historical statement, or quoted command must not execute the action it mentions; use NO_ACTION or a specific CLARIFY when no supported operation is actually requested. A negative status report does not imply the opposite positive status. An explicit request for not_available remains a valid status change. These rules also apply to urgent-event words: distinguish an actual report from a question, denial, or discussion of an earlier report. Do not infer a present field incident from a keyword alone.
+
 Only a physical emergency-button event may activate the emergency system. A voice transcript can NEVER produce DECLARE_EMERGENCY, regardless of wording. Shots fired, officer down, 10-33, emergency traffic, taking fire, gunpoint, taser point, and fighting are urgent CAD traffic. Use REPORT_FIELD_INCIDENT, REQUEST_BACKUP, CREATE_CALL, or ADD_CALL_NOTE without activating the emergency system.
 
 Use operationalContext to resolve references. operationalContext.units is the authoritative center-scoped roster. When another callsign is named, unitRef MUST be that unit. Default to the speaker only when the operation concerns the speaker. Preserve an unknown unit-like callsign as unitRef so authoritative resolution returns UNIT_NOT_FOUND; never silently replace it with the speaker. If a named unit is ambiguous, CLARIFY. Never guess across dispatch centers.
@@ -122,7 +131,7 @@ Normalize natural status language semantically. Arrived, arriving, on location, 
 
 Use REPORT_FIELD_INCIDENT for urgent first-person field activity. eventType is shots_fired, officer_assist, gunpoint, taserpoint, or fight; note preserves the operational statement. If dialogueContext.kind is field_incident, use UPDATE_FIELD_INCIDENT for answers or supplements: informationType is location, subject_description, direction, weapon, status, or other. Direction, weapon, movement, and status information must be captured even while location or description remains pending.
 
-When an addressed unit with a current call provides an operational observation, movement update, landmark, subject activity, or responding-unit direction, use ADD_CALL_NOTE or REPORT_FIELD_INCIDENT. Do not return NO_ACTION for addressed operational traffic. An urgent officer-assist report from a unit without a current call uses REPORT_FIELD_INCIDENT; execution creates an ASSIST - OFFICER call from verified GPS/location data.
+When an addressed unit with a current call provides a new operational observation, movement update, landmark, subject activity, or responding-unit direction, use ADD_CALL_NOTE or REPORT_FIELD_INCIDENT when the complete meaning calls for recording it. Addressing alone does not turn a question, prohibition, cancellation or quoted statement into an instruction to write a note. An urgent officer-assist report from a unit without a current call uses REPORT_FIELD_INCIDENT; execution creates an ASSIST - OFFICER call from verified GPS/location data.
 
 If pendingContext.kind is disposition, a concise reply is the disposition for pendingContext.callId. Return CLEAR_UNIT with that callId, the speaker, and the spoken disposition. If the transmission instead contains new operational information or another command, process it and leave disposition as a later goal.
 

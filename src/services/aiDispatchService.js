@@ -1,7 +1,15 @@
 let activeDispatcher = null;
+let pttCompatibilityResolver = null;
 
 export function setActiveDispatcherCompatibility(dispatcher) {
   activeDispatcher = dispatcher || null;
+}
+
+// The manager remains the only runtime registry. A synchronous resolver prevents
+// the legacy single-dispatcher facade from moving another center's transmission
+// to the primary profile, or introducing an async lookup ahead of turn intake.
+export function setDispatcherPttCompatibilityResolver(resolver) {
+  pttCompatibilityResolver = typeof resolver === 'function' ? resolver : null;
 }
 
 function compatibilityView(dispatcher) {
@@ -27,11 +35,15 @@ function compatibilityView(dispatcher) {
       if (!spokenText) return false;
       return dispatcher._speak(spokenText, null);
     },
-    async handlePttStart(channelId, unitId, isEmergency = false) {
-      return dispatcher.handlePttStart(channelId, unitId, isEmergency);
+    async handlePttStart(channelId, unitId, isEmergency = false, transmission = null) {
+      const route = pttCompatibilityResolver?.(channelId, transmission);
+      if (!route) return false;
+      return route.dispatcher.handlePttStart(channelId, unitId, isEmergency, route.transmission);
     },
-    async handlePttEnd(channelId, unitId, gracePeriodMs = null) {
-      return dispatcher.handlePttEnd(channelId, unitId, gracePeriodMs);
+    async handlePttEnd(channelId, unitId, gracePeriodMs = null, transmission = null) {
+      const route = pttCompatibilityResolver?.(channelId, transmission);
+      if (!route) return false;
+      return route.dispatcher.handlePttEnd(channelId, unitId, gracePeriodMs, route.transmission);
     },
     async handleEmergencyStart(channelId, unitId) {
       return dispatcher.handleEmergencyStart(channelId, unitId);

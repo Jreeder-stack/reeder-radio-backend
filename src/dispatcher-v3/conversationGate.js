@@ -20,12 +20,15 @@ export class V3ConversationGate {
     const unit = clean(unitId);
     const text = clean(transcript);
     if (!unit || !text) return { allowed: false, reason: 'empty' };
-    if (EMERGENCY_RX.test(text)) return { allowed: true, reason: 'emergency', transcript: text };
+    const matched = this.wakeWords.find((word) => new RegExp(`^\\s*${escapeRx(word)}(?:\\b|[,.:;-])`, 'i').test(text));
+    // Urgent traffic keeps its addressing exemption. Normalize only a known
+    // leading address, as for routine traffic, so complete urgent declarations
+    // reach the same meaning-preserving planner without a keyword bypass.
+    if (EMERGENCY_RX.test(text)) return { allowed: true, reason: 'emergency', transcript: matched ? stripLeadingWake(text, matched) || text : text };
 
     // An explicit wake word always starts a fresh dispatcher turn. This check
     // must run BEFORE pending-follow-up handling; otherwise a stale CLARIFY
     // window can hijack "Central, ..." and keep asking the same old question.
-    const matched = this.wakeWords.find((word) => new RegExp(`^\\s*${escapeRx(word)}(?:\\b|[,.:;-])`, 'i').test(text));
     if (matched) {
       this.pending.delete(unit);
       const remainder = stripLeadingWake(text, matched);
@@ -78,6 +81,14 @@ function normalizeWakeWords(value) {
 
 function stripLeadingWake(text, word) {
   return text.replace(new RegExp(`^\\s*${escapeRx(word)}\\s*[,.:;-]?\\s*`, 'i'), '').trim();
+}
+
+// Normalize the address without changing pending dialogue or granting access.
+// Emergency reply matching uses this before the ordinary conversation gate.
+export function stripV3LeadingAddress(transcript, wakeWords) {
+  const text = clean(transcript) || '';
+  const matched = normalizeWakeWords(wakeWords).find((word) => new RegExp(`^\\s*${escapeRx(word)}(?:\\b|[,.:;-])`, 'i').test(text));
+  return matched ? stripLeadingWake(text, matched) || text : text;
 }
 
 function looksLikeSpeakerHail(remainder, unitId) {

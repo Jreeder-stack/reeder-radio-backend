@@ -17,6 +17,11 @@ import pool, {
 } from '../db/index.js';
 import { randomUUID } from 'crypto';
 import { config } from '../config/env.js';
+import {
+  loadSessionPttPrincipal, loadRadioPttPrincipal, createPttTransmission,
+  finishPttTransmission, getPttMetadata, attachPttMetadata, ownsPttTransmission,
+  findPttRequest, pttRequestMatches,
+} from './pttProvenance.js';
 
 const SIGNALING_EVENTS = {
   CHANNEL_JOIN: 'channel:join',
@@ -62,6 +67,7 @@ class SignalingService {
     this.emergencyStates = new Map();
     this.clearAirStates = new Map();
     this.connectionTimes = new Map();
+    this._completedPttTransmissions = new WeakSet();
     this.trackedUnitLocations = new Map();
     this.TX_DRAIN_MS = 80;
     
@@ -136,9 +142,36 @@ class SignalingService {
     const callbacks = this._eventCallbacks[event];
     if (callbacks) {
       callbacks.forEach(cb => {
-        try { cb(data); } catch (err) { console.error(`[Signaling] Callback error:`, err); }
+        try { cb(data, getPttMetadata(data)); } catch (err) { console.error(`[Signaling] Callback error:`, err); }
       });
     }
+  }
+
+  _captureTransmission(socket, transmission, requestId = null) {
+    const principal = socket.pttPrincipal?.unitId === socket.unitId ? socket.pttPrincipal : null;
+    const metadata = createPttTransmission(principal, {
+      channelId: transmission.channelId, source: transmission.source,
+      captureStartedAt: transmission.timestamp, clientRequestId: requestId,
+    });
+    attachPttMetadata(transmission, metadata);
+    return transmission;
+  }
+
+  _emitTransmissionEnd(transmission, endData) {
+    if (!transmission || this._completedPttTransmissions.has(transmission)) return false;
+    const metadata = finishPttTransmission(getPttMetadata(transmission), endData.timestamp);
+    attachPttMetadata(endData, metadata);
+    this._completedPttTransmissions.add(transmission);
+    this._emitCallback('pttEnd', endData);
+    return true;
+  }
+
+  _ownsTransmission(socket, transmission) {
+    if (!transmission || transmission.unitId !== socket.unitId) return false;
+    const metadata = getPttMetadata(transmission);
+    if (metadata) return ownsPttTransmission(metadata, socket.pttPrincipal);
+    return (transmission.floorKey || transmission.deviceId || transmission.unitId)
+      === (socket.floorKey || socket.deviceId || socket.unitId);
   }
 
   initialize(httpServer) {
@@ -249,6 +282,9 @@ class SignalingService {
               console.warn('[Signaling] Could not resolve assigned user for radio:', e.message);
             }
           }
+          socket.pttPrincipal = await loadRadioPttPrincipal(radioToken, { connectionId: `socket:${socket.id}` })
+            .catch(() => null);
+          if (socket.pttPrincipal) unitIdentity = socket.pttPrincipal.unitId;
           socket.unitId = unitIdentity;
 
           await updateRadioLastSeen(radio.radio_id);
@@ -342,6 +378,7 @@ class SignalingService {
 
       audioRelayService.clearTxWatchdog(channelId, displayUnitId, 'floor_timeout');
       this.activeTransmissions.delete(channelId);
+      this._emitTransmissionEnd(transmission, { unitId: displayUnitId, channelId, timestamp: Date.now(), reason: 'timeout' });
 
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
         senderUnitId: displayUnitId,
@@ -383,6 +420,7 @@ class SignalingService {
         const floorHolder = floorControlService.getFloorHolder(channelId);
         if (!floorHolder || floorHolder.unitId !== transmission.unitId) {
           this.activeTransmissions.delete(channelId);
+          this._emitTransmissionEnd(transmission, { unitId: transmission.unitId, channelId, timestamp: Date.now(), reason: 'consistency_sweep' });
 
           this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
             senderUnitId: transmission.unitId,
@@ -468,6 +506,10 @@ class SignalingService {
       return;
     }
 
+    const authenticationRequest = randomUUID();
+    socket.pttAuthenticationRequest = authenticationRequest;
+    socket.pttPrincipal = null;
+    let verifiedSessionId = null;
     let sessionUser = null;
     try {
       const rawCookies = socket.handshake?.headers?.cookie;
@@ -478,9 +520,10 @@ class SignalingService {
           if (sid.startsWith('s:')) {
             sid = signature.unsign(sid.slice(2), config.sessionSecret);
             if (sid === false) sid = null;
+            else verifiedSessionId = sid;
           }
           if (sid) {
-            const sessResult = await pool.query('SELECT sess FROM session WHERE sid = $1', [sid]);
+            const sessResult = await pool.query('SELECT sess FROM session WHERE sid = $1 AND expire > NOW()', [sid]);
             if (sessResult.rows.length > 0) {
               const sess = typeof sessResult.rows[0].sess === 'string'
                 ? JSON.parse(sessResult.rows[0].sess)
@@ -493,6 +536,11 @@ class SignalingService {
     } catch (err) {
       console.warn('[Signaling] Session lookup failed:', err.message);
     }
+
+    const pttPrincipal = verifiedSessionId
+      ? await loadSessionPttPrincipal(verifiedSessionId, { connectionId: `socket:${socket.id}` }).catch(() => null)
+      : null;
+    if (socket.pttAuthenticationRequest !== authenticationRequest) return;
 
     let validatedUnitId = unitId;
     let validatedUsername = username;
@@ -524,6 +572,11 @@ class SignalingService {
       }
     }
 
+    if (pttPrincipal) {
+      validatedUnitId = pttPrincipal.unitId;
+      validatedUsername = pttPrincipal.username;
+    }
+    socket.pttPrincipal = pttPrincipal;
     socket.unitId = validatedUnitId;
     socket.agencyId = agencyId || 'default';
     socket.username = validatedUsername;
@@ -598,7 +651,7 @@ class SignalingService {
       }
     }
     
-    console.log(`[Signaling] Unit authenticated: ${validatedUnitId} (${validatedUsername}) deviceId=${socket.deviceId}${sessionUser ? ' [session-verified]' : ' [client-claimed]'}`);
+    console.log(`[Signaling] Unit authenticated: ${validatedUnitId} (${validatedUsername}) deviceId=${socket.deviceId}${pttPrincipal ? ' [session-verified]' : ' [identity-only]'}`);
   }
 
   _handleChannelJoin(socket, data) {
@@ -720,6 +773,7 @@ _handlePttStart(socket, data) {
       return;
     }
 
+    if (findPttRequest(socket.pttPrincipal, channelId, data.requestId)) return;
     this._emitCallback('pttAttempt', {
       unitId: socket.unitId,
       channelId,
@@ -734,6 +788,7 @@ _handlePttStart(socket, data) {
     if (existingTransmission && existingTransmission.unitId !== socket.unitId) {
       if (existingTransmission.isClearAir && !isClearAirRequest) {
         this.activeTransmissions.delete(channelId);
+        this._emitTransmissionEnd(existingTransmission, { unitId: existingTransmission.unitId, channelId, timestamp: Date.now(), reason: 'clearair_preempted' });
         clearAirAlreadyPreempted = true;
         const preemptedSocket = this._findSocketByUnitId(existingTransmission.unitId);
         if (preemptedSocket) {
@@ -762,6 +817,7 @@ _handlePttStart(socket, data) {
           }
           floorControlService.forceRelease(channelId);
           this.activeTransmissions.delete(channelId);
+          this._emitTransmissionEnd(existingTransmission, { unitId: existingTransmission.unitId, channelId, timestamp: Date.now(), reason: 'dispatcher_takeover' });
           const prevPresence = this.unitPresence.get(existingTransmission.unitId);
           if (prevPresence) {
             prevPresence.status = 'online';
@@ -791,7 +847,7 @@ _handlePttStart(socket, data) {
       }
     }
 
-    if (existingTransmission && existingTransmission.unitId === socket.unitId && !isClearAirRequest) {
+    if (existingTransmission && existingTransmission.unitId === socket.unitId) {
       socket.emit('ptt:busy', {
         channelId,
         transmittingUnit: socket.unitId,
@@ -801,7 +857,7 @@ _handlePttStart(socket, data) {
     }
     
     const draining = this.drainingTransmissions.get(channelId);
-    if (draining && draining.unitId !== socket.unitId) {
+    if (draining && !this._ownsTransmission(socket, draining.transmission)) {
       socket.emit('ptt:busy', {
         channelId,
         transmittingUnit: draining.unitId,
@@ -809,7 +865,7 @@ _handlePttStart(socket, data) {
       return;
     }
 
-    if (draining && draining.unitId === socket.unitId) {
+    if (draining && this._ownsTransmission(socket, draining.transmission)) {
       this._cancelDrain(channelId);
     }
 
@@ -854,6 +910,7 @@ _handlePttStart(socket, data) {
       source: socket.deviceType === 'cad' ? 'cad' : 'radio',
     };
 
+    this._captureTransmission(socket, transmissionData, data.requestId);
     this.activeTransmissions.set(channelId, transmissionData);
 
     const presence = this.unitPresence.get(socket.unitId);
@@ -903,7 +960,7 @@ _handlePttStart(socket, data) {
       return;
     }
 
-    if (transmission.unitId !== socket.unitId) {
+    if (!this._ownsTransmission(socket, transmission) || !pttRequestMatches(getPttMetadata(transmission), data.requestId)) {
       console.warn(`[Signaling] PTT END unitId mismatch: socket=${socket.unitId} transmission=${transmission.unitId} on ${channelId} — ignoring to protect active floor holder`);
       return;
     }
@@ -934,14 +991,19 @@ _handlePttStart(socket, data) {
   }
 
   _beginTransmissionDrain({ channelId, unitId, deviceId, floorKey, endData, presenceSynthesized = false }) {
+    const transmission = this.activeTransmissions.get(channelId);
+    if (!transmission) return false;
+    attachPttMetadata(endData, finishPttTransmission(getPttMetadata(transmission), endData.timestamp));
     this.activeTransmissions.delete(channelId);
 
     const existing = this.drainingTransmissions.get(channelId);
-    if (existing && existing.timer) {
-      clearTimeout(existing.timer);
+    if (existing) {
+      if (existing.timer) clearTimeout(existing.timer);
+      this._emitTransmissionEnd(existing.transmission, existing.endData);
     }
 
     this.drainingTransmissions.set(channelId, {
+      transmission,
       unitId,
       deviceId: deviceId || floorKey || null,
       floorKey: floorKey || deviceId || unitId,
@@ -958,12 +1020,12 @@ _handlePttStart(socket, data) {
     const entry = this.drainingTransmissions.get(channelId);
     if (!entry) return;
     if (entry.timer) clearTimeout(entry.timer);
-    entry.timer = setTimeout(() => this._checkDrain(channelId), this.TX_DRAIN_MS);
+    entry.timer = setTimeout(() => this._checkDrain(channelId, entry), this.TX_DRAIN_MS);
   }
 
-  _checkDrain(channelId) {
+  _checkDrain(channelId, expectedEntry = null) {
     const entry = this.drainingTransmissions.get(channelId);
-    if (!entry) return;
+    if (!entry || (expectedEntry && expectedEntry !== entry)) return;
     entry.timer = null;
 
     const lastPacketAt = audioRelayService.getLastPacketAt
@@ -975,10 +1037,10 @@ _handlePttStart(socket, data) {
     const sinceBaseline = Date.now() - baseline;
 
     if (sinceBaseline >= this.TX_DRAIN_MS) {
-      this._finalizeDrain(channelId);
+      this._finalizeDrain(channelId, entry);
     } else {
       const remaining = Math.max(10, this.TX_DRAIN_MS - sinceBaseline);
-      entry.timer = setTimeout(() => this._checkDrain(channelId), remaining);
+      entry.timer = setTimeout(() => this._checkDrain(channelId, entry), remaining);
     }
   }
 
@@ -987,12 +1049,14 @@ _handlePttStart(socket, data) {
     if (!entry) return false;
     if (entry.timer) clearTimeout(entry.timer);
     this.drainingTransmissions.delete(channelId);
+    // A new capture must not discard the old capture's immutable identity.
+    this._emitTransmissionEnd(entry.transmission, entry.endData);
     return true;
   }
 
-  _finalizeDrain(channelId) {
+  _finalizeDrain(channelId, expectedEntry = null) {
     const entry = this.drainingTransmissions.get(channelId);
-    if (!entry) return;
+    if (!entry || (expectedEntry && expectedEntry !== entry)) return;
     if (entry.timer) clearTimeout(entry.timer);
     this.drainingTransmissions.delete(channelId);
 
@@ -1012,7 +1076,7 @@ _handlePttStart(socket, data) {
       timestamp: Date.now(),
     }, entry.deviceId);
 
-    this._emitCallback('pttEnd', entry.endData);
+    this._emitTransmissionEnd(entry.transmission, entry.endData);
 
     if (entry.presenceSynthesized) {
       const p = this.unitPresence.get(entry.unitId);
@@ -1058,7 +1122,7 @@ _handlePttStart(socket, data) {
     this._emitToChannelExcludingDevice(key, SIGNALING_EVENTS.PTT_END, endData, excludeDeviceId);
     this._emitToChannelExcludingDevice(key, RADIO_EVENTS.CHANNEL_IDLE, { channelId: key, timestamp: Date.now() }, excludeDeviceId);
 
-    this._emitCallback('pttEnd', endData);
+    this._emitTransmissionEnd(transmission, endData);
     return true;
   }
 
@@ -1630,11 +1694,12 @@ _findSocketByUnitId(unitId) {
     for (const [channelId, transmission] of this.activeTransmissions) {
       if (transmission.unitId !== socket.unitId) continue;
       const transmissionFloorKey = transmission.floorKey || transmission.unitId;
-      if (transmissionFloorKey !== thisFloorKey) {
+      if (transmissionFloorKey !== thisFloorKey || !this._ownsTransmission(socket, transmission)) {
         console.log(`[Signaling] Skipping activeTransmissions delete for ${socket.unitId} on ${channelId}: transmission belongs to another device (floorKey=${transmissionFloorKey}, this=${thisFloorKey})`);
         continue;
       }
       this.activeTransmissions.delete(channelId);
+      this._emitTransmissionEnd(transmission, { unitId: socket.unitId, channelId, timestamp: Date.now(), reason });
       this.io.to(`channel:${channelId}`).emit(SIGNALING_EVENTS.PTT_END, {
         unitId: socket.unitId,
         channelId,
@@ -1658,7 +1723,18 @@ _findSocketByUnitId(unitId) {
     // floors actually held by *this* device. The fallback to socket.unitId
     // is only hit for legacy/un-deviced sockets, which by definition have
     // no peer device to confuse with.
-    const releasedChannels = floorControlService.releaseAllForUnit(socket.floorKey || socket.unitId);
+    for (const [channelId, entry] of this.drainingTransmissions) {
+      if (this._ownsTransmission(socket, entry.transmission)) this._cancelDrain(channelId);
+    }
+    const releasedChannels = [];
+    for (const [channelId, holder] of Object.entries(floorControlService.getActiveFloors())) {
+      if ((holder.floorKey || holder.unitId) !== thisFloorKey) continue;
+      const active = this.activeTransmissions.get(channelId);
+      const drain = this.drainingTransmissions.get(channelId);
+      if ((active && !this._ownsTransmission(socket, active))
+          || (drain && !this._ownsTransmission(socket, drain.transmission))) continue;
+      if (floorControlService.releaseFloor(channelId, thisFloorKey)) releasedChannels.push(channelId);
+    }
     for (const channelId of releasedChannels) {
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.CHANNEL_IDLE, {
         channelId,
@@ -2028,11 +2104,16 @@ _findSocketByUnitId(unitId) {
     audioRelayService.removeSubscriber(channelId, socket.deviceId || socket.unitId);
 
     const leaveTransmission = this.activeTransmissions.get(channelId);
-    if (leaveTransmission && leaveTransmission.unitId === socket.unitId) {
+    if (this._ownsTransmission(socket, leaveTransmission)) {
       this.activeTransmissions.delete(channelId);
+      this._emitTransmissionEnd(leaveTransmission, { unitId: socket.unitId, channelId, timestamp: Date.now(), reason: 'leave' });
     }
+    const drain = this.drainingTransmissions.get(channelId);
+    if (drain && this._ownsTransmission(socket, drain.transmission)) this._cancelDrain(channelId);
 
-    if (floorControlService.holdsFloor(channelId, socket.floorKey || socket.unitId)) {
+    if ((!leaveTransmission || this._ownsTransmission(socket, leaveTransmission))
+        && (!drain || this._ownsTransmission(socket, drain.transmission))
+        && floorControlService.holdsFloor(channelId, socket.floorKey || socket.unitId)) {
       floorControlService.releaseFloor(channelId, socket.floorKey || socket.unitId);
       this.io.to(`channel:${channelId}`).emit(RADIO_EVENTS.TX_STOP, {
         senderUnitId: socket.unitId,
@@ -2068,6 +2149,7 @@ _findSocketByUnitId(unitId) {
       return;
     }
 
+    if (findPttRequest(socket.pttPrincipal, channelId, data.requestId)) return;
     this._emitCallback('pttAttempt', {
       unitId: socket.unitId,
       channelId,
@@ -2087,7 +2169,7 @@ _findSocketByUnitId(unitId) {
     }
 
     const drainingTx = this.drainingTransmissions.get(channelId);
-    if (drainingTx && drainingTx.unitId !== socket.unitId) {
+    if (drainingTx && !this._ownsTransmission(socket, drainingTx.transmission)) {
       socket.emit(RADIO_EVENTS.PTT_DENIED, {
         channelId,
         reason: 'channel_busy',
@@ -2097,7 +2179,7 @@ _findSocketByUnitId(unitId) {
       });
       return;
     }
-    if (drainingTx && drainingTx.unitId === socket.unitId) {
+    if (drainingTx && this._ownsTransmission(socket, drainingTx.transmission)) {
       this._cancelDrain(channelId);
     }
 
@@ -2112,9 +2194,12 @@ _findSocketByUnitId(unitId) {
     });
 
     if (result.granted) {
+      if (existingTransmission) {
+        this._emitTransmissionEnd(existingTransmission, { unitId: existingTransmission.unitId, channelId, timestamp: Date.now(), reason: 'preempted_emergency' });
+      }
       opusCodec.resetSenderDecoder(socket.unitId);
 
-      this.activeTransmissions.set(channelId, {
+      const transmissionData = this._captureTransmission(socket, {
         unitId: socket.unitId,
         deviceId: socket.deviceId,
         floorKey: socket.floorKey || socket.deviceId || socket.unitId,
@@ -2123,7 +2208,8 @@ _findSocketByUnitId(unitId) {
         timestamp: Date.now(),
         isEmergency: result.isEmergency || false,
         source: socket.deviceType === 'cad' ? 'cad' : 'radio',
-      });
+      }, data.requestId);
+      this.activeTransmissions.set(channelId, transmissionData);
 
       socket.emit(RADIO_EVENTS.PTT_GRANTED, {
         channelId,
@@ -2175,12 +2261,7 @@ _findSocketByUnitId(unitId) {
         presenceData.status = 'transmitting';
       }
 
-      this._emitCallback('pttStart', {
-        unitId: socket.unitId,
-        channelId,
-        timestamp: Date.now(),
-        isEmergency: isEmergency || false,
-      });
+      this._emitCallback('pttStart', transmissionData);
 
       console.log(`[Signaling] PTT granted: ${socket.unitId} on ${channelId}`);
     } else {
@@ -2203,6 +2284,8 @@ _findSocketByUnitId(unitId) {
     if (!socket.unitId) return;
     console.log(`[Signaling] PTT_RELEASE_SENT unitId=${socket.unitId} channelId=${channelId}`);
 
+    const transmission = this.activeTransmissions.get(channelId);
+    if (!this._ownsTransmission(socket, transmission) || !pttRequestMatches(getPttMetadata(transmission), data.requestId)) return;
     audioRelayService.clearTxWatchdog(channelId, socket.unitId);
 
     const floorHolder = floorControlService.getFloorHolder(channelId);
@@ -2241,10 +2324,9 @@ _findSocketByUnitId(unitId) {
       timestamp: Date.now(),
     }, socket.deviceId);
 
-    this._emitCallback('pttEnd', {
-      unitId: socket.unitId,
-      channelId,
-      timestamp: Date.now(),
+    this._emitTransmissionEnd(transmission, {
+      unitId: socket.unitId, channelId, timestamp: now,
+      duration: now - transmission.timestamp,
     });
 
     console.log(`[Signaling] PTT released: ${socket.unitId} on ${channelId}`);
@@ -2304,14 +2386,16 @@ _findSocketByUnitId(unitId) {
     const channelId = socket._channelKeyMap?.get(rawChannelId) || rawChannelId;
     if (!socket.unitId) return;
 
+    const transmission = this.activeTransmissions.get(channelId);
+    if (!this._ownsTransmission(socket, transmission) || !pttRequestMatches(getPttMetadata(transmission), data.requestId)) return;
     audioRelayService.clearTxWatchdog(channelId, socket.unitId);
-
     if (floorControlService.holdsFloor(channelId, socket.floorKey || socket.unitId)) {
       const floorHolder = floorControlService.getFloorHolder(channelId);
       const grantedAt = floorHolder ? floorHolder.grantedAt : null;
 
       floorControlService.releaseFloor(channelId, socket.floorKey || socket.unitId);
       this.activeTransmissions.delete(channelId);
+      this._emitTransmissionEnd(transmission, { unitId: socket.unitId, channelId, timestamp: Date.now(), reason: 'tx_stop' });
 
       const presenceData = this.unitPresence.get(socket.unitId);
       if (presenceData) {
@@ -2378,6 +2462,11 @@ _findSocketByUnitId(unitId) {
   }
 
   stop() {
+    for (const [channelId, transmission] of this.activeTransmissions) {
+      this._emitTransmissionEnd(transmission, { unitId: transmission.unitId, channelId, timestamp: Date.now(), reason: 'signaling_stop' });
+    }
+    this.activeTransmissions.clear();
+    for (const channelId of [...this.drainingTransmissions.keys()]) this._cancelDrain(channelId);
     if (this._authCleanupInterval) {
       clearInterval(this._authCleanupInterval);
       this._authCleanupInterval = null;
