@@ -103,7 +103,8 @@ class BackgroundAudioService : Service() {
     private var hd760PermitJob: Job? = null
     @Volatile private var hd760FloorGranted = false
     // Remember a request even before its grant is delivered; physical UP must release it.
-    private var hd760RequestedFloorRoomKey: String? = null
+    @Volatile private var hd760RequestedFloorRoomKey: String? = null
+    private val hd760FloorRequestGate = Any()
 
     @Volatile private var pttUpWhileConnecting = false
     private var preCaptureSetupJob: Job? = null
@@ -1080,7 +1081,9 @@ class BackgroundAudioService : Service() {
                                         pttState != PttState.CONNECTING) return@launch
                                     Log.i("CC-HD760", "TPT_START floor_granted=true mic=false")
                                     // Coroutine resumes only when local tone playback completes.
-                                    app.toneEngine.playTalkPermitToneAndAwait()
+                                    withTimeout(2_500L) {
+                                        app.toneEngine.playTalkPermitToneAndAwait()
+                                    }
                                     if (!hd760Press.isCurrentHeld(generation) ||
                                         pttState != PttState.CONNECTING ||
                                         servicePrefs.channelRoomKey != grantedRoomKey ||
@@ -1108,7 +1111,24 @@ class BackgroundAudioService : Service() {
                                         engine.floorControl?.releaseFloor(servicePrefs.channelRoomKey ?: "")
                                         hd760FloorGranted = false
                                         hd760RequestedFloorRoomKey = null
+                                        releaseRadioAudioRoute()
                                         transitionPttState(PttState.IDLE)
+                                        updateNotification("Radio — Standby")
+                                        sendPttTxFailed()
+                                    }
+                                } catch (_: TimeoutCancellationException) {
+                                    Log.e("CC-HD760", "TPT_COMPLETION_TIMEOUT_RELEASING_FLOOR")
+                                    app.toneEngine.stopTalkPermitTone()
+                                    if (hd760Press.isCurrentHeld(generation) &&
+                                        pttState == PttState.CONNECTING) {
+                                        hd760RequestedFloorRoomKey?.let {
+                                            engine.floorControl?.releaseFloor(it)
+                                        }
+                                        hd760RequestedFloorRoomKey = null
+                                        hd760FloorGranted = false
+                                        releaseRadioAudioRoute()
+                                        transitionPttState(PttState.IDLE)
+                                        updateNotification("Radio — Standby")
                                         sendPttTxFailed()
                                     }
                                 } catch (_: CancellationException) {
@@ -1461,9 +1481,21 @@ class BackgroundAudioService : Service() {
                 if (pttState != PttState.CONNECTING ||
                     !hd760Press.isCurrentHeld(pressGeneration) ||
                     pttUpWhileConnecting || servicePrefs.channelRoomKey != roomKey) return@launch
-                Log.i("CC-HD760", "PTT_FLOOR_REQUEST_SENT roomKey=" + roomKey)
-                hd760RequestedFloorRoomKey = roomKey
-                engine.floorControl?.requestFloor(roomKey)
+                // An UP can race this IO coroutine. Make the final token
+                // check, request and local floor tracking atomic with release.
+                val sent = synchronized(hd760FloorRequestGate) {
+                    if (pttState != PttState.CONNECTING ||
+                        !hd760Press.isCurrentHeld(pressGeneration) ||
+                        pttUpWhileConnecting || servicePrefs.channelRoomKey != roomKey) {
+                        false
+                    } else {
+                        hd760RequestedFloorRoomKey = roomKey
+                        Log.i("CC-HD760", "PTT_FLOOR_REQUEST_SENT roomKey=" + roomKey)
+                        engine.floorControl?.requestFloor(roomKey)
+                        true
+                    }
+                }
+                if (!sent) return@launch
                 startPendingFloorTimeout(roomKey)
                 // Optional PTT location reporting must not block floor control.
                 scope.launch { reportPttLocationBestEffort() }
@@ -1607,12 +1639,14 @@ class BackgroundAudioService : Service() {
                 if (BuildConfig.FLAVOR == "hd760") {
                     // A late grant is possible even if the granted callback has not run.
                     // Cancel the request AND release the server floor on every early UP.
-                    val requested = hd760RequestedFloorRoomKey
-                    hd760RequestedFloorRoomKey = null
-                    hd760FloorGranted = false
-                    if (requested != null) {
-                        radioEngine?.floorControl?.releaseFloor(requested)
-                        Log.i("CC-HD760", "PTT_EARLY_RELEASE_REQUESTED_FLOOR room=" + requested)
+                    synchronized(hd760FloorRequestGate) {
+                        val requested = hd760RequestedFloorRoomKey
+                        hd760RequestedFloorRoomKey = null
+                        hd760FloorGranted = false
+                        if (requested != null) {
+                            radioEngine?.floorControl?.releaseFloor(requested)
+                            Log.i("CC-HD760", "PTT_EARLY_RELEASE_REQUESTED_FLOOR room=" + requested)
+                        }
                     }
                 }
                 cancelPendingFloorTimeout()
