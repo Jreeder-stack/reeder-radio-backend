@@ -66,6 +66,14 @@ class UdpAudioTransport(
 
     var channelId: String = ""
     var channelIndex: Int = 0
+    // Extra *receive-only* channel keepalives maintain NAT registration with
+    // the relay. TX framing always uses channelIndex, never these scan IDs.
+    @Volatile var scanChannelIndexes: Set<Int> = emptySet()
+
+    fun updateScanChannels(ids: Set<Int>) {
+        scanChannelIndexes = ids.filter { it > 0 && it != channelIndex }.toSet()
+        sendImmediateKeepalive()
+    }
     var unitId: String = ""
     var deviceId: String = ""
     @Volatile var suppressSameUnitDuringLocalTx: Boolean = false
@@ -116,10 +124,12 @@ class UdpAudioTransport(
         val sock = socket ?: return
         scope.launch {
             try {
-                val keepalivePacket = buildKeepalivePacket()
                 val address = resolveAddress() ?: return@launch
-                val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
-                sock.send(dgram)
+                for (id in (setOf(channelIndex) + scanChannelIndexes)) {
+                    val keepalivePacket = buildKeepalivePacket(id)
+                    val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
+                    sock.send(dgram)
+                }
                 Log.d(TAG, "UDP_KEEPALIVE_IMMEDIATE_SENT to=$relayHost:$relayPort ${RadioDiagLog.elapsedTag()}")
             } catch (e: Exception) {
                 Log.w("[RadioError]", "UDP immediate keepalive send error: ${e::class.simpleName}: ${e.message} dest=$relayHost:$relayPort method=sendImmediateKeepalive")
@@ -456,10 +466,12 @@ class UdpAudioTransport(
                     continue
                 }
                 try {
-                    val keepalivePacket = buildKeepalivePacket()
                     val address = resolveAddress() ?: continue
-                    val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
-                    sock.send(dgram)
+                    for (id in (setOf(channelIndex) + scanChannelIndexes)) {
+                        val keepalivePacket = buildKeepalivePacket(id)
+                        val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
+                        sock.send(dgram)
+                    }
                     Log.d(TAG, """{"event":"UDP_KEEPALIVE_SENT","dest":"$relayHost:$relayPort","fast":$isFast,"intervalMs":$interval}""")
                 } catch (e: Exception) {
                     Log.w("[RadioError]", """{"event":"UDP_KEEPALIVE_FAILED","error":"${e::class.simpleName}","message":"${e.message}","dest":"$relayHost:$relayPort"}""")
@@ -469,10 +481,10 @@ class UdpAudioTransport(
         }
     }
 
-    private fun buildKeepalivePacket(): ByteArray {
+    private fun buildKeepalivePacket(scanChannelId: Int = channelIndex): ByteArray {
         val senderBytes = unitId.toByteArray(Charsets.UTF_8)
         val senderLen = senderBytes.size.coerceAtMost(255)
-        val channelNumeric = channelIndex
+        val channelNumeric = scanChannelId
         val timestampMs = (System.currentTimeMillis() and 0xFFFFFFFFL).toInt()
         val frame = ByteArray(RADIO_HEADER_FIXED_LEN + senderLen)
         var offset = 0

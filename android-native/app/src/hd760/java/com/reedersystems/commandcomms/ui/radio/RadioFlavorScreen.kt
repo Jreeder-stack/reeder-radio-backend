@@ -114,14 +114,23 @@ fun RadioFlavorScreen(
                     Modifier.weight(1f).fillMaxWidth().padding(8.dp),
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    if (state.hd760ProgrammingSlot) {
-                        val channels = state.currentZone?.channels.orEmpty()
-                        val candidate = channels.getOrNull(state.hd760ProgramChannelIndex)
-                        Text("PROGRAM SLOT " + (state.hd760KnobPosition?.toString() ?: "?"),
-                            color = Muted, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text(candidate?.name ?: "EMPTY / DISABLED", fontSize = 19.sp,
-                            color = Ink, fontWeight = FontWeight.Bold, maxLines = 2)
-                        Text("UP/DOWN: CHOOSE   OK: SAVE", color = Muted, fontSize = 10.sp)
+                    if (state.hd760ScanListOpen) {
+                        val channels = state.scanChannels
+                        val idx = state.hd760ScanListIndex.coerceIn(0, (channels.size - 1).coerceAtLeast(0))
+                        fun label(index: Int): String {
+                            val item = channels.getOrNull(index) ?: return ""
+                            val zone = state.zones.firstOrNull { z ->
+                                z.channels.any { it.id == item.id }
+                            }?.name ?: ""
+                            return (if (item.enabled) "☑ " else "☐ ") + zone + ": " + item.name
+                        }
+                        Text("SCAN LIST " + (idx + 1) + "/" + channels.size,
+                            color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(label(idx - 1), color = Muted, fontSize = 11.sp, maxLines = 1)
+                        Text(label(idx), color = Ink, fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp, maxLines = 2)
+                        Text(label(idx + 1), color = Muted, fontSize = 11.sp, maxLines = 1)
+                        Text("UP/DOWN: MOVE  OK: CHECK", color = Muted, fontSize = 9.sp)
                     } else {
                         val items = model.hd760MenuLabels
                         val index = state.hd760MenuIndex
@@ -154,7 +163,10 @@ fun RadioFlavorScreen(
                         textAlign = TextAlign.Center, maxLines = 2,
                         overflow = TextOverflow.Ellipsis, lineHeight = if (compact) 26.sp else 33.sp
                     )
-                    Text(status, color = accent, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(state.hd760LockFeedback ?: status,
+                        color = if (state.hd760LockFeedback != null) Color(0xFF147D48) else accent,
+                        fontSize = if (compact) 13.sp else 15.sp,
+                        fontWeight = FontWeight.Bold)
                     val from = when {
                         state.scanActiveChannel != null ->
                             "SCAN: " + state.scanActiveChannel + "  " + state.scanActiveUnit.orEmpty()
@@ -171,7 +183,8 @@ fun RadioFlavorScreen(
                         Text(state.error ?: "", color = Color.Red, fontSize = 9.sp, maxLines = 1)
                     }
                     if (state.isKeyLocked) {
-                        Text("KEYS LOCKED", color = Muted, fontSize = 9.sp)
+                        Text("KEYPAD LOCKED", color = Muted, fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold)
                     }
                 }
             }

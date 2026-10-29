@@ -358,6 +358,12 @@ class ToneEngine(private val context: Context) {
      * Single short beep used for the 5-second emergency arming countdown.
      * One beep on press and one on each second tick (5 beeps over 5 seconds).
      */
+    fun playKeypadConfirmation() {
+        scope.launch {
+            playBeeps(960f, count = 1, durationMs = 65, gapMs = 0, volume = 0.35f)
+        }
+    }
+
     fun playArmingBeep() {
         scope.launch {
             runCatching {
