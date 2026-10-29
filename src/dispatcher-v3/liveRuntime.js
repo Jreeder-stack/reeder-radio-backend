@@ -15,6 +15,7 @@ import { V3DiagnosticsJournal } from './diagnostics.js';
 import { V3SpeechPipeline } from './speechPipeline.js';
 import { V3IntentPlanner } from './intentPlanner.js';
 import { V3ConversationGate, stripV3LeadingAddress } from './conversationGate.js';
+import { V3ConversationRecords } from './conversationRecords.js';
 import { normalizeV3CommandText } from './deterministicIntent.js';
 import { materializeV3Plan } from './planMaterializer.js';
 import { composeV3Response } from './responseComposer.js';
@@ -82,7 +83,6 @@ export class V3LiveDispatcher {
     this.isRunning = false;
     this.connected = false;
     this._sequence = 1;
-    this._recentContext = [];
     this._outbound = new V3OutboundScheduler({
       limits: outboundLimits,
       relevant: (entry) => this.isRunning && entry.generation === this.runtimeGeneration
@@ -166,6 +166,7 @@ export class V3LiveDispatcher {
     this.speech = new V3SpeechPipeline({ runtimeContext: this.context, transcribe, codec: this.codec, diagnostics: this.diagnostics });
     this.planner = planner || new V3IntentPlanner({ diagnostics: this.diagnostics });
     this.conversationGate = conversationGate || new V3ConversationGate();
+    this.conversations = new V3ConversationRecords({ runtimeContext: this.context });
     this.synthesize = synthesize;
     this._audioListener = (frame) => this.speech.pushFrame(frame);
   }
@@ -209,6 +210,7 @@ export class V3LiveDispatcher {
     this._ambiguousSources.clear();
     this._ambiguousSourcesOverflow = false;
     this.conversationGate.clearAll();
+    this.conversations.clearAll();
     this.fieldIncidents.clearAll();
     this._clearEmergencyTimers();
     this._emergency = null;
@@ -392,7 +394,8 @@ export class V3LiveDispatcher {
 
     if (await this._handleEmergencyTranscript(transmission)) return true;
 
-    const gate = this.conversationGate.shouldProcess({ unitId, transcript: transmission.transcript });
+    const sessionKey = this.conversations.scopeKey(turnEnvelope);
+    const gate = this.conversationGate.shouldProcess({ unitId, transcript: transmission.transcript, sessionKey });
     this._diag('turn_addressed', transmission.correlationId, gate.allowed, {
       reason: gate.reason, pending: !!gate.pending,
     }, turnEnvelope);
@@ -400,8 +403,21 @@ export class V3LiveDispatcher {
       this._diag('transmission_ignored', transmission.correlationId, true, { unitId, reason: gate.reason, transcript: transmission.transcript });
       return false;
     }
+    // An evicted or expired conversation cannot resume an orphaned prompt.
+    if (gate.reason === 'follow_up' && !this.conversations.get(turnEnvelope)) {
+      this.conversationGate.clear(unitId);
+      this._diag('transmission_ignored', transmission.correlationId, true, { unitId, reason: 'conversation_expired' }, turnEnvelope);
+      return false;
+    }
     transmission.transcript = gate.transcript || transmission.transcript;
     transmission.pendingContext = gate.pending || null;
+    transmission.sessionKey = sessionKey;
+    const conversation = this.conversations.recordTurn(turnEnvelope, {
+      transcript: transmission.transcript,
+      reason: gate.reason,
+      freshRequest: gate.freshRequest === true || gate.reason === 'emergency',
+    });
+    this._diag('conversation_recorded', transmission.correlationId, true, conversation, turnEnvelope);
     if (gate.reason === 'follow_up' && gate.pending) {
       const state = this._lifecycle.get(turnEnvelope.turnId);
       this._lifecycle.bindPending(state, unitId, gate.pending,
@@ -415,8 +431,12 @@ export class V3LiveDispatcher {
           kind: 'radio_hail',
           callsign: hail,
           correlationId: transmission.correlationId,
+          sessionKey,
         });
-        this._remember({ transcript: transmission.transcript, action: 'RADIO_HAIL', input: { callsign: hail }, clarification: `${hail}, go ahead.`, success: true });
+        this.conversations.completeTurn(turnEnvelope, {
+          plan: { action: 'RADIO_HAIL', input: { callsign: hail }, clarification: `${hail}, go ahead.` },
+          result: { success: true },
+        });
         this._diag('radio_hail_acknowledged', transmission.correlationId, true, { unitId, callsign: hail });
         this._queueReply(`${hail}, go ahead.`, transmission.correlationId, turnEnvelope);
         return true;
@@ -862,7 +882,7 @@ export class V3LiveDispatcher {
         speakerCallsign,
         runtimeContext: this.context,
         correlationId,
-        recentContext: this._recentContext,
+        recentContext: this.conversations.recent(turnEnvelope),
         operationalContext,
         pendingContext,
         dialogueContext,
@@ -914,24 +934,25 @@ export class V3LiveDispatcher {
     if (life) this._lifecycle.releasePending(life);
     dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign);
     if (plan.action === 'CLARIFY') {
-      this.conversationGate.expectFollowUp(speakerCallsign, { clarification: plan.clarification, input: plan.input || {}, correlationId });
+      this.conversationGate.expectFollowUp(speakerCallsign, { clarification: plan.clarification, input: plan.input || {}, correlationId, sessionKey: this.conversations.scopeKey(turnEnvelope) });
     } else if (result?.error?.code === 'DISPOSITION_REQUIRED') {
       this.conversationGate.expectFollowUp(speakerCallsign, {
         kind: 'disposition',
         callId: result.error.details?.callId || plan.input?.callId || null,
         unitRef: speakerCallsign,
         correlationId,
+        sessionKey: this.conversations.scopeKey(turnEnvelope),
       });
     } else if (dialogueContext) {
-      this.conversationGate.expectFollowUp(speakerCallsign, { ...dialogueContext, correlationId });
+      this.conversationGate.expectFollowUp(speakerCallsign, { ...dialogueContext, correlationId, sessionKey: this.conversations.scopeKey(turnEnvelope) });
     } else if (pendingContext?.kind === 'disposition' && plan.action !== V3_ACTIONS.CLEAR_UNIT && plan.action !== V3_ACTIONS.CLOSE_CALL) {
-      this.conversationGate.expectFollowUp(speakerCallsign, { ...pendingContext, correlationId });
+      this.conversationGate.expectFollowUp(speakerCallsign, { ...pendingContext, correlationId, sessionKey: this.conversations.scopeKey(turnEnvelope) });
     } else {
       this.conversationGate.clear(speakerCallsign);
     }
 
     const responseText = composeV3Response({ plan, result, speakerCallsign, turnEnvelope });
-    this._remember({ transcript, action: plan.action, input: plan.input || {}, clarification: plan.clarification || null, success: result ? result.success === true : plan.action !== 'NO_ACTION' });
+    this.conversations.completeTurn(turnEnvelope, { plan, result });
     if (responseText) this._queueReply(responseText, correlationId, turnEnvelope);
   }
 
@@ -1105,11 +1126,6 @@ export class V3LiveDispatcher {
       await sleep(FLOOR_RETRY_MS);
     }
     return false;
-  }
-
-  _remember(item) {
-    this._recentContext.push({ ...item, timestamp: Date.now() });
-    if (this._recentContext.length > 12) this._recentContext.splice(0, this._recentContext.length - 12);
   }
 
   _diag(phase, correlationId, success = null, details = {}, turnEnvelope = currentV3TurnEnvelope(), turnIdentity = turnEnvelope?.identity || null) {

@@ -16,7 +16,7 @@ export class V3ConversationGate {
     this.wakeWords = normalizeWakeWords(wakeWords);
   }
 
-  shouldProcess({ unitId, transcript } = {}) {
+  shouldProcess({ unitId, transcript, sessionKey = null } = {}) {
     const unit = clean(unitId);
     const text = clean(transcript);
     if (!unit || !text) return { allowed: false, reason: 'empty' };
@@ -46,6 +46,11 @@ export class V3ConversationGate {
     }
 
     const pending = this.pending.get(unit);
+    // Task 02-02/02-03 still owns the legacy follow-up lifecycle. This
+    // compatibility slot is never usable from a different authenticated session.
+    if (pending?.sessionKey && pending.sessionKey !== sessionKey) {
+      return { allowed: false, reason: 'not_addressed' };
+    }
     if (pending && pending.expiresAt >= this.now()) {
       if (looksLikeUnitToUnitTraffic(text, unit, pending)) {
         this.pending.delete(unit);
