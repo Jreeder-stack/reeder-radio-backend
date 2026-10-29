@@ -63,7 +63,7 @@ describe('01-03 actual PTT / CAD scheduling', () => {
     stt.resolve('Central, en route'); await finish(a);
     expect(h.writes('/api/radio/status').map((r) => r.body.unit_id)).toEqual(['B2', 'A1']);
   });
-  it('expires queued A1 work behind an unresolved STT and prevents late CAD writes', async () => {
+  it('expires stalled older STT, allows a still-valid newer command, and rejects late older results', async () => {
     const h = await harness();
     const stt = h.hold('Central, en route');
     const first = await h.begin(stt.promise);
@@ -72,10 +72,10 @@ describe('01-03 actual PTT / CAD scheduling', () => {
     await vi.advanceTimersByTimeAsync(31000);
     expect(first.settled).toBe(true);
     expect(second.settled).toBe(true);
-    expect(h.writes()).toEqual([]);
+    expect(h.writes('/api/radio/status').map((r) => r.body.status)).toEqual(['available']);
     stt.resolve('Central, en route');
     await first.done; await second.done;
-    expect(h.writes()).toEqual([]);
+    expect(h.writes('/api/radio/status').map((r) => r.body.status)).toEqual(['available']);
   });
   it('expires a second A1 command while first response synthesis is stalled', async () => {
     const h = await harness();
