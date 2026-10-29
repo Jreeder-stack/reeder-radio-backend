@@ -6,6 +6,7 @@ import pool, {
   getStatusChecksEnabledState,
 } from '../db/index.js';
 import { signalingService } from './signalingService.js';
+import { audioRelayService } from './audioRelayService.js';
 import { isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { CORE_AI_DISPATCHER_CAD_SCOPES, validateDispatcherCadIntegration } from './cadService.js';
 import { V3LiveDispatcher } from '../dispatcher-v3/liveRuntime.js';
@@ -370,6 +371,10 @@ export class AIDispatcherRuntimeManager {
         throw error;
       }
 
+      // Native radios require a numeric channel index in every injected UDP
+      // audio packet. Register the authoritative DB channel mapping before
+      // the AI can speak, independent of when the first radio joins.
+      audioRelayService.registerChannelNumeric(profile.room_key, Number(profile.channel_id));
       const dispatcher = new V3LiveDispatcher({
         runtimeContext: context,
         scopes: cadPreflight.scopes || requiredCadScopes,

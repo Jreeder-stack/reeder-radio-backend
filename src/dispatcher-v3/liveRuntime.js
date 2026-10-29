@@ -740,7 +740,9 @@ export class V3LiveDispatcher {
       return false;
     }
 
+    let announcedRx = false;
     try {
+      announcedRx = this.signaling.publishAiRadioAudio?.(channel, this.identity, true) === true;
       const tone = buildMdcTonePcm(MDC_TONE_MS);
       const toneFrames = this.codec.encodePcmToOpus(tone);
       for (const frame of toneFrames) {
@@ -768,6 +770,7 @@ export class V3LiveDispatcher {
     } finally {
       const released = this.floorControl.releaseFloor(channel, AI_FLOOR_IDENTITY);
       if (!released) this.floorControl.releaseAllForUnit?.(AI_FLOOR_IDENTITY);
+      if (announcedRx) this.signaling.publishAiRadioAudio?.(channel, this.identity, false);
     }
   }
 
@@ -780,12 +783,16 @@ export class V3LiveDispatcher {
     }
 
     let framesSent = 0;
+    let announcedRx = false;
     let lastRearmAt = Date.now();
     try {
       const started = Date.now();
       const pcm = await this.synthesize(text);
       const opusFrames = this.codec.encodePcmToOpus(pcm);
       this._diag('tts_ready', correlationId, true, { text, frames: opusFrames.length, latencyMs: Date.now() - started });
+      if (opusFrames.length > 0) {
+        announcedRx = this.signaling.publishAiRadioAudio?.(channel, this.identity, true) === true;
+      }
 
       for (const frame of opusFrames) {
         if (Date.now() - lastRearmAt >= FLOOR_REARM_MS) {
@@ -807,6 +814,7 @@ export class V3LiveDispatcher {
     } finally {
       const released = this.floorControl.releaseFloor(channel, AI_FLOOR_IDENTITY);
       if (!released) this.floorControl.releaseAllForUnit?.(AI_FLOOR_IDENTITY);
+      if (announcedRx) this.signaling.publishAiRadioAudio?.(channel, this.identity, false);
     }
   }
 

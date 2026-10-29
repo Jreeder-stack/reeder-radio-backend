@@ -6,6 +6,7 @@ on:
       - feature/hd760-hardware-diagnostics-20261028
       - feature/hd760-keylock-scan-20261029
       - feature/hd760-compact-status-display-20261029
+      - fix/hd760-ptt-ai-rx-display-20261029
     paths:
       - "android-native/**"
       - "src/services/**"
@@ -32,9 +33,11 @@ jobs:
       - name: Verify relay sibling-device echo protection
         run: |
           npm ci --ignore-scripts
-          npx vitest run src/services/__tests__/audioRelaySiblingDeviceHardening.test.js src/services/__tests__/nativePageDeliveryService.test.js
+          npx vitest run src/services/__tests__/audioRelaySiblingDeviceHardening.test.js src/services/__tests__/nativePageDeliveryService.test.js src/services/__tests__/aiRadioReceiveEvents.test.js src/dispatcher-v3/__tests__/liveRuntimeFloor.test.js
           node --check src/services/nativePageDeliveryService.js
           node --check src/services/signalingService.js
+          node --check src/services/aiDispatcherRuntimeManager.js
+          node --check src/dispatcher-v3/liveRuntime.js
           node --check src/services/pagingRosterService.js
           node --check src/routes/dispatchRouter.js
       - name: Validate dispatcher UI build

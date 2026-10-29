@@ -30,7 +30,7 @@ function makeRuntime({ floorControl, audioRelay } = {}) {
     decodeOpusToPcm: vi.fn(),
     releaseSenderDecoder: vi.fn(),
   };
-  const signaling = { io: {}, emergencyStates: new Map(), unitPresence: new Map() };
+  const signaling = { io: {}, emergencyStates: new Map(), unitPresence: new Map(), publishAiRadioAudio: vi.fn(() => true) };
   const runtime = new V3LiveDispatcher({
     runtimeContext: context,
     scopes: ['unit.read', 'unit.write', 'call.read', 'call.write'],
@@ -41,18 +41,26 @@ function makeRuntime({ floorControl, audioRelay } = {}) {
     signaling,
     planner: { plan: vi.fn() },
   });
-  return { runtime, floor, relay, codec };
+  return { runtime, floor, relay, codec, signaling };
 }
 
 describe('V3LiveDispatcher outbound floor control', () => {
   it('acquires the AI floor, transmits, and releases it', async () => {
-    const { runtime, floor, relay } = makeRuntime();
+    const { runtime, floor, relay, signaling } = makeRuntime();
     const sent = await runtime._speak('Indiana 1, copy.', 'corr-floor');
     expect(sent).toBe(true);
     expect(floor.requestFloor).toHaveBeenCalledWith('Zone1__OPS1', 'AI-Dispatcher');
     expect(relay.injectAudio).toHaveBeenCalledTimes(2);
     expect(floor.releaseFloor).toHaveBeenCalledWith('Zone1__OPS1', 'AI-Dispatcher');
     expect(floor.releaseAllForUnit).not.toHaveBeenCalled();
+    expect(signaling.publishAiRadioAudio).toHaveBeenNthCalledWith(1,
+      'Zone1__OPS1', 'AI-DISPATCHER:FLOOR', true);
+    expect(signaling.publishAiRadioAudio).toHaveBeenNthCalledWith(2,
+      'Zone1__OPS1', 'AI-DISPATCHER:FLOOR', false);
+    expect(signaling.publishAiRadioAudio.mock.invocationCallOrder[0])
+      .toBeLessThan(relay.injectAudio.mock.invocationCallOrder[0]);
+    expect(signaling.publishAiRadioAudio.mock.invocationCallOrder[1])
+      .toBeGreaterThan(floor.releaseFloor.mock.invocationCallOrder[0]);
   });
 
   it('always releases the floor when audio injection fails', async () => {
@@ -67,10 +75,11 @@ describe('V3LiveDispatcher outbound floor control', () => {
       hasRecentInbound: vi.fn(() => null),
       injectAudio: vi.fn(() => { throw new Error('relay failed'); }),
     };
-    const { runtime } = makeRuntime({ floorControl: floor, audioRelay: relay });
+    const { runtime, signaling } = makeRuntime({ floorControl: floor, audioRelay: relay });
     const sent = await runtime._speak('test', 'corr-error');
     expect(sent).toBe(false);
     expect(floor.releaseFloor).toHaveBeenCalledWith('Zone1__OPS1', 'AI-Dispatcher');
+    expect(signaling.publishAiRadioAudio).toHaveBeenCalledWith('Zone1__OPS1', 'AI-DISPATCHER:FLOOR', false);
   });
 
   it('does not transmit when the radio floor remains busy', async () => {
@@ -87,13 +96,14 @@ describe('V3LiveDispatcher outbound floor control', () => {
         hasRecentInbound: vi.fn(() => null),
         injectAudio: vi.fn(),
       };
-      const { runtime } = makeRuntime({ floorControl: floor, audioRelay: relay });
+      const { runtime, signaling } = makeRuntime({ floorControl: floor, audioRelay: relay });
       const promise = runtime._speak('test', 'corr-busy');
       await vi.advanceTimersByTimeAsync(3200);
       const sent = await promise;
       expect(sent).toBe(false);
       expect(relay.injectAudio).not.toHaveBeenCalled();
       expect(floor.releaseFloor).not.toHaveBeenCalled();
+      expect(signaling.publishAiRadioAudio).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }

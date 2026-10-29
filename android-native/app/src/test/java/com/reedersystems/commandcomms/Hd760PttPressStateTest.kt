@@ -49,6 +49,33 @@ class Hd760PttPressStateTest {
         assertFalse(p.isCurrentHeld(grantedPress))
     }
 
+    @Test fun repeatedPressEdgesNeverValidateAnOldPermitGeneration() {
+        val p = Hd760PttPressState()
+        p.down()
+        val first = p.currentGeneration()
+        p.down() // duplicate broadcast for the same held press
+        assertEquals(first, p.currentGeneration())
+        p.up()
+        assertFalse(p.isCurrentHeld(first))
+        p.down()
+        val second = p.currentGeneration()
+        assertNotEquals(first, second)
+        assertFalse(p.isCurrentHeld(first))
+        assertTrue(p.isCurrentHeld(second))
+        p.up()
+        assertFalse(p.isCurrentHeld(second))
+    }
+
+    @Test fun newPressHeldDuringCleanupIsDeferredOnlyUntilRealRelease() {
+        val p = Hd760PttPressState()
+        p.down(); p.up() // first press is being cleaned up
+        p.down(); p.deferDuringCleanup()
+        assertTrue(p.isHeld())
+        assertTrue(p.takeDeferredIfHeld())
+        p.up()
+        assertFalse(p.takeDeferredIfHeld())
+    }
+
     @Test fun duplicateCleanupDoesNotRestartTwice() {
         val p = Hd760PttPressState()
         p.down(); p.deferDuringCleanup(); p.deferDuringCleanup()

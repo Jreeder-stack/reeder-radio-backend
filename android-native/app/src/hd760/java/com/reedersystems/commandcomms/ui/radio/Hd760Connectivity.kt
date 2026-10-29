@@ -37,9 +37,11 @@ object Hd760ConnectivityReader {
             connectivity?.getNetworkInfo(ConnectivityManager.TYPE_WIFI)?.isConnected == true
         }.getOrDefault(false)
         @Suppress("DEPRECATION")
+        // A registered cellular modem can remain available while Wi-Fi is
+        // selected as the active data route; do not hide its indicator.
         val cellConnected = runCatching {
             connectivity?.getNetworkInfo(ConnectivityManager.TYPE_MOBILE)?.isConnected == true
-        }.getOrDefault(false)
+        }.getOrDefault(false) || phoneStrengthLevel != null
 
         val wifiBars = if (wifiConnected) runCatching {
             val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
