@@ -43,7 +43,11 @@ function sanitize(value, depth = 0, seen = new WeakSet()) {
   const out = {};
   for (const [key, child] of Object.entries(value).slice(0, MAX_DETAILS)) {
     // Unknown structures are omitted, not recursively dumped.
-    if (UNSAFE.test(key) || !SAFE_DETAILS.has(key)) continue;
+    // Numeric metadata is not audio or a bearer token. The allowlist still
+    // excludes raw PCM, text, model payloads and credential values.
+    if (!SAFE_DETAILS.has(key)) continue;
+    if (UNSAFE.test(key) && !['audioBytes','promptTokens','completionTokens',
+      'totalTokens','inputTokens','outputTokens'].includes(key)) continue;
     if (typeof child === 'object') continue;
     out[key] = sanitize(child, depth + 1, seen);
   }

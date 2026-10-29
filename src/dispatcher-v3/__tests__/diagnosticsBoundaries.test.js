@@ -93,7 +93,7 @@ describe('01-07 bounded, redacted, center-scoped diagnostics', () => {
     expect(j.getRecent()).toEqual([]);
     expect(recent(j,{...ACCESS,scopes:['unit.read']})).toEqual([]);
     expect(recent(j,{...ACCESS,dispatchCenterId:'center-b'})).toEqual([]);
-    expect(recent(j,{...ACCESS,runtimeId:'audit-center-b'})).toHaveLength(1);
+    expect(recent(j,{...ACCESS,dispatchCenterId:'center-b',runtimeId:'audit-center-b'})).toHaveLength(1);
     expect(recent(j,ACCESS)).toHaveLength(1);
     expect(j.getTrace({turnId:'anything',access:{...ACCESS,scopes:[]}})).toEqual([]);
   });
