@@ -6,6 +6,8 @@ on:
       - test/dispatcher-v3-01-01-baseline-20261028
     paths:
       - 'src/dispatcher-v3/**'
+      - 'src/services/aiDispatcherRuntimeManager.js'
+      - 'src/services/__tests__/dispatcherV3ManagerIntegration.test.js'
       - '.github/workflows/ai-dispatcher-v3-ci.yml'
   pull_request:
     paths:
@@ -21,6 +23,7 @@ on:
       - 'src/services/signalingFloorIdentityHardening.js'
       - 'src/services/pttProvenance.js'
       - 'src/services/__tests__/ptt*.test.js'
+      - 'src/services/__tests__/dispatcherV3ManagerIntegration.test.js'
       - 'src/routes/pttRoutes.js'
       - 'src/controllers/dispatchController.js'
       - 'package.json'
@@ -49,6 +52,7 @@ jobs:
       - name: Syntax-check V3 runtime boundary
         run: |
           node --check src/services/aiDispatcherRuntimeManager.js
+          node --check src/services/__tests__/dispatcherV3ManagerIntegration.test.js
           node --check src/services/aiDispatchService.js
           node --check src/services/aiDispatcherSignaling.js
           node --check src/dispatcher-v3/liveRuntime.js
@@ -79,6 +83,11 @@ jobs:
         run: |
           mkdir -p reports
           npm test -- src/services/__tests__/pttIntakeAdapters.test.js src/services/__tests__/pttRuntimeRouting.test.js src/services/__tests__/signalingFloorIdentityHardening.test.js src/services/__tests__/audioRelaySiblingDeviceHardening.test.js src/services/__tests__/floorControlService.aiWatchdog.test.js --reporter=default --reporter=json --outputFile=reports/ptt-tests.json
+      - name: Actual manager to V3 PTT integration with synthetic CAD
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p reports
+          npm test -- src/services/__tests__/dispatcherV3ManagerIntegration.test.js --reporter=default --reporter=json --outputFile=reports/v3-manager-integration.json
       - name: V3 suite and known-defect baseline (not release acceptance)
         if: ${{ !cancelled() }}
         env:
