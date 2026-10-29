@@ -121,11 +121,11 @@ describe('01-04 complete external operation deadlines', () => {
   it('does not block B2 when A1 model request has stopped responding', async () => {
     const h=await harness();
     const pending=deferred();
-    const original=h.runtime.planner.plan.bind(h.runtime.planner);
+    const original=V3IntentPlanner.prototype.plan;
     let starts=0;
     vi.spyOn(h.runtime.planner,'plan').mockImplementation((args)=>{
       if(args.speakerCallsign==='A1'){starts++;return pending.promise;}
-      return original(args);
+      return original.call(h.runtime.planner,args);
     });
     const a=await h.begin('Central, please retrieve the incident details I requested','A1');
     await until(()=>starts===1,'A1 model pending');

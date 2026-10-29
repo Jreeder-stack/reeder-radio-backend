@@ -77,18 +77,20 @@ describe('01-03 actual PTT / CAD scheduling', () => {
     await first.done; await second.done;
     expect(h.writes('/api/radio/status').map((r) => r.body.status)).toEqual(['available']);
   });
-  it('expires a second A1 command while first response synthesis is stalled', async () => {
+  it('releases a stalled synthesis so a still-valid later A1 command proceeds', async () => {
     const h = await harness();
     const tts = h.hold(Buffer.alloc(640));
     h.synthesisReplies.push(tts.promise);
     const first = await h.begin('Central, en route');
     await until(() => h.synthesize.mock.calls.length === 1, 'first TTS');
     const second = await h.begin('Central, available');
-    await vi.advanceTimersByTimeAsync(30001);
+    await vi.advanceTimersByTimeAsync(12500);
     expect(second.settled).toBe(true);
-    expect(h.writes('/api/radio/status').map((r) => r.body.status)).toEqual(['en_route']);
+    expect(h.writes('/api/radio/status').map((r) => r.body.status)).toEqual(['en_route', 'available']);
+    const transmitted = h.relay.injectAudio.mock.calls.length;
     tts.resolve(Buffer.alloc(640)); await finish(first); await second.done;
-    expect(h.writes('/api/radio/status').map((r) => r.body.status)).toEqual(['en_route']);
+    expect(h.writes('/api/radio/status').map((r) => r.body.status)).toEqual(['en_route', 'available']);
+    expect(h.relay.injectAudio.mock.calls.length).toBe(transmitted);
   });
   it('prevents pending transcription from executing after stop without claiming active-write rollback', async () => {
     const h = await harness();

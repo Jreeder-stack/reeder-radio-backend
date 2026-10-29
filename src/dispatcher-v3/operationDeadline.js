@@ -53,8 +53,8 @@ export async function withV3Stage(stage, timeoutMs, operation, { signal = null }
   const expiration = new Promise((_, reject) => { rejectTimeout = reject; });
   const cancel = () => {
     if (settled) return;
-    controller.abort();
     rejectTimeout(timeoutError(stage));
+    controller.abort();
   };
   for (const source of sources) source.addEventListener('abort', cancel, { once: true });
   try {
