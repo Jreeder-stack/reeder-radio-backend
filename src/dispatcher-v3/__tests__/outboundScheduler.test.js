@@ -150,6 +150,7 @@ describe('01-06 outbound lane and actual V3 integration', () => {
     const h=await make();
     const turn=await h.begin('Central, available');
     await finish(turn);
+    await h.flushOutput();
     const history=h.diagnostics.record.mock.calls.map(([x])=>x).filter(x=>x.phase.startsWith('outbound_'));
     expect(history.length).toBeGreaterThan(0);
     expect(history.at(-1)).toMatchObject({details:{recipient:'A1',channel:h.context.roomKey}});

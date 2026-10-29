@@ -87,11 +87,21 @@ export class V3LiveDispatcher {
       limits: outboundLimits,
       relevant: (entry) => this.isRunning && entry.generation === this.runtimeGeneration
         && entry.channel === this.context.roomKey
-        && (!entry.envelope || entry.envelope.runtimeGeneration === this.runtimeGeneration),
-      transmit: (entry, check) => runWithV3Budget(null, () => runWithV3Life(null, () =>
-        entry.kind === 'alert'
-          ? this._transmitAlert(entry.text, entry.correlationId, entry.envelope, { signal: entry.controller.signal, check })
-          : this._speak(entry.text, entry.correlationId, entry.envelope, { signal: entry.controller.signal, check }))),
+        && (!entry.envelope || (entry.envelope.runtimeGeneration === this.runtimeGeneration
+          && this._unitLatestIntake.get(entry.envelope.speakerRef) === entry.envelope.intakeSequence)),
+      transmit: async (entry, check) => {
+        check();
+        if (entry.source) {
+          // The intake credential may have expired while this response waited
+          // behind another channel transmission. Do not broadcast stale data.
+          if (!(await revalidatePttActor(entry.source, this.context))) return false;
+          check();
+        }
+        return runWithV3Budget(null, () => runWithV3Life(null, () =>
+          entry.kind === 'alert'
+            ? this._transmitAlert(entry.text, entry.correlationId, entry.envelope, { signal: entry.controller.signal, check })
+            : this._speak(entry.text, entry.correlationId, entry.envelope, { signal: entry.controller.signal, check })));
+      },
       onOutcome: (result, entry) => this._diag('outbound_' + result.status,
         result.correlationId, result.status === 'completed', {
           recipient: result.recipient, channel: result.channel, reason: result.reason,
@@ -118,6 +128,7 @@ export class V3LiveDispatcher {
     this._internalEmergencyEndUnsubscribe = null;
     this.runtimeGeneration = null;
     this._intakeSequence = 0;
+    this._unitLatestIntake = new Map();
     this._intake = new Map();
     this._seenTransmissions = new Map();
     this._ambiguousSources = new Map();
@@ -159,6 +170,7 @@ export class V3LiveDispatcher {
     if (this.isRunning) return true;
     this.runtimeGeneration = randomUUID();
     this._intakeSequence = 0;
+    this._unitLatestIntake.clear();
     this._scheduler.start();
     this._outbound.start(this.runtimeGeneration);
     this.audioRelay.addAudioListener(this.context.roomKey, this.identity, this._audioListener);
@@ -189,6 +201,7 @@ export class V3LiveDispatcher {
       this._diag('turn_capture_stopped', record.identity.turnId, false, { reason: 'runtime_stopped' }, null, record.identity);
     }
     this._intake.clear();
+    this._unitLatestIntake.clear();
     this._ambiguousSources.clear();
     this._ambiguousSourcesOverflow = false;
     this.conversationGate.clearAll();
@@ -286,6 +299,7 @@ export class V3LiveDispatcher {
       return false;
     }
     const life = this._lifecycle.accept(identity, metadata);
+    this._unitLatestIntake.set(identity.speakerRef, identity.intakeSequence);
     life.owner = this._lifecycle;
     reservation.ticket.life = life;
     // Reserve in intake order before any STT/identity await.
@@ -945,6 +959,7 @@ export class V3LiveDispatcher {
   _queueReply(text, correlationId, envelope) {
     const queued = this._outbound.enqueue({
       text, correlationId, envelope, recipient: envelope?.speaker?.callsign || envelope?.speakerRef || null,
+      source: envelope ? this._lifecycle.get(envelope.turnId)?.source || null : null,
       channel: this.context.roomKey, generation: this.runtimeGeneration, turnId: envelope?.turnId || null,
     });
     if (!queued.accepted) this._diag('outbound_failed', correlationId, false,
@@ -958,6 +973,7 @@ export class V3LiveDispatcher {
     if (!this.isRunning) return this._transmitAlert(text, correlationId, turnEnvelope);
     const task = this._outbound.enqueue({
       text, correlationId, envelope: turnEnvelope, recipient: turnEnvelope?.speaker?.callsign || null,
+      source: turnEnvelope ? this._lifecycle.get(turnEnvelope.turnId)?.source || null : null,
       channel: this.context.roomKey, generation: this.runtimeGeneration, turnId: turnEnvelope?.turnId || null,
       kind: 'alert', priority: true,
     });

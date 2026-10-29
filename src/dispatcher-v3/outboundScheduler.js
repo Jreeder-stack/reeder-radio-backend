@@ -40,7 +40,7 @@ export class V3OutboundScheduler {
       generation: this.generation, limits: this.limits, totals: { ...this.totals } };
   }
   enqueue({ text, recipient = null, channel, turnId = null, generation, correlationId = null,
-    kind = 'routine', priority = false, envelope = null } = {}) {
+    kind = 'routine', priority = false, envelope = null, source = null } = {}) {
     if (!this.running || generation !== this.generation || !text || !channel) return { accepted: false, reason: 'invalid_or_stale_output' };
     if (this.queue.length >= this.limits.maxQueued) {
       this.totals.failed += 1;
@@ -50,7 +50,7 @@ export class V3OutboundScheduler {
     let resolve;
     const delivery = new Promise(r => { resolve = r; });
     const entry = { id, text, recipient, channel, turnId, generation, correlationId, kind, priority,
-      envelope, createdAt, expiresAt: createdAt + this.limits.maxAgeMs,
+      envelope, source, createdAt, expiresAt: createdAt + this.limits.maxAgeMs,
       controller: new AbortController(), resolve, delivered: false, state: 'queued' };
     this.totals.queued += 1;
     if (kind === 'routine' && recipient) {
