@@ -5,6 +5,7 @@ on:
     branches:
       - feature/hd760-hardware-diagnostics-20261028
       - feature/hd760-keylock-scan-20261029
+      - feature/hd760-compact-status-display-20261029
     paths:
       - "android-native/**"
       - "src/services/**"
