@@ -88,6 +88,7 @@ export class V3DiagnosticsJournal {
     this.entries = [];
     this.rate = new Map();
     this.suppressed = 0;
+    this.suppressedByContext = new Map();
     this.counts = new Map();
     this.activeTurns = new Map();
     this.terminalTurns = new Map();
@@ -122,6 +123,8 @@ export class V3DiagnosticsJournal {
     const rate = this.rate.get(group);
     if (!terminal && rate && now - rate.at < this.rateWindowMs && rate.count >= this.rateLimit) {
       this.suppressed++;
+      const contextKey = JSON.stringify([runtimeId, dispatchCenterId]);
+      this.suppressedByContext.set(contextKey, (this.suppressedByContext.get(contextKey) || 0) + 1);
       return null;
     }
     if (!rate || now - rate.at >= this.rateWindowMs) this.rate.set(group, { at: now, count: 1 });
@@ -176,20 +179,27 @@ export class V3DiagnosticsJournal {
   }
   getSummary({ runtimeId = null, dispatchCenterId = null } = {}) {
     this._purge(this.now());
+    const selected = this.entries.filter(e => (!runtimeId || e.runtimeId === runtimeId) &&
+      (!dispatchCenterId || e.dispatchCenterId === dispatchCenterId));
+    const counts = new Map();
+    for (const item of selected) counts.set(item.classification, (counts.get(item.classification) || 0) + 1);
+    const suppressed = runtimeId && dispatchCenterId
+      ? this.suppressedByContext.get(JSON.stringify([runtimeId, dispatchCenterId])) || 0
+      : (runtimeId || dispatchCenterId ? null : this.suppressed);
     return Object.freeze({
-      retained: this.entries.filter(e => (!runtimeId || e.runtimeId === runtimeId) &&
-        (!dispatchCenterId || e.dispatchCenterId === dispatchCenterId)).length,
-      suppressed: this.suppressed,
+      retained: selected.length,
+      suppressed,
       activeTurns: [...this.activeTurns.values()].filter(e =>
         (!runtimeId || e.runtimeId === runtimeId) && (!dispatchCenterId || e.dispatchCenterId === dispatchCenterId)).length,
       terminalTurns: [...this.terminalTurns.values()].filter(e =>
         (!runtimeId || e.runtimeId === runtimeId) && (!dispatchCenterId || e.dispatchCenterId === dispatchCenterId)).length,
-      classificationCounts: Object.fromEntries(this.counts),
+      classificationCounts: Object.fromEntries(counts),
     });
   }
   clear() {
     this.entries.length = 0;
     this.rate.clear(); this.activeTurns.clear(); this.terminalTurns.clear(); this.counts.clear();
+    this.suppressedByContext.clear();
     this.suppressed = 0;
   }
 }

@@ -111,6 +111,17 @@ describe('01-07 bounded, redacted, center-scoped diagnostics', () => {
       'denied_action','provider_failure','delivery_failure',
     ]);
   });
+  it('isolates summary classification counts and throttling across dispatch centers', () => {
+    const j=journal({rateLimit:1});
+    for(let i=0;i<4;i++) j.record(event('audio_decode_failed',{code:'DECODE_ERROR'},'center-a'));
+    j.record(event('outbound_failed',{code:'TX_FAILED'},'center-b'));
+    const a=j.getSummary({runtimeId:'audit-center-a',dispatchCenterId:'center-a'});
+    const b=j.getSummary({runtimeId:'audit-center-b',dispatchCenterId:'center-b'});
+    expect(a).toMatchObject({retained:1,suppressed:3});
+    expect(b).toMatchObject({retained:1,suppressed:0});
+    expect(a.classificationCounts.delivery_failure || 0).toBe(0);
+    expect(b.classificationCounts.delivery_failure).toBe(1);
+  });
   it('does not allow raw diagnostic objects to escape via the operator read', () => {
     const j=journal();
     j.record(event('action_completed',{verified:true,code:null}));
