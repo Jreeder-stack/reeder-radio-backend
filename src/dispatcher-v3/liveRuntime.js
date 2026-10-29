@@ -22,6 +22,12 @@ import { createV3CorrelationId } from './correlation.js';
 import { V3_ACTIONS } from './actionContracts.js';
 import { V3FieldIncidentCoordinator } from './fieldIncidentCoordinator.js';
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
+import { randomUUID } from 'node:crypto';
+import { hasEndedPttTransmission, samePttTransmission } from '../services/pttProvenance.js';
+import {
+  pttBelongsToV3Runtime, createV3TurnIdentity, completeV3TurnEnvelope,
+  assertV3TurnEnvelope, runWithV3Turn, currentV3TurnEnvelope,
+} from './turnEnvelope.js';
 
 const TX_FRAME_MS = 20;
 const MIN_EXECUTION_CONFIDENCE = 0.7;
@@ -32,6 +38,8 @@ const EMERGENCY_CHECK_MS = 25000;
 const EMERGENCY_PAGE_MS = 25000;
 const MDC_TONE_MS = 2000;
 const PCM_SAMPLE_RATE = 16000;
+const MAX_REMEMBERED_TRANSMISSIONS = 2048;
+const MAX_AMBIGUOUS_AUDIO_OWNERS = 128;
 const NUMBER_WORD_RX = /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b/i;
 const HAIL_COMMAND_RX = /\b(status|show|mark|put|set|create|start|close|clear|assign|attach|add|note|check|time|backup|emergency|responding|en\s+route|on\s+scene|available|out\s+of\s+service|off\s+duty|on\s+duty|zone|switch|move|copy|radio\s+check)\b/i;
 const REPORTED_EVENT_RX = /\b(caller|complainant|RP|reporting party|someone|subject|victim)\s+(reports?|reported|is reporting|says?|said)\b|\breport(?:ed)?\s+of\b|\bresponding\s+to\b|\bcall\s+for\b/i;
@@ -73,6 +81,12 @@ export class V3LiveDispatcher {
     this._emergencyTimers = new Set();
     this._rawEmergencyEnds = new Map();
     this._internalEmergencyEndUnsubscribe = null;
+    this.runtimeGeneration = null;
+    this._intakeSequence = 0;
+    this._intake = new Map();
+    this._seenTransmissions = new Map();
+    this._ambiguousSources = new Map();
+    this._ambiguousSourcesOverflow = false;
 
     this.audioRelay = audioRelay;
     this.codec = codec;
@@ -98,7 +112,7 @@ export class V3LiveDispatcher {
     });
     this.handlers[V3_ACTIONS.REPORT_FIELD_INCIDENT] = (request) => this.fieldIncidents.report(request);
     this.handlers[V3_ACTIONS.UPDATE_FIELD_INCIDENT] = (request) => this.fieldIncidents.update(request);
-    this.executor = new V3ActionExecutor({ runtimeContext: this.context, handlers: this.handlers, diagnostics: this.diagnostics });
+    this.executor = new V3ActionExecutor({ runtimeContext: this.context, handlers: this.handlers, diagnostics: this.diagnostics, requireTurnIdentity: true });
     this.speech = new V3SpeechPipeline({ runtimeContext: this.context, transcribe, codec: this.codec, diagnostics: this.diagnostics });
     this.planner = planner || new V3IntentPlanner({ diagnostics: this.diagnostics });
     this.conversationGate = conversationGate || new V3ConversationGate();
@@ -108,6 +122,8 @@ export class V3LiveDispatcher {
 
   async start() {
     if (this.isRunning) return true;
+    this.runtimeGeneration = randomUUID();
+    this._intakeSequence = 0;
     this.audioRelay.addAudioListener(this.context.roomKey, this.identity, this._audioListener);
     if (String(this.context.channelId) !== String(this.context.roomKey)) {
       this.audioRelay.addAudioListener(this.context.channelId, this.identity, this._audioListener);
@@ -128,6 +144,12 @@ export class V3LiveDispatcher {
     this.audioRelay.removeAllAudioListeners(this.identity);
     this.floorControl.releaseAllForUnit?.(AI_FLOOR_IDENTITY);
     this.speech.clear();
+    for (const record of this._intake.values()) {
+      this._diag('turn_capture_stopped', record.identity.turnId, false, { reason: 'runtime_stopped' }, null, record.identity);
+    }
+    this._intake.clear();
+    this._ambiguousSources.clear();
+    this._ambiguousSourcesOverflow = false;
     this.conversationGate.clearAll();
     this.fieldIncidents.clearAll();
     this._processing.clear();
@@ -153,6 +175,8 @@ export class V3LiveDispatcher {
       version: 'v3',
       running: this.isRunning,
       connected: this.connected,
+      runtimeGeneration: this.runtimeGeneration,
+      intakeSequence: this._intakeSequence,
       dispatchCenterId: this.context.dispatchCenterId,
       channelId: this.context.channelId,
       roomKey: this.context.roomKey,
@@ -170,17 +194,114 @@ export class V3LiveDispatcher {
     };
   }
 
-  async handlePttStart(channelId, unitId) {
+  async handlePttStart(channelId, unitId, _isEmergency = false, metadata = null) {
     if (!this.isRunning || !this.matchesChannel(channelId) || unitId === this.identity) return false;
-    const correlationId = createV3CorrelationId(this.context.runtimeId);
-    this.speech.startTransmission({ unitId, channelId, correlationId });
+    if (!pttBelongsToV3Runtime(metadata, this.context, channelId, unitId) || hasEndedPttTransmission(metadata)) {
+      this._diag('turn_intake_rejected', null, false, { reason: 'untrusted_or_mismatched_source' });
+      return false;
+    }
+    if (this._intake.has(metadata.transmissionId) || this._seenTransmissions.has(metadata.transmissionId)) return false;
+    const speakerKey = String(metadata.principal.unitId).trim().toUpperCase();
+    const blocked = this._ambiguousSources.get(speakerKey);
+    if (blocked || this._ambiguousSourcesOverflow) {
+      if (blocked) {
+        if (blocked.sources.size < MAX_AMBIGUOUS_AUDIO_OWNERS) blocked.sources.set(metadata.transmissionId, metadata);
+        else blocked.overflow = true;
+      }
+      this._rememberTransmission(metadata.transmissionId);
+      this._diag('turn_intake_rejected', null, false, { reason: 'ambiguous_audio_owner' });
+      return false;
+    }
+    const competing = [...this._intake.values()].filter((record) => sameUnit(record.identity.speakerRef, metadata.principal.unitId)
+      && (record.identity.connectionId !== metadata.principal.connectionId || record.identity.accountId !== metadata.principal.accountId));
+    if (competing.length) {
+      // Audio has no connection ID. Keeping either capture would attribute
+      // indistinguishable packets to an arbitrary authenticated connection.
+      const sources = new Map([[metadata.transmissionId, metadata]]);
+      let overflow = false;
+      for (const record of competing) {
+        if (sources.size < MAX_AMBIGUOUS_AUDIO_OWNERS) sources.set(record.identity.transmissionId, record.metadata);
+        else overflow = true;
+        this._intake.delete(record.identity.transmissionId);
+        this.speech.cancelTransmission(record.identity.speakerRef, record.identity.transmissionId);
+        this._diag('turn_completed', record.identity.turnId, false, { outcome: 'ambiguous_audio_owner' }, null, record.identity);
+      }
+      if (this._ambiguousSources.size < MAX_AMBIGUOUS_AUDIO_OWNERS) this._ambiguousSources.set(speakerKey, { sources, overflow });
+      else this._ambiguousSourcesOverflow = true;
+      this._rememberTransmission(metadata.transmissionId);
+      this._diag('turn_intake_rejected', null, false, { reason: 'ambiguous_audio_owner' });
+      return false;
+    }
+    const identity = createV3TurnIdentity({
+      runtimeContext: this.context, runtimeGeneration: this.runtimeGeneration,
+      intakeSequence: ++this._intakeSequence, transmission: metadata,
+    });
+    // Capture and sequence ownership exist before the first asynchronous operation.
+    this.speech.startTransmission({ unitId: metadata.principal.unitId, channelId: this.context.roomKey, correlationId: identity.turnId, turnIdentity: identity });
+    const record = { identity, metadata, speaker: null, speakerError: null };
+    this._intake.set(metadata.transmissionId, record);
+    this._rememberTransmission(metadata.transmissionId, identity.turnId);
+    this._diag('turn_intake_accepted', identity.turnId, true, {}, null, identity);
+    record.speakerPromise = this.unitIdentityService.resolve(identity.speakerRef, { correlationId: identity.turnId })
+      .then((speaker) => { record.speaker = speaker; return speaker; })
+      .catch((error) => { record.speakerError = error; return null; });
     return true;
   }
 
-  async handlePttEnd(channelId, unitId) {
+  _rememberTransmission(transmissionId, turnId = null) {
+    this._seenTransmissions.set(transmissionId, turnId);
+    while (this._seenTransmissions.size > MAX_REMEMBERED_TRANSMISSIONS) this._seenTransmissions.delete(this._seenTransmissions.keys().next().value);
+  }
+
+  async handlePttEnd(channelId, unitId, _gracePeriodMs = 0, metadata = null) {
     if (!this.isRunning || !this.matchesChannel(channelId) || unitId === this.identity) return false;
-    const transmission = await this.speech.endTransmission({ unitId });
-    if (!transmission?.transcript) return false;
+    if (!pttBelongsToV3Runtime(metadata, this.context, channelId, unitId) || !Number.isFinite(metadata.captureEndedAt)) {
+      this._diag('turn_end_rejected', null, false, { reason: 'untrusted_or_mismatched_source' });
+      return false;
+    }
+    const speakerKey = String(metadata.principal.unitId).trim().toUpperCase();
+    const blocked = this._ambiguousSources.get(speakerKey);
+    if (blocked) {
+      const source = blocked.sources.get(metadata.transmissionId);
+      if (source && samePttTransmission(source, metadata)) blocked.sources.delete(metadata.transmissionId);
+      // If bounded bookkeeping overflowed, missing source evidence cannot be
+      // reconstructed. Remain closed until the runtime is deliberately stopped.
+      if (!blocked.sources.size && !blocked.overflow) this._ambiguousSources.delete(speakerKey);
+      return false;
+    }
+    const record = this._intake.get(metadata.transmissionId);
+    if (!record || !samePttTransmission(record.metadata, metadata)) return false;
+    // Consume once and detach this exact capture before awaiting identity/STT.
+    // An old drained end cannot consume a newer capture bearing the same callsign.
+    this._intake.delete(metadata.transmissionId);
+    const capture = this.speech.sealCapture({ unitId: record.identity.speakerRef, transmissionId: metadata.transmissionId });
+    const speaker = await record.speakerPromise;
+    const turnEnvelope = completeV3TurnEnvelope(record.identity, metadata, speaker);
+    return runWithV3Turn(turnEnvelope, async () => {
+      if (!speaker || !capture) {
+        this._diag('turn_identity_rejected', record.identity.turnId, false, { reason: record.speakerError?.code || 'speaker_unresolved' });
+        this._diag('turn_completed', record.identity.turnId, false, { outcome: 'identity_rejected' });
+        return false;
+      }
+      try {
+        const transmission = await this.speech.endTransmission({ unitId: record.identity.speakerRef, capture, turnEnvelope });
+        if (!transmission?.transcript) {
+          this._diag('turn_completed', record.identity.turnId, false, { outcome: 'empty_transcript' });
+          return false;
+        }
+        const handled = await this._handleCapturedTranscript(transmission);
+        this._diag('turn_completed', record.identity.turnId, handled, { outcome: handled ? 'processed' : 'not_addressed' });
+        return handled;
+      } catch (error) {
+        this._diag('turn_completed', record.identity.turnId, false, { outcome: 'failed', code: error.code || null, message: error.message });
+        return false;
+      }
+    });
+  }
+
+  async _handleCapturedTranscript(transmission) {
+    const { unitId, turnEnvelope } = transmission;
+    assertV3TurnEnvelope(turnEnvelope, this.context);
 
     if (await this._handleEmergencyTranscript(transmission)) return true;
 
@@ -202,7 +323,7 @@ export class V3LiveDispatcher {
         });
         this._remember({ transcript: transmission.transcript, action: 'RADIO_HAIL', input: { callsign: hail }, clarification: `${hail}, go ahead.`, success: true });
         this._diag('radio_hail_acknowledged', transmission.correlationId, true, { unitId, callsign: hail });
-        await this._speak(`${hail}, go ahead.`, transmission.correlationId);
+        await this._speak(`${hail}, go ahead.`, transmission.correlationId, turnEnvelope);
         return true;
       }
     }
@@ -627,7 +748,9 @@ export class V3LiveDispatcher {
     this._emergencyTimers.clear();
   }
 
-  async _processTranscript({ unitId: speakerCallsign, transcript, correlationId, pendingContext = null }) {
+  async _processTranscript({ unitId: speakerCallsign, transcript, correlationId, pendingContext = null, turnEnvelope }) {
+    assertV3TurnEnvelope(turnEnvelope, this.context);
+    speakerCallsign = turnEnvelope.speaker.callsign;
     this._diag('transcript_received', correlationId, true, { speakerCallsign, transcript });
     let plan;
     let result = null;
@@ -654,6 +777,7 @@ export class V3LiveDispatcher {
         operationalContext,
         pendingContext,
         dialogueContext,
+        turnEnvelope,
       });
       if (plan.action === 'NO_ACTION' && dialogueContext && !ROUTINE_EMERGENCY_CHAT_RX.test(transcript)) {
         plan = {
@@ -670,7 +794,7 @@ export class V3LiveDispatcher {
       }
       if (plan.action !== 'NO_ACTION' && plan.action !== 'CLARIFY') {
         if (plan.action === 'MULTI_ACTION') {
-          result = await this._executeMultiActionPlan(plan, { speakerCallsign, operationalContext, correlationId });
+          result = await this._executeMultiActionPlan(plan, { speakerCallsign, operationalContext, correlationId, turnEnvelope });
         } else {
           plan = await materializeV3Plan(plan, {
             speakerCallsign,
@@ -678,8 +802,9 @@ export class V3LiveDispatcher {
             operationalContextService: this.operationalContextService,
             operationalContext,
             correlationId,
+            turnEnvelope,
           });
-          result = await this.executor.execute({ action: plan.action, input: plan.input }, { correlationId });
+          result = await this.executor.execute({ action: plan.action, input: plan.input }, { correlationId, turnEnvelope });
         }
       }
     } catch (error) {
@@ -706,12 +831,13 @@ export class V3LiveDispatcher {
       this.conversationGate.clear(speakerCallsign);
     }
 
-    const responseText = composeV3Response({ plan, result, speakerCallsign });
+    const responseText = composeV3Response({ plan, result, speakerCallsign, turnEnvelope });
     this._remember({ transcript, action: plan.action, input: plan.input || {}, clarification: plan.clarification || null, success: result ? result.success === true : plan.action !== 'NO_ACTION' });
-    if (responseText) await this._speak(responseText, correlationId);
+    if (responseText) await this._speak(responseText, correlationId, turnEnvelope);
   }
 
-  async _executeMultiActionPlan(plan, { speakerCallsign, operationalContext, correlationId }) {
+  async _executeMultiActionPlan(plan, { speakerCallsign, operationalContext, correlationId, turnEnvelope }) {
+    assertV3TurnEnvelope(turnEnvelope, this.context);
     const steps = [];
     let context = operationalContext;
     for (const actionPlan of plan.actions || []) {
@@ -721,14 +847,16 @@ export class V3LiveDispatcher {
         operationalContextService: this.operationalContextService,
         operationalContext: context,
         correlationId,
+        turnEnvelope,
       });
-      const stepResult = await this.executor.execute({ action: materialized.action, input: materialized.input }, { correlationId });
+      const stepResult = await this.executor.execute({ action: materialized.action, input: materialized.input }, { correlationId, turnEnvelope });
       steps.push({ action: materialized.action, input: materialized.input, result: stepResult });
       if (!stepResult.success) {
         return {
           success: false,
           action: 'MULTI_ACTION',
           correlationId,
+          turnEnvelope,
           error: { ...stepResult.error, details: { ...(stepResult.error?.details || {}), completedSteps: steps.slice(0, -1).map((step) => step.action), failedAction: materialized.action } },
           data: { steps },
         };
@@ -737,10 +865,10 @@ export class V3LiveDispatcher {
         context = await this.operationalContextService.snapshot({ speakerCallsign, correlationId });
       } catch (_) {}
     }
-    return { success: true, action: 'MULTI_ACTION', correlationId, data: { steps } };
+    return { success: true, action: 'MULTI_ACTION', correlationId, turnEnvelope, data: { steps } };
   }
 
-  async _alert(text, correlationId) {
+  async _alert(text, correlationId, turnEnvelope = currentV3TurnEnvelope()) {
     const channel = this.context.roomKey;
     const acquired = await this._acquireFloor(channel, correlationId);
     if (!acquired) {
@@ -756,7 +884,7 @@ export class V3LiveDispatcher {
         await sleep(TX_FRAME_MS);
       }
 
-      const pcm = await this.synthesize(text);
+      const pcm = await this.synthesize(text, { turnEnvelope });
       const speechFrames = this.codec.encodePcmToOpus(pcm);
       let lastRearmAt = Date.now();
       for (const frame of speechFrames) {
@@ -779,7 +907,7 @@ export class V3LiveDispatcher {
     }
   }
 
-  async _speak(text, correlationId) {
+  async _speak(text, correlationId, turnEnvelope = currentV3TurnEnvelope()) {
     const channel = this.context.roomKey;
     const acquired = await this._acquireFloor(channel, correlationId);
     if (!acquired) {
@@ -791,7 +919,7 @@ export class V3LiveDispatcher {
     let lastRearmAt = Date.now();
     try {
       const started = Date.now();
-      const pcm = await this.synthesize(text);
+      const pcm = await this.synthesize(text, { turnEnvelope });
       const opusFrames = this.codec.encodePcmToOpus(pcm);
       this._diag('tts_ready', correlationId, true, { text, frames: opusFrames.length, latencyMs: Date.now() - started });
 
@@ -839,8 +967,8 @@ export class V3LiveDispatcher {
     if (this._recentContext.length > 12) this._recentContext.splice(0, this._recentContext.length - 12);
   }
 
-  _diag(phase, correlationId, success = null, details = {}) {
-    this.diagnostics.record({ phase, correlationId, runtimeId: this.context.runtimeId, dispatchCenterId: this.context.dispatchCenterId, channelId: this.context.channelId, success, details });
+  _diag(phase, correlationId, success = null, details = {}, turnEnvelope = currentV3TurnEnvelope(), turnIdentity = turnEnvelope?.identity || null) {
+    this.diagnostics.record({ phase, correlationId, runtimeId: this.context.runtimeId, dispatchCenterId: this.context.dispatchCenterId, channelId: this.context.channelId, success, details, turnEnvelope, turnIdentity });
   }
 }
 

@@ -1,4 +1,5 @@
 import { V3_ACTIONS } from './actionContracts.js';
+import { isV3TurnEnvelope } from './turnEnvelope.js';
 
 const ROUTINE_ACK_ACTIONS = new Set([
   V3_ACTIONS.SET_UNIT_STATUS,
@@ -33,7 +34,8 @@ const SMALL_NUMBER_WORDS = Object.freeze([
 
 const TENS_WORDS = Object.freeze({ 20: 'twenty', 30: 'thirty', 40: 'forty', 50: 'fifty' });
 
-export function composeV3Response({ plan, result, speakerCallsign, now = new Date() } = {}) {
+export function composeV3Response({ plan, result, speakerCallsign, now = new Date(), turnEnvelope = null } = {}) {
+  if (isV3TurnEnvelope(turnEnvelope) && turnEnvelope.speaker) speakerCallsign = turnEnvelope.speaker.callsign;
   const unit = clean(speakerCallsign) || 'unit';
   if (plan?.action === 'NO_ACTION') return null;
   if (plan?.action === 'CLARIFY') return clean(plan.clarification) || `${unit}, repeat your last.`;

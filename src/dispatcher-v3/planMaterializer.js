@@ -1,5 +1,6 @@
 import { V3_ACTIONS } from './actionContracts.js';
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
+import { assertV3TurnEnvelope } from './turnEnvelope.js';
 
 const SINGLE_UNIT_ACTIONS = new Set([
   V3_ACTIONS.SET_UNIT_STATUS,
@@ -51,10 +52,15 @@ export async function materializeV3Plan(plan, {
   operationalContextService = null,
   operationalContext = null,
   correlationId,
+  turnEnvelope = null,
 } = {}) {
   if (!plan || typeof plan !== 'object') throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION_INPUT, 'Planner result is required');
   if (plan.action === 'NO_ACTION' || plan.action === 'CLARIFY') return plan;
   if (!unitIdentityService) throw new TypeError('unitIdentityService is required');
+  if (turnEnvelope) {
+    assertV3TurnEnvelope(turnEnvelope, unitIdentityService.context);
+    speakerCallsign = turnEnvelope.speaker.callsign;
+  }
 
   const input = { ...(plan.input || {}) };
   if (SINGLE_UNIT_ACTIONS.has(plan.action)) {
@@ -104,7 +110,7 @@ export async function materializeV3Plan(plan, {
   }
 
   delete input.callRef;
-  return Object.freeze({ ...plan, input: Object.freeze(input) });
+  return Object.freeze({ ...plan, input: Object.freeze(input), ...(turnEnvelope ? { turnEnvelope } : {}) });
 }
 
 async function resolveRefs(refs, speakerCallsign, service, correlationId) {

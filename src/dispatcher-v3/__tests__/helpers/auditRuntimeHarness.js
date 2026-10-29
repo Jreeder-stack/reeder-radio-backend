@@ -1,6 +1,39 @@
 import { expect, vi } from 'vitest';
+
+// Only the database boundary is synthetic. The production credential issuer,
+// account-grant checks and private provenance tags remain real in these tests.
+const credentialDatabase = {
+  nextId: 1, sessions: new Map(), accounts: new Map(), grants: new Map(), radios: new Map(),
+};
+async function queryCredentialDatabase(sql, parameters = []) {
+  const query = String(sql).replace(/\s+/g, ' ').trim();
+  const key = String(parameters[0]);
+  if (/FROM session WHERE sid = \$1 AND expire > NOW\(\)/i.test(query)) {
+    const session = credentialDatabase.sessions.get(key);
+    return { rows: session ? [{ sess: structuredClone(session) }] : [] };
+  }
+  if (/FROM users WHERE id = \$1 AND status = 'active'/i.test(query)) {
+    const account = credentialDatabase.accounts.get(key);
+    return { rows: account?.status === 'active' ? [structuredClone(account)] : [] };
+  }
+  if (/FROM user_channel_access uca JOIN channels ch/i.test(query)) {
+    return { rows: structuredClone(credentialDatabase.grants.get(key) || []) };
+  }
+  if (/FROM radios WHERE token = \$1/i.test(query)) {
+    const radio = credentialDatabase.radios.get(key);
+    return { rows: radio ? [structuredClone(radio)] : [] };
+  }
+  throw new Error(`Unexpected synthetic credential query: ${query}`);
+}
+
+import pool from '../../../db/index.js';
 import { V3LiveDispatcher } from '../../liveRuntime.js';
 import { V3IntentPlanner } from '../../intentPlanner.js';
+import { V3DiagnosticsJournal } from '../../diagnostics.js';
+import {
+  bindPttTransmission, createPttTransmission, finishPttTransmission,
+  loadRadioPttPrincipal, loadSessionPttPrincipal,
+} from '../../../services/pttProvenance.js';
 
 export const BASE_SHA = 'c5ce5feed7a4feadb86ddca3d6d8c89e2c2f90fa';
 export const START_TIME = new Date('2026-10-28T17:00:00.000Z');
@@ -59,7 +92,8 @@ function createCad(context) {
   const current = new Map(units.map((unit) => [unit.unit_number, null]));
   const requests = [];
   const faults = [];
-  const cad = { units, calls, current, requests, faults, failNotes: false, failStatus: false, ignoreStatusWrite: false };
+  const cad = { units, calls, current, requests, faults, failNotes: false, failStatus: false, ignoreStatusWrite: false,
+    missingUnits: new Set(), ambiguousUnits: new Set(), resolveWaits: new Map() };
   cad.fetch = vi.fn(async (rawUrl, options = {}) => {
     const url = new URL(rawUrl);
     const method = options.method || 'GET';
@@ -77,6 +111,9 @@ function createCad(context) {
     const copy = (value) => structuredClone(value);
     if (method === 'GET' && path === '/api/radio/unit/resolve-v3') {
       const ref = url.searchParams.get('unit_ref');
+      if (cad.resolveWaits.has(ref)) await cad.resolveWaits.get(ref);
+      if (cad.ambiguousUnits.has(ref)) return json({ success: false, error: 'UNIT_AMBIGUOUS', candidates: [{ id: 'duplicate-1' }, { id: 'duplicate-2' }] }, 409);
+      if (cad.missingUnits.has(ref)) return json({ success: false, error: 'UNIT_NOT_FOUND' }, 404);
       const unit = units.find((item) => item.id === ref || item.unit_number.toLowerCase() === ref?.toLowerCase());
       return unit ? json({ success: true, unit: copy(unit) }) : json({ success: false, error: 'UNIT_NOT_FOUND' }, 404);
     }
@@ -139,6 +176,7 @@ function createCad(context) {
 }
 
 export async function createHarness({ center = 'center-a', scopes = ['unit.read', 'unit.write', 'call.read', 'call.write'], llmPlans = [] } = {}) {
+  vi.spyOn(pool, 'query').mockImplementation(queryCredentialDatabase);
   const context = {
     runtimeId: `audit-${center}`, profileId: `profile-${center}`, dispatchCenterId: center,
     channelId: `channel-${center}`, roomKey: `${center}__OPS1`, channelName: 'OPS1',
@@ -165,9 +203,10 @@ export async function createHarness({ center = 'center-a', scopes = ['unit.read'
   });
   const synthesize = vi.fn(async () => synthesisReplies.length ? await synthesisReplies.shift() : Buffer.alloc(640));
   const llm = vi.fn(async () => ({ choices: [{ message: { content: JSON.stringify(llmPlans.length ? llmPlans.shift() : NO_ACTION) } }] }));
-  const planner = new V3IntentPlanner({ client: { chat: { completions: { create: llm } } } });
+  const diagnostics = new V3DiagnosticsJournal({ logger: null });
+  const planner = new V3IntentPlanner({ client: { chat: { completions: { create: llm } } }, diagnostics });
   const runtime = new V3LiveDispatcher({
-    runtimeContext: context, scopes, planner, transcribe, synthesize, codec, audioRelay: relay, floorControl: floor,
+    runtimeContext: context, scopes, planner, diagnostics, transcribe, synthesize, codec, audioRelay: relay, floorControl: floor,
     signaling: { io: {}, emergencyStates: new Map(), unitPresence: new Map() },
     emergencyPager: vi.fn(() => { faults.push('Unexpected emergency page'); throw new Error(faults.at(-1)); }),
   });
@@ -175,22 +214,68 @@ export async function createHarness({ center = 'center-a', scopes = ['unit.read'
   runtime.gateway.fetchImpl = cad.fetch;
   vi.spyOn(runtime.planner, 'plan');
   vi.spyOn(runtime.executor, 'execute');
+  vi.spyOn(runtime.speech, 'startTransmission');
+  vi.spyOn(runtime.speech, 'endTransmission');
+  vi.spyOn(runtime, '_speak');
+  vi.spyOn(diagnostics, 'record');
   const turns = [];
   const deferreds = [];
+  const principals = new Map();
+  const credentials = [];
+  const binding = { profileId: context.profileId, channelId: context.channelId, roomKey: context.roomKey, dispatchCenterId: context.dispatchCenterId };
   const h = {
-    runtime, context, cad, relay, floor, codec, transcribe, synthesize, llm, llmPlans, sttReplies, synthesisReplies, turns, deferreds,
+    runtime, context, cad, relay, floor, codec, transcribe, synthesize, llm, llmPlans, sttReplies, synthesisReplies, turns, deferreds, diagnostics, binding,
     hold(fallback) { const value = deferred(fallback); deferreds.push(value); return value; },
     writes(path) { return cad.requests.filter((request) => request.method !== 'GET' && (!path || request.path === path)); },
     spoken() { return synthesize.mock.calls.map(([text]) => text); },
-    async begin(text, unit = 'A1') {
-      sttReplies.push(text);
-      expect(await runtime.handlePttStart(context.roomKey, unit)).toBe(true);
-      const listener = listeners.get(context.roomKey);
+    async principal(unit = 'A1', options = {}) {
+      const cacheKey = `${unit}:${options.connectionId || 'default'}:${options.credentialType || 'session'}`;
+      if (!Object.keys(options).length && principals.has(cacheKey)) return principals.get(cacheKey);
+      const id = String(options.accountId || credentialDatabase.nextId++);
+      const credential = `synthetic-credential-${center}-${credentialDatabase.nextId++}`;
+      const account = { id, username: `operator-${id}`, unit_id: unit, role: 'user', is_dispatcher: false, status: options.status || 'active' };
+      credentialDatabase.accounts.set(id, account);
+      credentialDatabase.grants.set(id, options.grants || [{ channel_id: context.channelId, channel_name: context.channelName, room_key: context.roomKey }]);
+      credentials.push({ id, credential });
+      let principal;
+      if (options.credentialType === 'radio-token') {
+        credentialDatabase.radios.set(credential, { radio_id: `radio-${id}`, assigned_unit_id: id, is_locked: false });
+        principal = await loadRadioPttPrincipal(credential, { connectionId: options.connectionId });
+      } else {
+        credentialDatabase.sessions.set(credential, { user: { id } });
+        principal = await loadSessionPttPrincipal(credential, { connectionId: options.connectionId });
+      }
+      if (!Object.keys(options).length) principals.set(cacheKey, principal);
+      return principal;
+    },
+    async capture(unit = 'A1', options = {}) {
+      const principal = Object.hasOwn(options, 'principal') ? options.principal : await h.principal(unit);
+      const channel = options.channel || context.roomKey;
+      const source = createPttTransmission(principal, { channelId: channel, source: options.source || 'socket', captureStartedAt: Date.now() });
+      const metadata = Object.hasOwn(options, 'metadata') ? options.metadata : bindPttTransmission(source, binding);
+      const accepted = await runtime.handlePttStart(channel, unit, false, metadata);
+      return { unit, channel, principal, source, metadata, accepted };
+    },
+    frame(capture, payload = Buffer.from([7, 8])) {
+      const listener = listeners.get(capture.channel);
       expect(typeof listener).toBe('function');
-      listener({ unitId: unit, opusPayload: Buffer.from([7, 8]), codec: 'opus' });
-      const turn = observe(runtime.handlePttEnd(context.roomKey, unit));
+      listener({ unitId: capture.unit, opusPayload: payload, codec: 'opus' });
+    },
+    end(capture, text, options = {}) {
+      if (text !== undefined) sttReplies.push(text);
+      const sourceEnd = finishPttTransmission(capture.source);
+      const metadata = Object.hasOwn(options, 'metadata') ? options.metadata : bindPttTransmission(sourceEnd, binding);
+      const turn = observe(runtime.handlePttEnd(capture.channel, capture.unit, false, metadata));
+      turn.capture = capture;
+      turn.metadata = metadata;
       turns.push(turn);
       return turn;
+    },
+    async begin(text, unit = 'A1') {
+      const capture = await h.capture(unit);
+      expect(capture.accepted).toBe(true);
+      h.frame(capture);
+      return h.end(capture, text);
     },
     async send(text, unit = 'A1') { return finish(await h.begin(text, unit)); },
     async lastPlan() { return runtime.planner.plan.mock.results.at(-1)?.value; },
@@ -199,6 +284,12 @@ export async function createHarness({ center = 'center-a', scopes = ['unit.read'
       for (const pending of deferreds) pending.resolve(pending.fallback);
       await until(() => turns.every((turn) => turn.settled), 'fixture cleanup', 1500);
       await runtime.stop();
+      for (const { id, credential } of credentials) {
+        credentialDatabase.sessions.delete(credential);
+        credentialDatabase.radios.delete(credential);
+        credentialDatabase.accounts.delete(id);
+        credentialDatabase.grants.delete(id);
+      }
       expect(turns.map((turn) => turn.error).filter(Boolean)).toEqual([]);
       expect(faults).toEqual([]);
     },

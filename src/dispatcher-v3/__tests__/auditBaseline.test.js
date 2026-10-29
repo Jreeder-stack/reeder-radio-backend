@@ -74,14 +74,25 @@ afterAll(() => {
     'src/dispatcher-v3/operationalContext.js', 'src/dispatcher-v3/actionExecutor.js',
     'src/dispatcher-v3/responseComposer.js', 'src/dispatcher-v3/cadGateway.js',
     'src/services/azureSpeechService.js', 'src/services/aiDispatcherRuntimeManager.js', 'package-lock.json',
+    'src/dispatcher-v3/turnEnvelope.js', 'src/services/pttProvenance.js',
+    'src/services/signalingService.js', 'src/services/signalingFloorIdentityHardening.js',
+    'src/routes/pttRoutes.js', 'src/controllers/dispatchController.js',
+    'src/services/aiDispatchService.js', 'src/services/aiDispatcherSignaling.js',
   ];
   const sourceBlobs = Object.fromEntries(sourcePaths.map((path) => {
     const content = readFileSync(path);
     return [path, createHash('sha1').update(`blob ${content.length}\0`).update(content).digest('hex')];
   }));
+  // Sandboxed test runners may prohibit child processes. The caller can supply
+  // the independently verified checkout revision; source hashes still record
+  // the actual bytes tested, including uncommitted implementation changes.
+  const testedRevision = process.env.DISPATCHER_AUDIT_REVISION
+    || execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  if (!/^[a-f0-9]{40}$/.test(testedRevision)) throw new Error('Audit revision must be a complete commit SHA');
   const report = {
     task: 'AI-DISP-V3-001/01-01', historicalBaseline: BASE_SHA,
-    testedRevision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+    testedRevision,
+    revisionSource: process.env.DISPATCHER_AUDIT_REVISION ? 'caller_verified_checkout' : 'git_checkout',
     runtime: process.version, platform: `${process.platform}/${process.arch}`, mode,
     generatedAt: new Date().toISOString(), sourceBlobs,
     expectedReproductions: 14, recordedReproductions: ledger.length,

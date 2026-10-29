@@ -1,6 +1,7 @@
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { ensureV3CorrelationId } from './correlation.js';
 import { validateV3RuntimeContext } from './runtimeContract.js';
+import { assertV3TurnEnvelope, currentV3TurnEnvelope } from './turnEnvelope.js';
 
 const DEFAULT_TIMEOUT_MS = 8000;
 const SAFE_RETRY_METHODS = new Set(['GET', 'HEAD']);
@@ -42,6 +43,8 @@ export class CommandLinkGateway {
   }
 
   async request(path, options = {}) {
+    const turnEnvelope = options.turnEnvelope || currentV3TurnEnvelope();
+    if (turnEnvelope) assertV3TurnEnvelope(turnEnvelope, this.context);
     const method = String(options.method || 'GET').toUpperCase();
     const correlationId = ensureV3CorrelationId(options.correlationId, this.context.runtimeId);
     const url = this._buildUrl(path, options.query);
@@ -55,7 +58,7 @@ export class CommandLinkGateway {
     let lastError = null;
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       try {
-        return await this._execute({ url, method, headers, body, correlationId, attempt, timeoutMs: requestTimeoutMs });
+        return await this._execute({ url, method, headers, body, correlationId, attempt, timeoutMs: requestTimeoutMs, turnEnvelope });
       } catch (error) {
         lastError = error;
         if (!this._shouldRetry(error, method, attempt, attempts)) throw error;
@@ -101,7 +104,7 @@ export class CommandLinkGateway {
     return JSON.stringify(body);
   }
 
-  async _execute({ url, method, headers, body, correlationId, attempt, timeoutMs }) {
+  async _execute({ url, method, headers, body, correlationId, attempt, timeoutMs, turnEnvelope = null }) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     timer.unref?.();
@@ -137,7 +140,7 @@ export class CommandLinkGateway {
       throw cadRejectedError({ payload, response, responseCorrelationId, method, url });
     }
 
-    return Object.freeze({ success: true, statusCode: response.status, correlationId: responseCorrelationId, data: payload });
+    return Object.freeze({ success: true, statusCode: response.status, correlationId: responseCorrelationId, data: payload, ...(turnEnvelope ? { turnEnvelope } : {}) });
   }
 
   _shouldRetry(error, method, attempt, attempts) {

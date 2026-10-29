@@ -3,6 +3,7 @@ import { V3_ACTIONS, V3_UNIT_STATUSES, V3_CALL_STATUSES, listV3Actions } from '.
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { planDeterministicV3Intent } from './deterministicIntent.js';
 import { sanitizeV3OperationalContext } from './operationalContext.js';
+import { assertV3TurnEnvelope } from './turnEnvelope.js';
 
 const DEFAULT_TIMEOUT_MS = 6500;
 const CONTROL_ACTIONS = new Set(['NO_ACTION', 'CLARIFY']);
@@ -20,14 +21,20 @@ export class V3IntentPlanner {
     this.diagnostics = diagnostics;
   }
 
-  async plan({ transcript, speakerCallsign, runtimeContext, correlationId, recentContext = [], operationalContext = null, pendingContext = null, dialogueContext = null } = {}) {
+  async plan({ transcript, speakerCallsign, runtimeContext, correlationId, recentContext = [], operationalContext = null, pendingContext = null, dialogueContext = null, turnEnvelope = null } = {}) {
+    if (turnEnvelope) {
+      assertV3TurnEnvelope(turnEnvelope, runtimeContext);
+      speakerCallsign = turnEnvelope.speaker.callsign;
+    }
+    const attachTurn = (plan) => turnEnvelope ? Object.freeze({ ...plan, turnEnvelope }) : plan;
     const text = String(transcript || '').trim();
-    if (!text) return Object.freeze({ action: 'NO_ACTION', input: {}, confidence: 1, reason: 'empty_transcript' });
+    if (!text) return attachTurn(Object.freeze({ action: 'NO_ACTION', input: {}, confidence: 1, reason: 'empty_transcript' }));
 
     const deterministic = planDeterministicV3Intent({ transcript: text, speakerCallsign, operationalContext, pendingContext });
     if (deterministic) {
-      this._diag('intent_planned_deterministic', runtimeContext, correlationId, true, 0, { transcript: text, plan: deterministic });
-      return deterministic;
+      const plan = attachTurn(deterministic);
+      this._diag('intent_planned_deterministic', runtimeContext, correlationId, true, 0, { transcript: text, plan: deterministic }, turnEnvelope);
+      return plan;
     }
 
     const client = this.client || getDefaultClient();
@@ -56,20 +63,20 @@ export class V3IntentPlanner {
         ],
       }, { signal: controller.signal });
       const raw = response?.choices?.[0]?.message?.content || '{}';
-      const plan = normalizePlan(JSON.parse(raw));
-      this._diag('intent_planned', runtimeContext, correlationId, true, Date.now() - started, { transcript: text, plan });
+      const plan = attachTurn(normalizePlan(JSON.parse(raw)));
+      this._diag('intent_planned', runtimeContext, correlationId, true, Date.now() - started, { transcript: text, plan }, turnEnvelope);
       return plan;
     } catch (error) {
       const timeout = error?.name === 'AbortError';
-      this._diag('intent_failed', runtimeContext, correlationId, false, Date.now() - started, { transcript: text, message: error.message, timeout });
+      this._diag('intent_failed', runtimeContext, correlationId, false, Date.now() - started, { transcript: text, message: error.message, timeout }, turnEnvelope);
       throw new DispatcherV3Error(V3_ERROR_CODES.CAD_UNAVAILABLE, timeout ? 'Dispatcher V3 intent planning timed out' : 'Dispatcher V3 intent planning failed', { statusCode: 503, retryable: true, cause: error });
     } finally {
       clearTimeout(timer);
     }
   }
 
-  _diag(phase, runtimeContext, correlationId, success, latencyMs, details) {
-    this.diagnostics?.record?.({ phase, correlationId, runtimeId: runtimeContext?.runtimeId || null, dispatchCenterId: runtimeContext?.dispatchCenterId || null, channelId: runtimeContext?.channelId || null, success, latencyMs, details });
+  _diag(phase, runtimeContext, correlationId, success, latencyMs, details, turnEnvelope = null) {
+    this.diagnostics?.record?.({ phase, correlationId, runtimeId: runtimeContext?.runtimeId || null, dispatchCenterId: runtimeContext?.dispatchCenterId || null, channelId: runtimeContext?.channelId || null, success, latencyMs, details, turnEnvelope });
   }
 }
 

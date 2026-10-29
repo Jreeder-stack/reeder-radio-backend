@@ -2,13 +2,15 @@ import { validateV3ActionRequest, V3_ACTIONS } from './actionContracts.js';
 import { DispatcherV3Error, V3_ERROR_CODES, asDispatcherV3Error } from './errors.js';
 import { ensureV3CorrelationId } from './correlation.js';
 import { recordV3Diagnostic } from './diagnostics.js';
+import { assertV3TurnEnvelope, currentV3TurnEnvelope } from './turnEnvelope.js';
 
 export class V3ActionExecutor {
-  constructor({ runtimeContext, handlers = {}, diagnostics = null, now = () => Date.now() } = {}) {
+  constructor({ runtimeContext, handlers = {}, diagnostics = null, now = () => Date.now(), requireTurnIdentity = false } = {}) {
     this.runtimeContext = runtimeContext;
     this.handlers = new Map(Object.entries(handlers));
     this.diagnostics = diagnostics;
     this.now = now;
+    this.requireTurnIdentity = requireTurnIdentity;
   }
 
   register(action, handler) {
@@ -24,6 +26,7 @@ export class V3ActionExecutor {
   }
 
   async execute(request = {}, options = {}) {
+    const turnEnvelope = options.turnEnvelope || currentV3TurnEnvelope();
     const correlationId = ensureV3CorrelationId(options.correlationId || request.correlationId, this.runtimeContext?.runtimeId);
     const startedAt = this.now();
     const baseDiagnostic = {
@@ -32,6 +35,7 @@ export class V3ActionExecutor {
       dispatchCenterId: this.runtimeContext?.dispatchCenterId || null,
       channelId: this.runtimeContext?.channelId || null,
       action: String(request.action || '').trim().toUpperCase() || null,
+      turnEnvelope,
     };
 
     recordV3Diagnostic(this.diagnostics, {
@@ -41,6 +45,7 @@ export class V3ActionExecutor {
     });
 
     try {
+      if (this.requireTurnIdentity || turnEnvelope) assertV3TurnEnvelope(turnEnvelope, this.runtimeContext);
       const validated = validateV3ActionRequest(request, this.runtimeContext);
       recordV3Diagnostic(this.diagnostics, {
         ...baseDiagnostic,
@@ -63,6 +68,7 @@ export class V3ActionExecutor {
         input: validated.input,
         runtimeContext: this.runtimeContext,
         correlationId,
+        turnEnvelope,
       });
 
       const result = Object.freeze({
@@ -70,6 +76,7 @@ export class V3ActionExecutor {
         action: validated.action,
         correlationId,
         data: data ?? null,
+        ...(turnEnvelope ? { turnEnvelope } : {}),
       });
 
       recordV3Diagnostic(this.diagnostics, {
@@ -87,6 +94,7 @@ export class V3ActionExecutor {
         success: false,
         action: String(request.action || '').trim().toUpperCase() || null,
         correlationId,
+        ...(turnEnvelope ? { turnEnvelope } : {}),
         error: Object.freeze({
           code: normalized.code,
           message: normalized.message,

@@ -10,8 +10,10 @@ import { isConfigured as isAzureConfigured } from './azureSpeechService.js';
 import { CORE_AI_DISPATCHER_CAD_SCOPES, validateDispatcherCadIntegration } from './cadService.js';
 import { V3LiveDispatcher } from '../dispatcher-v3/liveRuntime.js';
 import { isV3PlannerConfigured } from '../dispatcher-v3/intentPlanner.js';
-import { setActiveDispatcherCompatibility } from './aiDispatchService.js';
+import { setActiveDispatcherCompatibility, setDispatcherPttCompatibilityResolver } from './aiDispatchService.js';
 import { runWithRuntime } from './runtimeContext.js';
+import { bindPttTransmission, getPttMetadata, isTrustedPttTransmission, matchPttChannelGrant } from './pttProvenance.js';
+import { canonicalChannelKey } from './channelKeyUtils.js';
 
 function clean(value) {
   const text = String(value ?? '').trim();
@@ -45,6 +47,8 @@ export class AIDispatcherRuntimeManager {
     this.runtimes = new Map();
     this.initialized = false;
     this._schemaPromise = null;
+    this._configuredPttProfiles = Object.freeze([]);
+    this._pttConfigurationLoaded = false;
   }
 
   log(action, details = {}) {
@@ -174,9 +178,67 @@ export class AIDispatcherRuntimeManager {
   }
 
   async _listRows() {
-    await this.ensureSchema();
-    const result = await pool.query('SELECT * FROM ai_dispatcher_profiles ORDER BY created_at, name');
-    return result.rows;
+    try {
+      await this.ensureSchema();
+      const result = await pool.query('SELECT * FROM ai_dispatcher_profiles ORDER BY created_at, name');
+      this._rememberPttProfiles(result.rows);
+      return result.rows;
+    } catch (error) {
+      // A failed configuration refresh cannot turn the running-runtime list
+      // into substitute authorization evidence.
+      this._pttConfigurationLoaded = false;
+      this._configuredPttProfiles = Object.freeze([]);
+      throw error;
+    }
+  }
+
+  _rememberPttProfiles(rows) {
+    // Include disabled profiles: an enabled runtime is not evidence that a
+    // shared channel has only one configured owner.
+    this._configuredPttProfiles = Object.freeze(rows.map((row) => Object.freeze({
+      profileId: clean(row.id),
+      channelId: clean(row.channel_id),
+      roomKey: canonicalChannelKey(row.room_key),
+      channelName: clean(row.channel_name),
+      dispatchCenterId: clean(row.dispatch_center_id),
+    })));
+    this._pttConfigurationLoaded = true;
+  }
+
+  _rememberPttProfile(row) {
+    if (!row) return;
+    const rows = this._configuredPttProfiles.filter((profile) => profile.profileId !== clean(row.id));
+    rows.push(Object.freeze({
+      profileId: clean(row.id), channelId: clean(row.channel_id),
+      roomKey: canonicalChannelKey(row.room_key), channelName: clean(row.channel_name),
+      dispatchCenterId: clean(row.dispatch_center_id),
+    }));
+    this._configuredPttProfiles = Object.freeze(rows);
+  }
+
+  resolvePttDispatcher(channelId, transmission) {
+    if (!this._pttConfigurationLoaded || !isTrustedPttTransmission(transmission)) return null;
+    const key = canonicalChannelKey(channelId);
+    const grant = matchPttChannelGrant(transmission.principal, key);
+    if (!grant || grant.channelId !== transmission.channelId || grant.roomKey !== transmission.roomKey) return null;
+
+    // The adapter's account-owned grant identifies the channel. The complete
+    // server configuration must then identify exactly one profile and center.
+    const candidates = this._configuredPttProfiles.filter((profile) => profile.channelId === grant.channelId);
+    if (candidates.length !== 1) return null;
+    const binding = candidates[0];
+    if (!binding.profileId || !binding.dispatchCenterId || binding.roomKey !== grant.roomKey) return null;
+    const aliases = this._configuredPttProfiles.filter((profile) => (
+      profile.channelId === key || profile.roomKey === key || profile.channelName === key
+    ));
+    if (aliases.length !== 1 || aliases[0] !== binding) return null;
+    const runtime = this.runtimes.get(binding.profileId);
+    if (!runtime || !runtime.dispatcher.matchesChannel(key)
+        || clean(runtime.context.dispatchCenterId) !== binding.dispatchCenterId
+        || clean(runtime.context.channelId) !== binding.channelId
+        || canonicalChannelKey(runtime.context.roomKey) !== binding.roomKey) return null;
+    const bound = bindPttTransmission(transmission, binding);
+    return bound ? { dispatcher: runtime.dispatcher, transmission: bound } : null;
   }
 
   async getProfileRow(id) {
@@ -282,6 +344,7 @@ export class AIDispatcherRuntimeManager {
       identity,
       normalized.statusChecksEnabled,
     ]);
+    this._rememberPttProfile(result.rows[0]);
     if (normalized.enabled) await this.startProfile(id);
     return publicProfile(result.rows[0]);
   }
@@ -309,6 +372,7 @@ export class AIDispatcherRuntimeManager {
       normalized.dispatchCenterCode,
       normalized.statusChecksEnabled,
     ]);
+    this._rememberPttProfile(result.rows[0]);
     if (normalized.enabled) await this.startProfile(id);
     return publicProfile(result.rows[0]);
   }
@@ -317,6 +381,7 @@ export class AIDispatcherRuntimeManager {
     await this.stopProfile(id, { persist: false });
     const result = await pool.query('DELETE FROM ai_dispatcher_profiles WHERE id=$1 RETURNING id', [id]);
     if (!result.rows[0]) throw Object.assign(new Error('AI dispatcher profile not found'), { statusCode: 404 });
+    this._configuredPttProfiles = Object.freeze(this._configuredPttProfiles.filter((profile) => profile.profileId !== clean(id)));
     return true;
   }
 
@@ -347,6 +412,9 @@ export class AIDispatcherRuntimeManager {
     if (!profile.dispatch_center_id || !profile.channel_id || !profile.room_key) {
       throw Object.assign(new Error('Profile requires a dispatch center and radio channel'), { statusCode: 400 });
     }
+    // Load every configured mapping before accepting any events. There are no
+    // per-event awaits before V3 allocates its intake sequence.
+    await this._listRows();
     if (!isAzureConfigured()) {
       throw Object.assign(new Error('Azure Speech is not configured'), { statusCode: 503 });
     }
@@ -379,11 +447,19 @@ export class AIDispatcherRuntimeManager {
 
       const subscriptions = [];
       const allowed = (data) => dispatcher.matchesChannel(data.channelId);
-      subscriptions.push(signalingService.onPttStart(async (data) => {
-        if (allowed(data)) await dispatcher.handlePttStart(data.channelId, data.unitId, data.isEmergency);
+      subscriptions.push(signalingService.onPttStart(async (data, transmission = getPttMetadata(data)) => {
+        const route = this.resolvePttDispatcher(data.channelId, transmission);
+        if (route?.dispatcher === dispatcher) {
+          return dispatcher.handlePttStart(data.channelId, data.unitId, data.isEmergency, route.transmission);
+        }
+        return false;
       }));
-      subscriptions.push(signalingService.onPttEnd(async (data) => {
-        if (allowed(data)) await dispatcher.handlePttEnd(data.channelId, data.unitId, data.gracePeriodMs);
+      subscriptions.push(signalingService.onPttEnd(async (data, transmission = getPttMetadata(data)) => {
+        const route = this.resolvePttDispatcher(data.channelId, transmission);
+        if (route?.dispatcher === dispatcher) {
+          return dispatcher.handlePttEnd(data.channelId, data.unitId, data.gracePeriodMs, route.transmission);
+        }
+        return false;
       }));
       subscriptions.push(signalingService.onEmergencyStart(async (data) => {
         if (allowed(data)) await dispatcher.handleEmergencyStart(data.channelId, data.unitId);
@@ -401,6 +477,7 @@ export class AIDispatcherRuntimeManager {
         startedAt: new Date().toISOString(),
       };
       this.runtimes.set(id, runtime);
+      setDispatcherPttCompatibilityResolver((channelId, transmission) => this.resolvePttDispatcher(channelId, transmission));
       if (!this._getCompatibilityRuntime()) setActiveDispatcherCompatibility(dispatcher);
       else if (this.runtimes.size === 1) setActiveDispatcherCompatibility(dispatcher);
 

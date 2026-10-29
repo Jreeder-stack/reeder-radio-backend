@@ -1,3 +1,5 @@
+import { currentV3TurnEnvelope, isV3TurnEnvelope, isV3TurnIdentity } from './turnEnvelope.js';
+
 const DEFAULT_MAX_ENTRIES = 500;
 
 const SENSITIVE_KEYS = new Set([
@@ -39,6 +41,9 @@ export class V3DiagnosticsJournal {
   }
 
   record(event = {}) {
+    const candidate = event.turnEnvelope || currentV3TurnEnvelope();
+    const turnEnvelope = isV3TurnEnvelope(candidate) ? candidate : null;
+    const turnIdentity = turnEnvelope?.identity || (isV3TurnIdentity(event.turnIdentity) ? event.turnIdentity : null);
     const entry = Object.freeze({
       timestamp: new Date(this.now()).toISOString(),
       phase: String(event.phase || 'unknown'),
@@ -51,6 +56,11 @@ export class V3DiagnosticsJournal {
       unitId: event.unitId || null,
       success: typeof event.success === 'boolean' ? event.success : null,
       latencyMs: Number.isFinite(event.latencyMs) ? event.latencyMs : null,
+      turnId: turnIdentity?.turnId || null,
+      intakeSequence: turnIdentity?.intakeSequence ?? null,
+      runtimeGeneration: turnIdentity?.runtimeGeneration || null,
+      turnIdentity,
+      turnEnvelope,
       details: Object.freeze(cloneForDiagnostics(event.details || {})),
     });
 
