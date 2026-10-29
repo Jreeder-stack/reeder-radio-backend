@@ -24,6 +24,7 @@ import { V3FieldIncidentCoordinator } from './fieldIncidentCoordinator.js';
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { randomUUID } from 'node:crypto';
 import { V3TurnScheduler } from './turnScheduler.js';
+import { V3OutboundScheduler } from './outboundScheduler.js';
 import { V3TurnLifecycle, runWithV3Life } from './turnLifecycle.js';
 import { revalidatePttActor } from '../services/pttProvenance.js';
 import { createV3TurnBudget, runWithV3Budget, assertV3DeadlineActive, withV3Stage, V3_DEADLINES } from './operationDeadline.js';
@@ -70,6 +71,7 @@ export class V3LiveDispatcher {
     emergencyCheckMs = EMERGENCY_CHECK_MS,
     emergencyPageMs = EMERGENCY_PAGE_MS,
     schedulerLimits = {},
+    outboundLimits = {},
   } = {}) {
     this.context = buildV3RuntimeContext({ ...runtimeContext, scopes });
     this.runtimeContext = this.context;
@@ -81,6 +83,21 @@ export class V3LiveDispatcher {
     this.connected = false;
     this._sequence = 1;
     this._recentContext = [];
+    this._outbound = new V3OutboundScheduler({
+      limits: outboundLimits,
+      relevant: (entry) => this.isRunning && entry.generation === this.runtimeGeneration
+        && entry.channel === this.context.roomKey
+        && (!entry.envelope || entry.envelope.runtimeGeneration === this.runtimeGeneration),
+      transmit: (entry, check) => runWithV3Budget(null, () => runWithV3Life(null, () =>
+        entry.kind === 'alert'
+          ? this._transmitAlert(entry.text, entry.correlationId, entry.envelope, { signal: entry.controller.signal, check })
+          : this._speak(entry.text, entry.correlationId, entry.envelope, { signal: entry.controller.signal, check }))),
+      onOutcome: (result, entry) => this._diag('outbound_' + result.status,
+        result.correlationId, result.status === 'completed', {
+          recipient: result.recipient, channel: result.channel, reason: result.reason,
+          elapsedMs: result.elapsedMs, deliveryId: result.id, kind: result.kind,
+        }, entry.envelope || null),
+    });
     this._lifecycle = new V3TurnLifecycle({
       getGeneration: () => this.isRunning ? this.runtimeGeneration : null,
       validator: (source) => revalidatePttActor(source, this.context),
@@ -143,6 +160,7 @@ export class V3LiveDispatcher {
     this.runtimeGeneration = randomUUID();
     this._intakeSequence = 0;
     this._scheduler.start();
+    this._outbound.start(this.runtimeGeneration);
     this.audioRelay.addAudioListener(this.context.roomKey, this.identity, this._audioListener);
     if (String(this.context.channelId) !== String(this.context.roomKey)) {
       this.audioRelay.addAudioListener(this.context.channelId, this.identity, this._audioListener);
@@ -162,6 +180,7 @@ export class V3LiveDispatcher {
   async stop() {
     this.isRunning = false;
     this._lifecycle.invalidateAll('runtime_stopped');
+    this._outbound.stop();
     this.audioRelay.removeAllAudioListeners(this.identity);
     this.floorControl.releaseAllForUnit?.(AI_FLOOR_IDENTITY);
     this._scheduler.stop();
@@ -203,6 +222,7 @@ export class V3LiveDispatcher {
       roomKey: this.context.roomKey,
       processing: this._scheduler.status().executing,
       scheduler: this._scheduler.status(),
+      outbound: this._outbound.status(),
       emergency: this._emergency ? {
         unitId: this._emergency.callsign,
         source: this._emergency.source,
@@ -286,6 +306,7 @@ export class V3LiveDispatcher {
     const state = this._lifecycle.get(turnId);
     if (!state) return null;
     const outcome = this._lifecycle.cancelById(turnId, reason);
+    this._outbound.cancelByTurn(turnId, reason);
     const ticket = [...this._scheduler.tickets].find((item) => item.identity.turnId === turnId);
     if (ticket && !ticket.executing) this._scheduler.cancel(ticket, reason);
     this._diag('turn_superseded', turnId, false, outcome || {}, state.envelope || null, state.identity);
@@ -374,7 +395,7 @@ export class V3LiveDispatcher {
         });
         this._remember({ transcript: transmission.transcript, action: 'RADIO_HAIL', input: { callsign: hail }, clarification: `${hail}, go ahead.`, success: true });
         this._diag('radio_hail_acknowledged', transmission.correlationId, true, { unitId, callsign: hail });
-        await this._speak(`${hail}, go ahead.`, transmission.correlationId, turnEnvelope);
+        this._queueReply(`${hail}, go ahead.`, transmission.correlationId, turnEnvelope);
         return true;
       }
     }
@@ -884,7 +905,7 @@ export class V3LiveDispatcher {
 
     const responseText = composeV3Response({ plan, result, speakerCallsign, turnEnvelope });
     this._remember({ transcript, action: plan.action, input: plan.input || {}, clarification: plan.clarification || null, success: result ? result.success === true : plan.action !== 'NO_ACTION' });
-    if (responseText) await this._speak(responseText, correlationId, turnEnvelope);
+    if (responseText) this._queueReply(responseText, correlationId, turnEnvelope);
   }
 
   async _executeMultiActionPlan(plan, { speakerCallsign, operationalContext, correlationId, turnEnvelope }) {
@@ -921,10 +942,34 @@ export class V3LiveDispatcher {
     return { success: true, action: 'MULTI_ACTION', correlationId, turnEnvelope, data: { steps } };
   }
 
+  _queueReply(text, correlationId, envelope) {
+    const queued = this._outbound.enqueue({
+      text, correlationId, envelope, recipient: envelope?.speaker?.callsign || envelope?.speakerRef || null,
+      channel: this.context.roomKey, generation: this.runtimeGeneration, turnId: envelope?.turnId || null,
+    });
+    if (!queued.accepted) this._diag('outbound_failed', correlationId, false,
+      { reason: queued.reason, recipient: envelope?.speaker?.callsign || null }, envelope || null);
+    return queued;
+  }
+
   async _alert(text, correlationId, turnEnvelope = currentV3TurnEnvelope()) {
+    // Physical emergency signal and floor controls remain authoritative. The
+    // priority lane preempts routine AI output, never another speaker's floor.
+    if (!this.isRunning) return this._transmitAlert(text, correlationId, turnEnvelope);
+    const task = this._outbound.enqueue({
+      text, correlationId, envelope: turnEnvelope, recipient: turnEnvelope?.speaker?.callsign || null,
+      channel: this.context.roomKey, generation: this.runtimeGeneration, turnId: turnEnvelope?.turnId || null,
+      kind: 'alert', priority: true,
+    });
+    if (!task.accepted) return false;
+    return (await task.delivery).status === 'completed';
+  }
+
+  async _transmitAlert(text, correlationId, turnEnvelope = currentV3TurnEnvelope(), { signal = null, check = () => {} } = {}) {
     assertV3DeadlineActive();
+    check();
     const channel = this.context.roomKey;
-    const acquired = await this._acquireFloor(channel, correlationId);
+    const acquired = await this._acquireFloor(channel, correlationId, { signal, check });
     assertV3DeadlineActive();
     if (!acquired) {
       this._diag('alert_skipped_channel_busy', correlationId, false, { text, channel });
@@ -935,17 +980,20 @@ export class V3LiveDispatcher {
       const tone = buildMdcTonePcm(MDC_TONE_MS);
       const toneFrames = this.codec.encodePcmToOpus(tone);
       for (const frame of toneFrames) {
+        check();
         assertV3DeadlineActive();
         this.audioRelay.injectAudio(channel, this.identity, this._sequence++, frame);
         await sleep(TX_FRAME_MS);
       }
 
       const pcm = await withV3Stage('synthesis', V3_DEADLINES.synthesisMs,
-        ({ signal, timeoutMs }) => this.synthesize(text, { turnEnvelope, signal, timeoutMs }));
+        ({ signal: synthesisSignal, timeoutMs }) => this.synthesize(text, { turnEnvelope, signal: synthesisSignal, timeoutMs }), { signal });
+      check();
       assertV3DeadlineActive();
       const speechFrames = this.codec.encodePcmToOpus(pcm);
       let lastRearmAt = Date.now();
       for (const frame of speechFrames) {
+        check();
         assertV3DeadlineActive();
         if (Date.now() - lastRearmAt >= FLOOR_REARM_MS) {
           const rearm = this.floorControl.requestFloor(channel, AI_FLOOR_IDENTITY);
@@ -966,10 +1014,10 @@ export class V3LiveDispatcher {
     }
   }
 
-  async _speak(text, correlationId, turnEnvelope = currentV3TurnEnvelope()) {
-    try { assertV3DeadlineActive(); } catch (_) { return false; }
+  async _speak(text, correlationId, turnEnvelope = currentV3TurnEnvelope(), { signal = null, check = () => {} } = {}) {
+    try { check(); assertV3DeadlineActive(); } catch (_) { return false; }
     const channel = this.context.roomKey;
-    const acquired = await this._acquireFloor(channel, correlationId);
+    const acquired = await this._acquireFloor(channel, correlationId, { signal, check });
     if (!acquired) {
       this._diag('speech_skipped_channel_busy', correlationId, false, { text, channel });
       return false;
@@ -980,12 +1028,14 @@ export class V3LiveDispatcher {
     try {
       const started = Date.now();
       const pcm = await withV3Stage('synthesis', V3_DEADLINES.synthesisMs,
-        ({ signal, timeoutMs }) => this.synthesize(text, { turnEnvelope, signal, timeoutMs }));
+        ({ signal: synthesisSignal, timeoutMs }) => this.synthesize(text, { turnEnvelope, signal: synthesisSignal, timeoutMs }), { signal });
+      check();
       assertV3DeadlineActive();
       const opusFrames = this.codec.encodePcmToOpus(pcm);
       this._diag('tts_ready', correlationId, true, { text, frames: opusFrames.length, latencyMs: Date.now() - started });
 
       for (const frame of opusFrames) {
+        check();
         assertV3DeadlineActive();
         if (Date.now() - lastRearmAt >= FLOOR_REARM_MS) {
           const rearm = this.floorControl.requestFloor(channel, AI_FLOOR_IDENTITY);
@@ -1009,9 +1059,11 @@ export class V3LiveDispatcher {
     }
   }
 
-  async _acquireFloor(channel, correlationId) {
+  async _acquireFloor(channel, correlationId, { signal = null, check = () => {} } = {}) {
     const deadline = Date.now() + FLOOR_WAIT_MS;
     while (Date.now() <= deadline) {
+      if (signal?.aborted) return false;
+      check();
       assertV3DeadlineActive();
       const recent = this.audioRelay.hasRecentInbound?.(channel, 350, [this.identity]);
       if (!recent) {
