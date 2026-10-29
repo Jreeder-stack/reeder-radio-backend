@@ -108,7 +108,10 @@ export class V3DiagnosticsJournal {
     const runtimeId = event.runtimeId || turnIdentity?.runtimeId || null;
     const dispatchCenterId = event.dispatchCenterId || turnIdentity?.dispatchCenterId || null;
     const turnId = turnIdentity?.turnId || null;
-    const details = Object.freeze(sanitize(event.details || {}));
+    const safe = sanitize(event.details || {});
+    const rawCode = event.details?.code ?? event.details?.error?.code;
+    if (!safe.code && typeof rawCode === 'string' && /^[A-Z][A-Z0-9_]{0,59}$/.test(rawCode)) safe.code = rawCode;
+    const details = Object.freeze(safe);
     const classification = kindFor({ phase }, details);
     const terminal = TERMINAL.has(phase);
     const group = [runtimeId || '', dispatchCenterId || '', turnId || '-', phase].join('|');
