@@ -4,6 +4,7 @@ import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { planDeterministicV3Intent } from './deterministicIntent.js';
 import { sanitizeV3OperationalContext } from './operationalContext.js';
 import { assertV3TurnEnvelope } from './turnEnvelope.js';
+import { withV3Stage, assertV3DeadlineActive } from './operationDeadline.js';
 
 const DEFAULT_TIMEOUT_MS = 6500;
 const CONTROL_ACTIONS = new Set(['NO_ACTION', 'CLARIFY']);
@@ -41,10 +42,8 @@ export class V3IntentPlanner {
     if (!client) throw new DispatcherV3Error(V3_ERROR_CODES.CAD_UNAVAILABLE, 'Azure OpenAI is not configured for Dispatcher V3', { statusCode: 503, retryable: true });
 
     const started = Date.now();
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
-      const response = await client.chat.completions.create({
+      const response = await withV3Stage('model', this.timeoutMs, ({ signal }) => client.chat.completions.create({
         model: process.env.AZURE_OPENAI_DEPLOYMENT,
         temperature: 0,
         response_format: { type: 'json_object' },
@@ -61,17 +60,16 @@ export class V3IntentPlanner {
             recentContext: sanitizeRecent(recentContext),
           }) },
         ],
-      }, { signal: controller.signal });
+      }, { signal }));
+      assertV3DeadlineActive();
       const raw = response?.choices?.[0]?.message?.content || '{}';
       const plan = attachTurn(normalizePlan(JSON.parse(raw)));
       this._diag('intent_planned', runtimeContext, correlationId, true, Date.now() - started, { transcript: text, plan }, turnEnvelope);
       return plan;
     } catch (error) {
-      const timeout = error?.name === 'AbortError';
+      const timeout = error?.code === V3_ERROR_CODES.OPERATION_TIMEOUT || error?.name === 'AbortError';
       this._diag('intent_failed', runtimeContext, correlationId, false, Date.now() - started, { transcript: text, message: error.message, timeout }, turnEnvelope);
       throw new DispatcherV3Error(V3_ERROR_CODES.CAD_UNAVAILABLE, timeout ? 'Dispatcher V3 intent planning timed out' : 'Dispatcher V3 intent planning failed', { statusCode: 503, retryable: true, cause: error });
-    } finally {
-      clearTimeout(timer);
     }
   }
 

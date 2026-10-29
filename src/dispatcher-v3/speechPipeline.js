@@ -3,6 +3,7 @@ import { opusCodec } from '../services/opusCodec.js';
 import { ensureV3CorrelationId } from './correlation.js';
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { isV3TurnIdentity } from './turnEnvelope.js';
+import { withV3Stage, V3_DEADLINES } from './operationDeadline.js';
 
 const DEFAULT_MAX_PCM_BYTES = 16000 * 2 * 90;
 
@@ -88,7 +89,8 @@ export class V3SpeechPipeline {
     }
     const started = Date.now();
     try {
-      const transcript = String(await this.transcribe(pcm, { turnEnvelope }) || '').trim();
+      const transcript = String(await withV3Stage('transcription', V3_DEADLINES.transcriptionMs,
+        ({ signal, timeoutMs }) => this.transcribe(pcm, { turnEnvelope, signal, timeoutMs })) || '').trim();
       this._diag('stt_completed', session.correlationId, true, { unitId: unit, transcript, audioBytes: pcm.length, truncated: session.dropped }, Date.now() - started, session.turnIdentity, turnEnvelope);
       return { ...result, transcript, audioBytes: pcm.length, truncated: session.dropped };
     } catch (error) {

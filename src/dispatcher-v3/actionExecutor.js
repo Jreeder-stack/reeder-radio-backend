@@ -3,6 +3,7 @@ import { DispatcherV3Error, V3_ERROR_CODES, asDispatcherV3Error } from './errors
 import { ensureV3CorrelationId } from './correlation.js';
 import { recordV3Diagnostic } from './diagnostics.js';
 import { assertV3TurnEnvelope, currentV3TurnEnvelope } from './turnEnvelope.js';
+import { assertV3DeadlineActive } from './operationDeadline.js';
 
 export class V3ActionExecutor {
   constructor({ runtimeContext, handlers = {}, diagnostics = null, now = () => Date.now(), requireTurnIdentity = false } = {}) {
@@ -63,6 +64,8 @@ export class V3ActionExecutor {
         );
       }
 
+      // A timed-out provider completion may not start a new CAD mutation.
+      assertV3DeadlineActive();
       const data = await handler({
         action: validated.action,
         input: validated.input,
@@ -71,6 +74,7 @@ export class V3ActionExecutor {
         turnEnvelope,
       });
 
+      assertV3DeadlineActive();
       const result = Object.freeze({
         success: true,
         action: validated.action,

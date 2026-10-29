@@ -24,6 +24,7 @@ import { V3FieldIncidentCoordinator } from './fieldIncidentCoordinator.js';
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { randomUUID } from 'node:crypto';
 import { V3TurnScheduler } from './turnScheduler.js';
+import { createV3TurnBudget, runWithV3Budget, assertV3DeadlineActive, withV3Stage, V3_DEADLINES } from './operationDeadline.js';
 import { hasEndedPttTransmission, samePttTransmission } from '../services/pttProvenance.js';
 import {
   pttBelongsToV3Runtime, createV3TurnIdentity, completeV3TurnEnvelope,
@@ -292,7 +293,8 @@ export class V3LiveDispatcher {
     // An old drained end cannot consume a newer capture bearing the same callsign.
     this._intake.delete(metadata.transmissionId);
     const capture = this.speech.sealCapture({ unitId: record.identity.speakerRef, transmissionId: metadata.transmissionId });
-    const outcome = await this._scheduler.complete(record.ticket, async () => {
+    const budget = createV3TurnBudget({ captureEndedAt: metadata.captureEndedAt });
+    const outcome = await this._scheduler.complete(record.ticket, async () => runWithV3Budget(budget, async () => {
       const speaker = await record.speakerPromise;
       const turnEnvelope = completeV3TurnEnvelope(record.identity, metadata, speaker);
       record.ticket.turnEnvelope = turnEnvelope;
@@ -303,7 +305,11 @@ export class V3LiveDispatcher {
       return runWithV3Turn(turnEnvelope, () => this.speech.endTransmission({
         unitId: record.identity.speakerRef, capture, turnEnvelope,
       }));
-    }, async (transmission) => runWithV3Turn(transmission.turnEnvelope, () => this._handleCapturedTranscript(transmission)));
+    }), async (transmission) => runWithV3Budget(budget,
+      () => runWithV3Turn(transmission.turnEnvelope,
+        () => withV3Stage('turn_processing', V3_DEADLINES.turnMs,
+          () => this._handleCapturedTranscript(transmission)))));
+    budget.finish();
     this._diag('turn_completed', record.identity.turnId, outcome.handled, {
       outcome: outcome.reason, code: outcome.code,
     }, record.ticket.turnEnvelope || null, record.identity);
@@ -772,6 +778,7 @@ export class V3LiveDispatcher {
         this._diag('operational_context_failed', correlationId, false, { speakerCallsign, message: contextError.message, code: contextError.code || null });
       }
 
+      assertV3DeadlineActive();
       plan = await this.planner.plan({
         transcript,
         speakerCallsign,
@@ -792,6 +799,7 @@ export class V3LiveDispatcher {
           reason: 'field_incident_no_silent_drop',
         };
       }
+      assertV3DeadlineActive();
       assertExplicitUnitTargets({ transcript, plan, operationalContext, speakerCallsign });
       if (plan.action !== 'NO_ACTION' && plan.action !== 'CLARIFY' && plan.confidence < MIN_EXECUTION_CONFIDENCE) {
         plan = { action: 'CLARIFY', input: plan.input || {}, confidence: plan.confidence, clarification: 'Repeat your request.', reason: 'low_confidence' };
@@ -817,6 +825,7 @@ export class V3LiveDispatcher {
       this._diag('transcript_processing_failed', correlationId, false, { speakerCallsign, message: error.message, code: error.code || null });
     }
 
+    assertV3DeadlineActive();
     dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign);
     if (plan.action === 'CLARIFY') {
       this.conversationGate.expectFollowUp(speakerCallsign, { clarification: plan.clarification, input: plan.input || {}, correlationId });
@@ -888,10 +897,13 @@ export class V3LiveDispatcher {
         await sleep(TX_FRAME_MS);
       }
 
-      const pcm = await this.synthesize(text, { turnEnvelope });
+      const pcm = await withV3Stage('synthesis', V3_DEADLINES.synthesisMs,
+        ({ signal, timeoutMs }) => this.synthesize(text, { turnEnvelope, signal, timeoutMs }));
+      assertV3DeadlineActive();
       const speechFrames = this.codec.encodePcmToOpus(pcm);
       let lastRearmAt = Date.now();
       for (const frame of speechFrames) {
+        assertV3DeadlineActive();
         if (Date.now() - lastRearmAt >= FLOOR_REARM_MS) {
           const rearm = this.floorControl.requestFloor(channel, AI_FLOOR_IDENTITY);
           if (!rearm?.granted) throw new Error(`AI dispatcher lost radio floor to ${rearm?.heldBy || 'another unit'}`);
@@ -912,6 +924,7 @@ export class V3LiveDispatcher {
   }
 
   async _speak(text, correlationId, turnEnvelope = currentV3TurnEnvelope()) {
+    try { assertV3DeadlineActive(); } catch (_) { return false; }
     const channel = this.context.roomKey;
     const acquired = await this._acquireFloor(channel, correlationId);
     if (!acquired) {
@@ -923,11 +936,14 @@ export class V3LiveDispatcher {
     let lastRearmAt = Date.now();
     try {
       const started = Date.now();
-      const pcm = await this.synthesize(text, { turnEnvelope });
+      const pcm = await withV3Stage('synthesis', V3_DEADLINES.synthesisMs,
+        ({ signal, timeoutMs }) => this.synthesize(text, { turnEnvelope, signal, timeoutMs }));
+      assertV3DeadlineActive();
       const opusFrames = this.codec.encodePcmToOpus(pcm);
       this._diag('tts_ready', correlationId, true, { text, frames: opusFrames.length, latencyMs: Date.now() - started });
 
       for (const frame of opusFrames) {
+        assertV3DeadlineActive();
         if (Date.now() - lastRearmAt >= FLOOR_REARM_MS) {
           const rearm = this.floorControl.requestFloor(channel, AI_FLOOR_IDENTITY);
           if (!rearm?.granted) {
@@ -953,6 +969,7 @@ export class V3LiveDispatcher {
   async _acquireFloor(channel, correlationId) {
     const deadline = Date.now() + FLOOR_WAIT_MS;
     while (Date.now() <= deadline) {
+      assertV3DeadlineActive();
       const recent = this.audioRelay.hasRecentInbound?.(channel, 350, [this.identity]);
       if (!recent) {
         const grant = this.floorControl.requestFloor(channel, AI_FLOOR_IDENTITY);

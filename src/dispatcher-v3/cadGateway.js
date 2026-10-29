@@ -2,6 +2,7 @@ import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { ensureV3CorrelationId } from './correlation.js';
 import { validateV3RuntimeContext } from './runtimeContract.js';
 import { assertV3TurnEnvelope, currentV3TurnEnvelope } from './turnEnvelope.js';
+import { assertV3DeadlineActive, withV3Stage } from './operationDeadline.js';
 
 const DEFAULT_TIMEOUT_MS = 8000;
 const SAFE_RETRY_METHODS = new Set(['GET', 'HEAD']);
@@ -11,7 +12,7 @@ export class CommandLinkGateway {
     validateV3RuntimeContext(context);
     this.context = context;
     this.fetchImpl = options.fetchImpl || globalThis.fetch;
-    this.timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : DEFAULT_TIMEOUT_MS;
+    this.timeoutMs = Number.isFinite(options.timeoutMs) && options.timeoutMs > 0 ? options.timeoutMs : DEFAULT_TIMEOUT_MS;
     this.maxSafeRetries = Number.isInteger(options.maxSafeRetries) ? Math.max(0, options.maxSafeRetries) : 1;
 
     if (typeof this.fetchImpl !== 'function') {
@@ -55,16 +56,22 @@ export class CommandLinkGateway {
       ? Number(options.timeoutMs)
       : this.timeoutMs;
 
-    let lastError = null;
-    for (let attempt = 1; attempt <= attempts; attempt += 1) {
-      try {
-        return await this._execute({ url, method, headers, body, correlationId, attempt, timeoutMs: requestTimeoutMs, turnEnvelope });
-      } catch (error) {
-        lastError = error;
-        if (!this._shouldRetry(error, method, attempt, attempts)) throw error;
+    // One budget across retries AND the full response body, not only response headers.
+    assertV3DeadlineActive();
+    return withV3Stage('cad', requestTimeoutMs, async ({ signal }) => {
+      let lastError = null;
+      for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        assertV3DeadlineActive();
+        if (signal.aborted) throw new DispatcherV3Error(V3_ERROR_CODES.OPERATION_TIMEOUT, 'CAD operation canceled');
+        try {
+          return await this._execute({ url, method, headers, body, correlationId, attempt, signal, turnEnvelope });
+        } catch (error) {
+          lastError = error;
+          if (!this._shouldRetry(error, method, attempt, attempts)) throw error;
+        }
       }
-    }
-    throw lastError;
+      throw lastError;
+    });
   }
 
   _buildUrl(path, query) {
@@ -104,26 +111,21 @@ export class CommandLinkGateway {
     return JSON.stringify(body);
   }
 
-  async _execute({ url, method, headers, body, correlationId, attempt, timeoutMs, turnEnvelope = null }) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    timer.unref?.();
-
+  async _execute({ url, method, headers, body, correlationId, attempt, signal, turnEnvelope = null }) {
+    assertV3DeadlineActive();
     let response;
     try {
-      response = await this.fetchImpl(url, { method, headers, body, signal: controller.signal });
+      response = await this.fetchImpl(url, { method, headers, body, signal });
     } catch (error) {
-      const timedOut = error?.name === 'AbortError';
+      if (signal.aborted) throw new DispatcherV3Error(V3_ERROR_CODES.OPERATION_TIMEOUT, 'Command Link request deadline exceeded', { statusCode: 504 });
       throw new DispatcherV3Error(
-        V3_ERROR_CODES.CAD_UNAVAILABLE,
-        timedOut ? 'Command Link request timed out' : 'Command Link request failed',
-        { retryable: true, cause: error, details: { correlationId, attempt, timedOut, timeoutMs, method, url: redactUrl(url) } },
+        V3_ERROR_CODES.CAD_UNAVAILABLE, 'Command Link request failed',
+        { retryable: true, cause: error, details: { correlationId, attempt, method, url: redactUrl(url) } },
       );
-    } finally {
-      clearTimeout(timer);
     }
-
     const payload = await parseResponseBody(response);
+    assertV3DeadlineActive();
+    if (signal.aborted) throw new DispatcherV3Error(V3_ERROR_CODES.OPERATION_TIMEOUT, 'Command Link response body deadline exceeded', { statusCode: 504 });
     const responseCorrelationId = response.headers?.get?.('x-correlation-id') || correlationId;
     if (!response.ok) {
       throw cadRejectedError({ payload, response, responseCorrelationId, method, url });
