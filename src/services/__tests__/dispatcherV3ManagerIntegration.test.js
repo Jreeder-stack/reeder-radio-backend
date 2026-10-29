@@ -159,6 +159,8 @@ beforeEach(()=>{
   vi.stubEnv('AZURE_OPENAI_DEPLOYMENT','synthetic-local-only');
   vi.stubEnv('AZURE_OPENAI_API_KEY','synthetic-do-not-call');
   vi.stubEnv('AZURE_OPENAI_ENDPOINT','https://invalid.example.test');
+  vi.stubEnv('CAD_URL','https://cad.example.test');
+  vi.stubEnv('CAD_API_KEY','synthetic-no-real-network');
   state.profiles=[];state.accounts.clear();state.sessions.clear();state.grants.clear();
   state.listeners.clear();state.sttReplies.clear();state.spoken=[];state.requests=[];state.statuses.clear();
   state.stallBody=null;state.synthWait=null;state.fetchCount=0;
