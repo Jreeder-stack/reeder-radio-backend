@@ -110,6 +110,16 @@ function mutationVerificationSatisfied(plan, result) {
 function compoundV3Response(unit, result, now) {
   const steps = Array.isArray(result?.data?.steps) ? result.data.steps : [];
   if (!steps.length) return unit + ', unable to confirm the requested operations.';
+  // Pre-03-03 callers and safety tests supplied steps without outcome status.
+  // Preserve the existing strict verification boundary for that legacy shape;
+  // the new executor supplies explicit statuses for truthful partial reporting.
+  if (steps.some(step => !step?.status)) {
+    if (!result?.success) return unit + ', unable to complete that request.';
+    if (!mutationVerificationSatisfied({ action: 'MULTI_ACTION' }, result)) {
+      return unit + ', unable to verify that change in CAD.';
+    }
+    return `Ten-four, ${formatMilitaryTimeForSpeech(now)}.`;
+  }
   const parts = [];
   for (const step of steps.slice(0, 10)) {
     const call = step.result?.data?.call || step.result?.data?.assignment || null;
