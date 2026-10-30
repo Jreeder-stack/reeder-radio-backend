@@ -1,0 +1,154 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "02-03",
+  "date": "2026-10-29",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "b4760365a99132f39057afff2ea36a53e82c9c94",
+  "implementationCommits": [
+    "0c75d416cfa3438e580bb265e07076c7ab512cd7",
+    "d012bd3bc1df3b7c7d2fd7247c5cba8fb0a4833a"
+  ],
+  "validatedExecutableSource": "d012bd3bc1df3b7c7d2fd7247c5cba8fb0a4833a",
+  "modified": [
+    "src/dispatcher-v3/conversationGate.js",
+    "src/dispatcher-v3/liveRuntime.js",
+    "src/dispatcher-v3/__tests__/conversationGate.test.js",
+    "src/dispatcher-v3/__tests__/auditBaseline.test.js"
+  ],
+  "created": [
+    "src/dispatcher-v3/__tests__/promptDelivery.test.js"
+  ],
+  "behavior": {
+    "answerWindowMs": 30000,
+    "startsOnOutboundStatus": "completed",
+    "deliveryMeaning": "local_audio_relay_injection_complete_not_human_audibility",
+    "pendingBeforeCompletion": "awaiting_delivery_without_deadline",
+    "pendingAfterFailure": "removed",
+    "outcomesWithoutWindow": [
+      "failed",
+      "interrupted",
+      "expired",
+      "outbound_queue_rejected"
+    ],
+    "promptCustody": [
+      "resolved_unit",
+      "authenticated_session",
+      "conversation_id",
+      "task_id",
+      "original_turn_id",
+      "runtime_generation",
+      "dispatch_channel"
+    ],
+    "unitToUnitIgnorableWithoutPromptReset": true,
+    "dispatcherOutputCannotStartNewUnitAnswer": true,
+    "wakeFreeFollowUpRequiresDeliveredPrompt": true,
+    "explicitAddressingPreserved": true,
+    "verifiedCadAuthorizationUnchanged": true,
+    "hardwareEmergencyControlsUnchanged": true
+  },
+  "ci": {
+    "runId": 40981399539,
+    "jobId": 123822067924,
+    "nodeMajor": 20,
+    "conclusion": "failure",
+    "focus02_03": {
+      "passed": 20,
+      "failed": 0,
+      "total": 20
+    },
+    "audit": {
+      "passed": 26,
+      "failed": 0,
+      "total": 26,
+      "repairedR11": true
+    },
+    "prior02_02": {
+      "passed": 13,
+      "failed": 0,
+      "total": 13
+    },
+    "manager": {
+      "passed": 7,
+      "failed": 0,
+      "total": 7
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "v3": {
+      "passed": 457,
+      "failed": 1,
+      "total": 458,
+      "files": 42
+    },
+    "priorRun": {
+      "id": 40981216754,
+      "fix": "corrected async setup assertion and queued-output fixture to respect 12s synthesis budget"
+    },
+    "artifact": {
+      "id": 12945076050,
+      "name": "dispatcher-v3-evidence-40981399539-1",
+      "reportedSha256": "08d9694ff616b26ce2aff35ffeef0a42158a3f62fa98e158a75d4f34539f79c4",
+      "independentlyHashed": false
+    }
+  },
+  "soleKnownFixtureFailure": "src/dispatcher-v3/__tests__/phase4Pipeline.test.js expects verified CREATE_CALL acknowledgment without independent CAD read-back; remains unmodified and red",
+  "repairedAudit": [
+    "R01",
+    "R02",
+    "R03",
+    "R04",
+    "R06",
+    "R07",
+    "R09",
+    "R10",
+    "R11",
+    "R12"
+  ],
+  "pendingAudit": [
+    "R05",
+    "R08",
+    "R13",
+    "R14"
+  ],
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "fullV3SuiteGreen": false,
+    "fullRepositoryVerified": false,
+    "newerMainIntegrated": false,
+    "liveRadioProvidersVerified": false,
+    "productionVerified": false,
+    "releaseAccepted": false,
+    "merged": false,
+    "deployed": false,
+    "paidProviderCalls": false,
+    "productionDataChanged": false
+  },
+  "counts": {
+    "parent01": 8,
+    "parent02": 3,
+    "parent03": 1,
+    "parent04": 0,
+    "completed": 12,
+    "total": 32
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "caveats": [
+    "Local completed injection does not prove speaker heard prompt",
+    "02-04 owns correction/cancel/topic changes",
+    "02-05 owns complete assignment/call relationship validation",
+    "02-08 owns full five-unit integration and old state consolidation",
+    "PR conflicts with newer main remain unresolved"
+  ],
+  "next": "02-04: Implement correction, cancel, topic change and resumption"
+}

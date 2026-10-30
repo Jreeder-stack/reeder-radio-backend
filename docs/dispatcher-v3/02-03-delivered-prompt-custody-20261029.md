@@ -1,0 +1,35 @@
+# AI Dispatcher V3 02-03: correlate follow-ups with delivered prompts
+
+**Plan:** AI-DISP-V3-001. **Original work item:** 02-03, no scope extension. **Repository:** `Jreeder-stack/reeder-radio-backend`; **branch:** `test/dispatcher-v3-01-01-baseline-20261028`; **PR:** [#163](https://github.com/Jreeder-stack/reeder-radio-backend/pull/163), draft/open/unmerged/unmergeable.
+
+## Confirmed root cause and bounded architectural repair
+
+The old `V3ConversationGate.expectFollowUp` immediately set `expiresAt = creationTime + 30_000` when a radio question was generated. `V3LiveDispatcher._processTranscript` created this pending state before queuing speech. `V3OutboundScheduler` independently delivered routine speech after any queued radio/floor/voice delay, and could report `completed`, `expired`, `interrupted` or `failed`. There was no correlation between pending-task availability and that delivery result. R11 demonstrated that an undelivered question could expire before its recipient had an opportunity to reply.
+
+The implementation retains the single existing V3 outbound scheduler, conversation records and gate. `expectFollowUp` now fails closed without trusted conversation/session/task/turn/generation/channel identifiers, and registers a prompt in `awaiting_delivery` with **no answer deadline**. The runtime commits the original task before associating it with the pending prompt. `V3OutboundScheduler`'s **terminal outcome callback** calls the gate only for the matching authenticated original turn, output recipient, owned conversation, task ID, runtime generation and channel.
+
+Exactly one `completed` terminal outcome changes the state to `delivered`, with `deliveredAt` equal to the locally observed completion time and `expiresAt = deliveredAt + 30_000`. This outcome means **successful local relay injection**, not proof the person heard or received the transmission. A `failed`, `interrupted` or `expired` outcome removes the prompt; immediate outbound queue rejection does the same. A late, cross-session, wrong-unit, wrong-task, wrong-turn or wrong-channel callback cannot activate a newer prompt or restart its lease. Runtime shutdown clears its pending state. `V3TurnLifecycle.bindPending` and `isCurrentPending` ensure even already admitted replies fail closed if their lease is no longer current during asynchronous work.
+
+An answer without a wake word is accepted only within a **delivered, matching, live** task window. Explicitly addressed fresh traffic keeps its independent intent path; cross-unit traffic (including directly addressed different callsigns) is ignored without consuming the valid window, and authenticated foreign sessions cannot answer another operator's question. The runtime's existing AI-transmitter exclusion remains in force. A model's ambiguous answer can request another targeted question while retaining the same intended task, but the **new** prompt must again be delivered before its reply is actionable.
+
+No radio transport, codec, firmware, schema, provider, authorization, hardware emergency or CAD mutation-verification implementation was changed. There is no alternate dispatcher engine or separate pending-task manager.
+
+## Source, CI and negative coverage
+
+- Parent / previous documentation HEAD: `b4760365a99132f39057afff2ea36a53e82c9c94`.
+- Core implementation + new runtime/gate tests + repaired R11 assertion: `0c75d416cfa3438e580bb265e07076c7ab512cd7`.
+- Focused test-fixture correction: `d012bd3bc1df3b7c7d2fd7247c5cba8fb0a4833a`. The first CI run `40981216754` demonstrated two *new test-fixture* errors: the test checked an async pending record before initialization, and another held TTS beyond the existing 12-second synthesis deadline. Tests were corrected to wait for the actual runtime state and exercise a truly long buffered radio output without weakening the stage budgets.
+- **Final independently GitHub CI-tested executable source:** `d012bd3bc1df3b7c7d2fd7247c5cba8fb0a4833a`.
+- [Final CI 40981399539](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/40981399539), job `123822067924` on Node 20: **20/20** new 02-03 tests through actual `V3ConversationGate` and `V3LiveDispatcher`; **26/26** existing audit/control cases with R11 now always asserting repaired behavior; **13/13** prior 02-02 retained-task tests; **7/7** real runtime-manager integration; **81/81** PTT/credential/floor; **457/458** full V3 suite across 42 files. Some group totals overlap. The syntax and absent-legacy-engine workflow checks passed.
+- The **only unchanged failure** is `src/dispatcher-v3/__tests__/phase4Pipeline.test.js`'s CREATE_CALL fixture, which expects positive verification speech without independent CAD read-back evidence. The actual runtime refuses to assert verified success. The CI overall conclusion is **failure**, not full-green or G-01 acceptance. This fixture remains unmodified.
+- GitHub CI artifact `12945076050` (`dispatcher-v3-evidence-40981399539-1`), reported SHA-256 `08d9694ff616b26ce2aff35ffeef0a42158a3f62fa98e158a75d4f34539f79c4`; provider-reported digest not independently downloaded/rehashed.
+
+Twenty 02-03 tests exercise creation-vs-delivery expiry, wrong/late/duplicate receipts, missing custody, failure/interruption/expiry clearing, foreign session and unrelated radio speech, a delayed synthesis completed inside existing bounds, a queued prompt behind another unit's output, premature answers, aborted/failed outputs, bounded queued output expiry, A1/B2/C3 isolation, retained re-clarification of the same task, explicit fresh addressing, expiring answers, AI loopback rejection, positive disposition and identical callsigns in two dispatch centers. The revised R11 audit reproduces old creation-time expiration with a 10-second TTS delay followed by a 22-second wait after successful delivery, respecting the existing 12s synthesis and 22s outbound limits. All tests use synthetic CAD, credentials and media; no production or paid provider access.
+
+## Completion boundary and next work
+
+**02-03 coding/scoped mocked validation completed.** The original four parent tasks and all 32 work-item IDs/32 deliverables/32 acceptance paragraphs remain intact: parent 01 **8/8**, 02 **3/8**, 03 **1/8**, 04 **0/8**, total **12/32**. G-01 through G-04 remain unchecked. `02-04` owns unified correction/cancel/topic-change/resumption lifecycle; `02-05` owns full shared-incident/assignment revalidation; `02-06/02-07/02-08` own shared facts, reconnect and five-unit end-to-end acceptance. R05/R08/R13/R14 remain known audit defects; legacy CREATE_CALL verification fixture remains red.
+
+This work does **not** prove human audibility, live radio/provider integration, full repository/mobile regression, newer-main conflict integration, production state, pilot or release acceptance. No merge/rebase, service restart, deployment, real payment, production CAD write or paid model call was authorized or performed. PR #163 remains draft/open/unmerged/unmergeable.
+
+**Next original ID:** 02-04: Implement correction, cancel, topic change and resumption.
