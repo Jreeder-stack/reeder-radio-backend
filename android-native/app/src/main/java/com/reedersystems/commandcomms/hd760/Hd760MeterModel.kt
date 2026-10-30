@@ -31,6 +31,16 @@ object Hd760MeterModel {
     fun cellularBars(platformLevel: Int?): Int? =
         platformLevel?.takeIf { it in 0..4 }?.let { if (it == 0) 1 else it + 1 }
 
+    /** Live PCM RMS in signed 16-bit units, not a synthetic signal-strength meter. */
+    fun audioBars(rms: Double): Int = when {
+        !rms.isFinite() || rms < 80.0 -> 0
+        rms < 250.0 -> 1
+        rms < 650.0 -> 2
+        rms < 1_600.0 -> 3
+        rms < 4_000.0 -> 4
+        else -> 5
+    }
+
     fun receiveBars(quality: SignalQuality): Int? = when (quality) {
         SignalQuality.EXCELLENT -> 5
         SignalQuality.GOOD -> 4
