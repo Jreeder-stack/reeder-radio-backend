@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.os.Build
+import android.os.SystemClock
 import android.media.audiofx.LoudnessEnhancer
 import android.util.Log
 import com.reedersystems.commandcomms.BuildConfig
@@ -105,6 +106,8 @@ class AudioPlayback(
         Log.d(TAG, "[LOUDNESS] LoudnessEnhancer released")
     }
     var onFrameDecoded: (() -> Unit)? = null
+    var onPcmAudioFrame: ((Double) -> Unit)? = null
+    private var lastRmsMeterAtMs: Long = 0L
     var onUnderrun: (() -> Unit)? = null
     var onDecodeFailure: (() -> Unit)? = null
     var onFecRecovery: (() -> Unit)? = null
@@ -448,6 +451,13 @@ class AudioPlayback(
                                     }
                                     applyRxDspChain(pcm)
                                     applyGain(pcm)
+                                    if (onPcmAudioFrame != null) {
+                                        val meterNow = SystemClock.elapsedRealtime()
+                                        if (meterNow - lastRmsMeterAtMs >= 100L) {
+                                            lastRmsMeterAtMs = meterNow
+                                            onPcmAudioFrame?.invoke(RadioDiagLog.pcmStats(pcm, pcm.size).rms)
+                                        }
+                                    }
 
                                     if (lastWasConcealment) {
                                         applyPostLossFadeIn(pcm)
