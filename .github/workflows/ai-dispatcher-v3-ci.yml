@@ -58,6 +58,8 @@ jobs:
           node --check src/dispatcher-v3/liveRuntime.js
           node --check src/dispatcher-v3/turnScheduler.js
           node --check src/dispatcher-v3/intentPlanner.js
+          node --check src/dispatcher-v3/semanticContract.js
+          node --check src/dispatcher-v3/__tests__/semanticInterpretation.test.js
           node --check src/dispatcher-v3/__tests__/auditBaseline.test.js
           node --check src/dispatcher-v3/__tests__/helpers/auditRuntimeHarness.js
           node --check src/services/pttProvenance.js

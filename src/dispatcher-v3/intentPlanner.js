@@ -121,6 +121,11 @@ function semanticRejectionQuestion(reason) {
   if (reason === 'untrusted_identity_field') {
     return 'Repeat the unit callsign and the action you want.';
   }
+  // 03-01 containment: malformed model JSON must never produce a keyword
+  // fallback or a CAD change, and the radio reply must remain truthful.
+  if (reason === 'invalid_model_response') {
+    return 'I was unable to process that response. Please clarify the action or information you need.';
+  }
   return 'Please clarify the action or information you need.';
 }
 

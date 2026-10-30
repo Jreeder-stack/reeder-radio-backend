@@ -184,7 +184,7 @@ describe('AI-DISP-V3-001 03-02 one structured semantic contract', () => {
       operation('conversation_only', 'NO_ACTION', {}, { reason: 'no matching CAD operation' }),
     ] });
     expect(await h.send('Central, thanks for the update, understood')).toBe(true);
-    expect((await h.lastPlan()).toMatchObject({
+    expect(await h.lastPlan()).toMatchObject({
       action: 'NO_ACTION', intentType: 'conversation_only',
     });
     expect(h.writes()).toEqual([]);
