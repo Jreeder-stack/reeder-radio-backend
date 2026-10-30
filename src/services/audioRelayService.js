@@ -1,7 +1,7 @@
 import dgram from 'dgram';
 import { canonicalChannelKey } from './channelKeyUtils.js';
 import { opusCodec } from './opusCodec.js';
-import { RADIO_FLAG_CODEC_PCM, isRadioPcmFallback, isValidRadioAudioPayload } from './radioAudioCodecFlags.js';
+import { isRadioPcmFallback, isValidRadioAudioPayload } from './radioAudioCodecFlags.js';
 
 const VERSION_LEN = 1;
 const FLAGS_LEN = 1;
