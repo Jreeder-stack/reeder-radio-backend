@@ -110,14 +110,12 @@ private fun FixedIndicatorSlot(kind: StatusIcon, active: Boolean, bars: Int? = n
 }
 
 @Composable
-private fun SharedTxRxMeter(tx: Boolean, rx: Boolean, rxBars: Int?) {
+private fun SharedTxRxMeter(tx: Boolean, rx: Boolean, txBars: Int, rxBars: Int) {
     // Fixed-height space stays completely blank when idle.
     Box(Modifier.fillMaxWidth().height(29.dp), contentAlignment = Alignment.Center) {
         if (tx || rx) {
-            val known = if (tx) null else rxBars
-            val count = known ?: 0
+            val count = (if (tx) txBars else rxBars).coerceIn(0, 5)
             val filled = when {
-                known == null -> Muted
                 count <= 1 -> Color(0xFFB42318)
                 count <= 3 -> Color(0xFFB67508)
                 else -> Color(0xFF16784A)
@@ -190,8 +188,9 @@ fun RadioFlavorScreen(
             delay(4_000L)
         }
     }
-    val tx = state.pttState == PttState.TRANSMITTING
-    val rx = !tx && state.radioState == RadioState.RECEIVING
+    // Floor grant is not microphone capture; a signaling event is not audio.
+    val tx = state.txMediaActive
+    val rx = !tx && state.rxMediaActive
     val emergency = state.myEmergencyActive
     val accent = if (emergency) Color(0xFFB71C1C) else Color(0xFF17618F)
 
@@ -311,7 +310,8 @@ fun RadioFlavorScreen(
                 SharedTxRxMeter(
                     tx = tx,
                     rx = rx,
-                    rxBars = Hd760MeterModel.receiveBars(state.signalQuality)
+                    txBars = state.txAudioBars,
+                    rxBars = state.rxAudioBars
                 )
             } else {
                 Spacer(Modifier.height(29.dp))
