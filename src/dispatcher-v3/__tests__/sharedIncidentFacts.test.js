@@ -37,18 +37,22 @@ describe('02-06 shared incident source and task isolation',()=>{
     expect(payload.sharedIncident).toMatchObject({callId:'OLD-CALL',verifiedCadFacts:true,participatingUnits:['A1','B2'],reportCount:1});
     expect(JSON.stringify(payload)).not.toContain('Subject walking north');
     expect(payload.recentContext).toEqual([]);
-    expect(payload.pendingContext).toBeNull();
+    expect(payload.pendingContext).toEqual({});
     expect(h.spoken().at(-1)).toMatch(/A1 reported: Subject walking north.*unverified report/i);
     expect(h.writes('/api/radio/note')).toHaveLength(1);
   });
   it('B2 cannot inherit A1 delivered disposition even while assigned to same incident',async()=>{
     const h=await make({llmPlans:[read()]});together(h);
+    // With B2 still assigned, CLEAR_UNIT would complete without asking for a
+    // disposition. Stage a single-unit call before the prompt, then attach B2.
+    h.cad.calls.get('OLD-CALL').assigned_units=[{unit_id:'A1'}];
     await h.send('Central, clear me from my call','A1');
+    h.cad.calls.get('OLD-CALL').assigned_units.push({unit_id:'B2'});
     const pending=h.runtime.conversationGate.pending.get('A1');
     expect(pending?.kind).toBe('disposition');
     await h.send('Central, what is our call?','B2');
     const payload=JSON.parse(h.llm.mock.calls.at(-1)[0].messages[1].content);
-    expect(payload.pendingContext).toBeNull();
+    expect(payload.pendingContext).toEqual({});
     expect(payload.recentContext).toEqual([]);
     expect(h.runtime.conversationGate.pending.get('A1')?.taskId).toBe(pending.taskId);
     expect(h.writes('/api/radio/dispose')).toEqual([]);
@@ -131,6 +135,20 @@ describe('02-06 shared incident source and task isolation',()=>{
     await h.send('Central, mark B2 on scene','A1');
     expect(h.writes('/api/radio/status')).toHaveLength(1);
     expect(h.cad.units.find(x=>x.unit_id==='B2').status).toBe('on_scene');
+  });
+  it('ambiguous we are both on scene never becomes even one unintended status change',async()=>{
+    const h=await make({llmPlans:[write('SET_UNIT_STATUS',{unitRef:'A1',status:'on_scene'})]});
+    together(h);await h.send("Central, we're both on scene",'A1');
+    expect(h.writes('/api/radio/status')).toHaveLength(0);
+    expect(h.spoken().at(-1)).toMatch(/Which individual units/i);
+  });
+  it('multiple CAD notes with the same text remain unattributed without a reliable note identity',async()=>{
+    const h=await make({llmPlans:[write('ADD_CALL_NOTE',{callId:'OLD-CALL',note:'Unknown direction'}),read()]});
+    together(h);await h.send('Central, note unknown direction','A1');
+    h.cad.calls.get('OLD-CALL').call_notes.push({text:'Unknown direction'});
+    await h.send('Central, read the notes','B2');
+    expect(h.spoken().at(-1)).not.toContain('A1 reported:');
+    expect(h.spoken().at(-1)).toContain('Unattributed CAD note:');
   });
   it('read-only we/our references do not request a group mutation',()=>{
     expect(clarifyV3GroupMutation({plan:read(),transcript:'what is our call?'})).toBeNull();

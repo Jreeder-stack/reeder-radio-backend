@@ -13,7 +13,7 @@ const UNIT_MUTATIONS = new Set([
 const GROUP_REFS = new Set(['we','us','ours','our units','our officers','both','both of us','all of us',
   'all our units','everyone','the two of us','the three of us']);
 const GROUP_OBJECT = /\b(?:mark|show|set|put|assign|unassign|clear|remove|attach|move|change|make|update|dispatch)\b.{0,55}?\b(?:us|both of us|all of us|our units|our officers|the two of us|the three of us)\b/i;
-const GROUP_STATUS = /\b(?:we|both of us|all of us)\s+(?:are|were|will be|should be|need to be|are now)\s+(?:available|en[\s-]?route|responding|on[\s-]?scene|cleared|off[\s-]?duty|busy|out of service)\b/i;
+const GROUP_STATUS = /\b(?:we(?:'re| are| will| should| need to)?|both(?: of us)?|all of us)\s+(?:(?:are|were|will be|should be|need to be|are now|both|are both)\s+)?(?:available|en[\s-]?route|responding|on[\s-]?scene|cleared|off[\s-]?duty|busy|out of service)\b/i;
 const clean = (v,n=240) => String(v??'').trim().replace(/\s+/g,' ').slice(0,n);
 const norm = v => clean(v).toLowerCase();
 const callId = c => clean(c?.call_id||c?.callId||c?.id);
@@ -50,7 +50,10 @@ export class V3SharedIncidentFacts {
     const reports=notes.slice(-8).map(note=>{
       const text=clean(typeof note==='string'?note:note?.text||note?.note);
       if(!text)return null;
-      const attributed=this.reports.findLast(r=>r.callId===expected&&r.text===text);
+      // Repeated identical note text cannot be correlated to a specific
+      // authenticated write. Fail closed rather than misattribute a report.
+      const occurrences=notes.filter(other=>clean(typeof other==='string'?other:other?.text||other?.note)===text).length;
+      const attributed=occurrences===1 ? this.reports.findLast(r=>r.callId===expected&&r.text===text) : null;
       return {text,kind:'operational_report',factVerified:false,cadRecorded:true,
         reportedBy:attributed?.callsign||null,
         source:attributed?'authenticated_unit_cad_write':'cad_note_unattributed'};
