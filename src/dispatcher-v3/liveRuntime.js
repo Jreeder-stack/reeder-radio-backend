@@ -919,9 +919,11 @@ export class V3LiveDispatcher {
           clarification: plan.clarification || `${speakerCallsign}, which ${ownedPendingTask.unresolvedField === 'callId' ? 'call' : 'detail'}?`,
           pendingTask: ownedPendingTask };
       }
-      if (plan.action === 'CLARIFY' && !plan.pendingTask) {
+      if (plan.action === 'CLARIFY' && plan.pendingTask && !ownedPendingTask) {
+        // The model proposes an operation; only the server may stamp its
+        // trusted original turn, owner and CAD-scoped candidate set.
         const pendingTask = createV3PendingTask({ plan, operationalContext, turnEnvelope });
-        if (pendingTask) plan = { ...plan, pendingTask };
+        plan = { ...plan, pendingTask };
       }
       if (plan.action === 'NO_ACTION' && dialogueContext && !ROUTINE_EMERGENCY_CHAT_RX.test(transcript)) {
         plan = {
