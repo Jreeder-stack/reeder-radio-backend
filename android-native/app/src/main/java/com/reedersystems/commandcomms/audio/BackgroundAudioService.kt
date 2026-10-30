@@ -395,6 +395,11 @@ class BackgroundAudioService : Service() {
                     radioEngine?.udpTransport?.suppressSameUnitDuringLocalTx = true
                 }
                 handleRadioPttDown(intent.getBooleanExtra(EXTRA_NEEDS_SIGNALING, false))
+                if (BuildConfig.FLAVOR == "hd760" && pttState == PttState.IDLE) {
+                    // Blocked/unprogrammed PTT must not leave scan RX suspended.
+                    radioEngine?.udpTransport?.suppressSameUnitDuringLocalTx = false
+                    radioEngine?.suspendHd760Scan(false)
+                }
             }
             ACTION_PTT_UP -> {
                 if (BuildConfig.FLAVOR == "hd760") {
@@ -1689,6 +1694,13 @@ class BackgroundAudioService : Service() {
         val old = pttState
         if (old == newState) return
         pttState = newState
+        if (BuildConfig.FLAVOR == "hd760" && newState == PttState.IDLE &&
+            (old != PttState.CLEANING_UP || !hd760Press.isHeld())) {
+            // All denied, failed or cancelled TX paths must restore listening.
+            // Preserve a held rapid re-press deferred through CLEANING_UP.
+            radioEngine?.udpTransport?.suppressSameUnitDuringLocalTx = false
+            radioEngine?.suspendHd760Scan(false)
+        }
         val channelKey = servicePrefs.channelRoomKey
         when (newState) {
             PttState.CONNECTING -> Log.d(TAG, "PTT_STATE $old -> CONNECTING channelKey=${channelKey ?: "none"}")
