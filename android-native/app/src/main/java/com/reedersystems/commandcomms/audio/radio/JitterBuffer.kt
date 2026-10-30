@@ -15,9 +15,12 @@ private const val SEQ_HALF = 32768
 private const val RECONNECT_PROTECTION_FRAMES = 3
 private const val SEQ_RESYNC_THRESHOLD = 1000
 
+// Preserve codec metadata with the payload through reordering and FEC.
+data class BufferedAudioPacket(val payload: ByteArray, val flags: Int)
+
 class JitterBuffer {
 
-    private val buffer = HashMap<Int, ByteArray>()
+    private val buffer = HashMap<Int, BufferedAudioPacket>()
     private val lock = Object()
 
     private var nextPlaybackSeq: Int = -1
@@ -96,7 +99,7 @@ class JitterBuffer {
         enqueueRateLimiter.reset()
     }
 
-    fun enqueue(sequence: Int, packet: ByteArray) {
+    fun enqueue(sequence: Int, packet: ByteArray, flags: Int = 0) {
         synchronized(lock) {
             if (!running) {
                 Log.w("[RadioError]", "enqueue called while not running seq=$sequence — ignoring")
@@ -144,7 +147,7 @@ class JitterBuffer {
                 }
             }
 
-            buffer[sequence] = packet
+            buffer[sequence] = BufferedAudioPacket(packet, flags)
             summaryEnqueued++
 
             enqueueRateLimiter.tick()
@@ -165,7 +168,9 @@ class JitterBuffer {
         }
     }
 
-    fun peekNextPacket(currentSeq: Int): ByteArray? {
+    fun peekNextPacket(currentSeq: Int): ByteArray? = peekNextFrame(currentSeq)?.payload
+
+    fun peekNextFrame(currentSeq: Int): BufferedAudioPacket? {
         synchronized(lock) {
             val nextSeq = (currentSeq + 1) % SEQ_MOD
             return buffer[nextSeq]
@@ -185,7 +190,9 @@ class JitterBuffer {
         }
     }
 
-    fun take(sequence: Int): ByteArray? {
+    fun take(sequence: Int): ByteArray? = takeFrame(sequence)?.payload
+
+    fun takeFrame(sequence: Int): BufferedAudioPacket? {
         synchronized(lock) {
             if (!running) return null
             return buffer.remove(sequence)
