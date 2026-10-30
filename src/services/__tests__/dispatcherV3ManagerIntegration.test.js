@@ -104,11 +104,11 @@ function fakeCad(urlString, options) {
   if (url.pathname==='/api/radio/unit/resolve-v3') {
     const unit=url.searchParams.get('unit_ref');
     const id=String(unit).replace(center+'-','');
-    if (!['A1','B2'].includes(id)) return { ...json({error:'UNIT_NOT_FOUND'}),ok:false,status:404 };
+    if (!['A1','B2','C3','D4','E5'].includes(id)) return { ...json({error:'UNIT_NOT_FOUND'}),ok:false,status:404 };
     return json({success:true,unit:{id:center+'-'+id,unit_number:id,unit_id:id,status:status(id),agency_id:'synthetic'}});
   }
   if (url.pathname==='/api/radio/status-check') return json({success:true,
-    units:['A1','B2'].map(id=>({unit_id:id,status:status(id)}))});
+    units:['A1','B2','C3','D4','E5'].map(id=>({unit_id:id,status:status(id)}))});
   if (url.pathname==='/api/radio/calls') return json({success:true,calls:[]});
   if (url.pathname.endsWith('/call')) return json({success:true,call:null});
   if (method==='POST' && url.pathname==='/api/radio/status') {
@@ -180,6 +180,35 @@ afterEach(async()=>{
   }
 });
 describe('01-08 live manager + actual V3 runtime integration with synthetic CAD',()=>{
+  it('02-08: five independently credentialed units interleave manager-to-V3 PTT while A1 transcription waits', async () => {
+    const row = profile('a', 41);
+    await start([row]);
+    const waiting = defer();
+    const first = await send(await ptt(row, 'five-A1', 'A1', waiting.promise));
+    expect(first.accepted).toBe(true);
+    await until(() => state.sttReplies.get('A1')?.length === 0, 'A1 STT started');
+    const others = [];
+    for (const unit of ['B2','C3','D4','E5']) {
+      others.push(await send(await ptt(row, 'five-' + unit, unit, 'Central, available')));
+    }
+    await until(() => state.requests.filter(r => r.method === 'POST').length === 4, 'four unit CAD writes');
+    expect(state.requests.filter(r => r.method === 'POST').map(r => r.body.unit_id))
+      .toEqual(['B2','C3','D4','E5']);
+    waiting.resolve('Central, en route');
+    await until(() => [first,...others].every(turn => turn.result?.settled), 'five manager-to-V3 turns', 2400);
+    expect(state.requests.filter(r => r.method === 'POST').map(r => r.body.unit_id))
+      .toEqual(['B2','C3','D4','E5','A1']);
+    for (const unit of ['B2','C3','D4','E5']) {
+      expect(state.statuses.get('center-a:' + unit)).toBe('available');
+    }
+    expect(state.statuses.get('center-a:A1')).toBe('en_route');
+    const runtime = manager.runtimes.get(row.id).dispatcher;
+    expect(runtime._scheduler.status().resident).toBe(0);
+    const records = [...runtime.conversations.conversations.values()];
+    expect(records).toHaveLength(5);
+    expect(new Set(records.map(record => record.speakerUnitId)).size).toBe(5);
+  });
+
   it('routes real trusted PTT into ordered same-unit CAD writes and independent B2',async()=>{
     const [a]=[profile('a',41)];await start([a]);
     const delayed=defer();const one=await ptt(a,'u-a','A1',delayed.promise);
