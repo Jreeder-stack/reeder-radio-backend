@@ -1,0 +1,144 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "02-06",
+  "date": "2026-10-30",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "4abdd6b36c6454170799ee2c04a3252a0a0f60a8",
+  "priorValidatedExecutable": "c9e92e53d9dc5b857684e222c79ae877a11f34b6",
+  "validatedExecutableSource": "0da4fb1ce858a58167260f0aac25935f2087ffa9",
+  "implementationCommits": [
+    "ae04b813c9e06415eed4a46fb3ba3fbe9dbc82f1",
+    "b89f49e685a197243cd325df9ca6f59fd7008eca",
+    "0da4fb1ce858a58167260f0aac25935f2087ffa9"
+  ],
+  "modified": [
+    "src/dispatcher-v3/liveRuntime.js",
+    "src/dispatcher-v3/intentPlanner.js",
+    "src/dispatcher-v3/responseComposer.js",
+    "src/dispatcher-v3/fieldIncidentCoordinator.js"
+  ],
+  "created": [
+    "src/dispatcher-v3/sharedIncidentFacts.js",
+    "src/dispatcher-v3/__tests__/sharedIncidentFacts.test.js"
+  ],
+  "security": {
+    "centerScopedCadRead": true,
+    "activeCallAndExplicitParticipationRequired": true,
+    "pttSpeakerIdentityAndGenerationRechecked": true,
+    "callReadUnitReadScopesRequired": true,
+    "postPlanningReadRechecked": true,
+    "modelSeesNoRawCadNotes": true,
+    "reportFactVerification": false,
+    "reportWriteVerifiedBeforeAttribution": true,
+    "duplicateTextAttributionRefused": true,
+    "pendingTasksNeverShared": true,
+    "groupTargetsRequireClarification": true,
+    "explicitIndividualActionsRetainExistingPermissions": true,
+    "sourceEmergencyControlsUnchanged": true,
+    "transportCodecSchemaUnchanged": true
+  },
+  "ci": {
+    "runId": 41048969337,
+    "jobId": 124039999953,
+    "nodeMajor": 20,
+    "conclusion": "failure",
+    "focused02_06": {
+      "passed": 18,
+      "failed": 0,
+      "total": 18
+    },
+    "audit": {
+      "passed": 26,
+      "failed": 0,
+      "total": 26
+    },
+    "prior02_05": {
+      "passed": 32,
+      "failed": 0,
+      "total": 32
+    },
+    "prior02_04": {
+      "passed": 16,
+      "failed": 0,
+      "total": 16
+    },
+    "prior02_03": {
+      "passed": 20,
+      "failed": 0,
+      "total": 20
+    },
+    "prior02_02": {
+      "passed": 13,
+      "failed": 0,
+      "total": 13
+    },
+    "manager": {
+      "passed": 7,
+      "failed": 0,
+      "total": 7
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "v3": {
+      "passed": 523,
+      "failed": 1,
+      "total": 524,
+      "files": 45
+    },
+    "syntaxPassed": true,
+    "legacyEngineAbsent": true,
+    "artifact": {
+      "id": 12973372661,
+      "name": "dispatcher-v3-evidence-41048969337-1",
+      "reportedSha256": "f16b337c578048c60b8ed26a01ea39c775bf0c8b07440bcc2dc85324c3279949",
+      "independentlyHashed": false
+    }
+  },
+  "soleKnownFixtureFailure": "Unmodified phase4Pipeline.test.js CREATE_CALL success-speech fixture lacks independent CAD read-back, correctly fails verified mutation response",
+  "auditUnresolved": [
+    "R08",
+    "R13",
+    "R14"
+  ],
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "fullV3SuiteGreen": false,
+    "fullRepositoryVerified": false,
+    "realRadioProvidersVerified": false,
+    "newerMainIntegrated": false,
+    "productionVerified": false,
+    "releaseAccepted": false,
+    "merged": false,
+    "deployed": false,
+    "paidProviderCalls": false,
+    "productionDataChanged": false
+  },
+  "counts": {
+    "parent01": 8,
+    "parent02": 6,
+    "parent03": 1,
+    "parent04": 0,
+    "completed": 15,
+    "total": 32
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "knownLimits": [
+    "Non-atomic CAD participation recheck after model/writes",
+    "Raw CAD note text not sent to model",
+    "No durable note identity/attribution for unknown or duplicate notes",
+    "Radio channel speech is audible to authorized channel listeners",
+    "Full repository/mobile, newer-main, real providers/radio, production and G-01–G-04 remain unverified"
+  ],
+  "next": "02-07: Handle channel changes, disconnects and identity changes"
+}
