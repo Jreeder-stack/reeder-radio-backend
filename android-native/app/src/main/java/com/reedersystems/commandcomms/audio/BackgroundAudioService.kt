@@ -1071,7 +1071,10 @@ class BackgroundAudioService : Service() {
                                         pttState != PttState.CONNECTING) return@launch
                                     Log.i("CC-HD760", "TPT_START floor_granted=true mic=false")
                                     // Coroutine resumes only when local tone playback completes.
-                                    app.toneEngine.playTalkPermitToneAndAwait()
+                                    val permitPlayed = app.toneEngine.playTalkPermitToneAndAwait()
+                                    if (!permitPlayed) {
+                                        throw IllegalStateException("talk-permit tone did not complete")
+                                    }
                                     if (!hd760Press.isCurrentHeld(generation) ||
                                         pttState != PttState.CONNECTING ||
                                         servicePrefs.channelRoomKey != grantedRoomKey ||
@@ -1103,6 +1106,22 @@ class BackgroundAudioService : Service() {
                                     }
                                 } catch (_: CancellationException) {
                                     Log.i("CC-HD760", "TPT_CANCELLED release_or_revoke")
+                                } catch (e: Exception) {
+                                    Log.e("CC-HD760", "TPT_OR_MIC_START_FAILED: ${e.message}", e)
+                                    if (hd760Press.isCurrentHeld(generation) &&
+                                        pttState == PttState.CONNECTING &&
+                                        servicePrefs.channelRoomKey == grantedRoomKey) {
+                                        if (engine.stateManager.txPipelineRunning) {
+                                            runCatching { engine.stopTransmit() }
+                                                .onFailure { Log.e("CC-HD760", "TX_START_CLEANUP_FAILED", it) }
+                                        }
+                                        hd760FloorGranted = false
+                                        grantedRoomKey?.let { engine.floorControl?.releaseFloor(it) }
+                                        releaseRadioAudioRoute()
+                                        transitionPttState(PttState.IDLE)
+                                        updateNotification("Radio — Standby")
+                                        sendPttTxFailed()
+                                    }
                                 }
                             }
                             return@collect
