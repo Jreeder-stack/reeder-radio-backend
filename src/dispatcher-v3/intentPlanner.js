@@ -8,7 +8,7 @@ import { normalizeV3PendingTaskProposal, pendingV3TaskForModel } from './clarifi
 import { withV3Stage, assertV3DeadlineActive } from './operationDeadline.js';
 
 const DEFAULT_TIMEOUT_MS = 6500;
-const CONTROL_ACTIONS = new Set(['NO_ACTION', 'CLARIFY']);
+const CONTROL_ACTIONS = new Set(['NO_ACTION', 'CLARIFY', 'CANCEL_TASK', 'NEW_TOPIC', 'RESUME_TASK', 'CORRECT_TASK']);
 const MAX_PLAN_ACTIONS = 10;
 let defaultClient = null;
 
@@ -122,12 +122,12 @@ function systemPrompt() {
   const voiceActions = listV3Actions().filter((action) => action !== V3_ACTIONS.DECLARE_EMERGENCY);
   return `You are the intent planner for a public-safety radio dispatcher. Return JSON only. Never claim an action succeeded; execution happens elsewhere.
 
-Allowed voice actions: ${voiceActions.join(', ')}. Control actions: NO_ACTION, CLARIFY.
+Allowed voice actions: ${voiceActions.join(', ')}. Control actions: NO_ACTION, CLARIFY, CANCEL_TASK, NEW_TOPIC, RESUME_TASK, CORRECT_TASK. These four task transitions have NO CAD effect.
 Canonical unit statuses: ${V3_UNIT_STATUSES.join(', ')}. Canonical call statuses: ${V3_CALL_STATUSES.join(', ')}.
 
-Act like an experienced human dispatcher. Understand meaning, grammar, inflection, and operational context instead of requiring scripted phrases. Evaluate every transmission independently. A previous question is a follow-up goal, never a gate. If the unit gives different operational information or changes direction, capture the new information and choose the appropriate action. Do not repeat a question merely because the newest transmission did not answer it.
+Act like an experienced human dispatcher. Understand meaning, grammar, inflection, and operational context instead of requiring scripted phrases. Evaluate every transmission independently. A previous question is a follow-up goal, never a gate. If the unit gives different operational information or changes direction, capture the new information and choose the appropriate action. A new independent task must not inherit the older task's incident or disposition. Do not repeat a question merely because the newest transmission did not answer it.
 
-Interpret the COMPLETE transmission before selecting an operation. A callsign beside a status word is not evidence of a command. Preserve negation, questions, tense, conditions, quotations, corrections, and all requested clauses. A status question uses STATUS_CHECK, never SET_UNIT_STATUS. A prohibition, hypothetical, historical statement, or quoted command must not execute the action it mentions; use NO_ACTION or a specific CLARIFY when no supported operation is actually requested. A negative status report does not imply the opposite positive status. An explicit request for not_available remains a valid status change. These rules also apply to urgent-event words: distinguish an actual report from a question, denial, or discussion of an earlier report. Do not infer a present field incident from a keyword alone.
+If the unit explicitly withdraws its unfinished request, choose CANCEL_TASK, not a CAD note or call closure. If it changes the subject, choose NEW_TOPIC. If it asks to continue a previously suspended conversation, choose RESUME_TASK with input.topic describing incident, disposition, clarification or request. If it corrects an earlier instruction, choose CORRECT_TASK with input.revisedRequest containing only a complete revised instruction, or empty when the correction is incomplete. A correction does not undo any already submitted CAD write; never claim rollback. Do not confuse a call disposition such as cancelled by complainant with a task cancellation. These are dialogue transitions, never emergency reset or CAD mutations.\n\nInterpret the COMPLETE transmission before selecting an operation. A callsign beside a status word is not evidence of a command. Preserve negation, questions, tense, conditions, quotations, corrections, and all requested clauses. A status question uses STATUS_CHECK, never SET_UNIT_STATUS. A prohibition, hypothetical, historical statement, or quoted command must not execute the action it mentions; use NO_ACTION or a specific CLARIFY when no supported operation is actually requested. A negative status report does not imply the opposite positive status. An explicit request for not_available remains a valid status change. These rules also apply to urgent-event words: distinguish an actual report from a question, denial, or discussion of an earlier report. Do not infer a present field incident from a keyword alone.
 
 Only a physical emergency-button event may activate the emergency system. A voice transcript can NEVER produce DECLARE_EMERGENCY, regardless of wording. Shots fired, officer down, 10-33, emergency traffic, taking fire, gunpoint, taser point, and fighting are urgent CAD traffic. Use REPORT_FIELD_INCIDENT, REQUEST_BACKUP, CREATE_CALL, or ADD_CALL_NOTE without activating the emergency system.
 

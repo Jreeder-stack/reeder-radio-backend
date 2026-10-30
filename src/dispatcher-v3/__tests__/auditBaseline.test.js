@@ -24,7 +24,7 @@ if (!['baseline', 'acceptance'].includes(mode)) throw new Error(`Unknown DISPATC
 const ledger = [];
 // Repaired cases must assert the fixed behavior in EVERY mode. Unrepaired
 // cases retain their pinned baseline until their owning work item is finished.
-const repairedCases = new Set(['R01', 'R02', 'R03', 'R04', 'R06', 'R07', 'R09', 'R10', 'R11', 'R12']);
+const repairedCases = new Set(['R01', 'R02', 'R03', 'R04', 'R05', 'R06', 'R07', 'R09', 'R10', 'R11', 'R12']);
 let harnesses = [];
 let networkGuard;
 
@@ -69,7 +69,7 @@ afterAll(() => {
   if (!reportPath) return;
   const sourcePaths = [
     'src/dispatcher-v3/liveRuntime.js', 'src/dispatcher-v3/conversationRecords.js', 'src/dispatcher-v3/speechPipeline.js',
-    'src/dispatcher-v3/conversationGate.js', 'src/dispatcher-v3/intentPlanner.js',
+    'src/dispatcher-v3/conversationGate.js', 'src/dispatcher-v3/taskTransitions.js', 'src/dispatcher-v3/intentPlanner.js',
     'src/dispatcher-v3/deterministicIntent.js', 'src/dispatcher-v3/fieldIncidentCoordinator.js',
     'src/dispatcher-v3/operationalContext.js', 'src/dispatcher-v3/actionExecutor.js',
     'src/dispatcher-v3/responseComposer.js', 'src/dispatcher-v3/cadGateway.js',

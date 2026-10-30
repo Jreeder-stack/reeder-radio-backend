@@ -14,6 +14,18 @@ export const V3_CONVERSATION_LIMITS = Object.freeze({
 const limited = (value, max) => String(value ?? '').trim().replace(/\s+/g, ' ').slice(0, max);
 const positive = (value, fallback) => Number.isSafeInteger(value) && value > 0 ? value : fallback;
 const copy = (value) => structuredClone(value);
+const unfinished = (task) => !!task && !task.finishedAt && !!task.pendingFollowUp
+  && !['canceled', 'expired'].includes(task.state);
+function newTask(record, envelope, time) {
+  return {
+    id: randomUUID(), conversationId: record.id,
+    state: 'active', kind: 'operation', originalTurnId: envelope.turnId,
+    latestTurnId: envelope.turnId,
+    action: null, requestedInput: {}, pendingTask: null, pendingFollowUp: null,
+    lastOutcome: null, submittedWrites: 0, finishedAt: null,
+    startedAt: time, updatedAt: time,
+  };
+}
 
 // A dialogue record may remember requested parameters, but never caches an
 // operational snapshot or represents any CAD fact as a verified source.
@@ -96,13 +108,7 @@ export class V3ConversationRecords {
 
     if (freshRequest || !record.activeTask) {
       if (record.activeTask) this._suspend(record, time);
-      record.activeTask = {
-        id: randomUUID(), conversationId: record.id,
-        state: 'active', originalTurnId: envelope.turnId,
-        latestTurnId: envelope.turnId,
-        action: null, requestedInput: {}, pendingTask: null, lastOutcome: null,
-        startedAt: time, updatedAt: time,
-      };
+      record.activeTask = newTask(record, envelope, time);
     } else {
       record.activeTask.latestTurnId = envelope.turnId;
       record.activeTask.updatedAt = time;
@@ -128,7 +134,7 @@ export class V3ConversationRecords {
     return { conversationId: record.id, taskId: record.activeTask.id };
   }
 
-  completeTurn(envelope, { plan = null, result = null } = {}) {
+  completeTurn(envelope, { plan = null, result = null, submittedWrites = 0 } = {}) {
     const key = this.scopeKey(envelope);
     this._prune();
     const record = this.conversations.get(key);
@@ -149,19 +155,119 @@ export class V3ConversationRecords {
         task.requestedInput = copy(plan.pendingTask.input);
         task.pendingTask = copy(plan.pendingTask);
         task.state = 'awaiting_clarification';
+        task.kind = 'task_clarification';
+        task.finishedAt = null;
         task.lastOutcome = 'clarification_requested';
       } else {
         task.action = action;
         task.requestedInput = copy(turn.input);
         task.pendingTask = null;
-        task.state = 'active';
+        task.state = action === 'CLARIFY' ? 'awaiting_clarification' : 'completed';
+        task.finishedAt = action === 'CLARIFY' ? null : this.now();
         task.lastOutcome = result ? (result.success === true ? 'completed_operation' : 'failed_operation')
           : action === 'CLARIFY' ? 'clarification_requested' : 'no_cad_effect';
       }
+      task.submittedWrites = (task.submittedWrites || 0) + Math.max(0, submittedWrites | 0);
       task.latestTurnId = turn.turnId;
       task.updatedAt = this.now();
     }
     return { conversationId: record.id, taskId: turn.taskId, action };
+  }
+
+  // The only source of lifecycle state for clarification, disposition and
+  // field-incident follow-ups. Prompt delivery is still owned by the gate.
+  setFollowUp(envelope, details) {
+    const key = this.scopeKey(envelope), record = this.conversations.get(key);
+    const task = record?.activeTask;
+    if (!task || task.latestTurnId !== envelope.turnId || !details || typeof details !== 'object') return null;
+    task.pendingFollowUp = copy(details);
+    task.kind = ['task_clarification', 'disposition', 'field_incident', 'radio_hail', 'correction', 'new_topic']
+      .includes(details.kind) ? details.kind : 'clarification';
+    task.state = task.kind === 'task_clarification' ? 'awaiting_clarification' : 'awaiting_follow_up';
+    task.finishedAt = null;
+    task.updatedAt = this.now();
+    return copy(task);
+  }
+
+  // Control utterances are committed without overwriting the task they
+  // cancel, suspend or resume; they never represent a CAD operation.
+  completeControlTurn(envelope, action) {
+    const key = this.scopeKey(envelope), record = this.conversations.get(key);
+    const turn = record?.turns.find((item) => item.turnId === envelope.turnId);
+    if (!turn || turn.action) return false;
+    turn.action = limited(action, 40).toUpperCase();
+    turn.success = true;
+    return true;
+  }
+
+  // Only the authenticated owner may cancel an unfinished task. A submitted
+  // CAD write is preserved as historical evidence, never described as undone.
+  cancelTask(envelope, { taskId = null, reason = 'user_canceled' } = {}) {
+    const key = this.scopeKey(envelope), record = this.conversations.get(key);
+    if (!record) return null;
+    this._pruneTasks(record);
+    const candidates = [record.activeTask, ...record.suspendedTasks];
+    const target = candidates.find((task) => unfinished(task) && (!taskId || task.id === taskId));
+    if (!target) return null;
+    target.state = 'canceled';
+    target.finishedAt = this.now();
+    target.lastOutcome = limited(reason, 40);
+    target.updatedAt = this.now();
+    const result = copy(target);
+    target.pendingFollowUp = null;
+    target.pendingTask = null;
+    record.suspendedTasks = record.suspendedTasks.filter((task) => task.id !== target.id);
+    record.lastActivityAt = this.now();
+    return result;
+  }
+
+  // A new independent request cannot inherit the old task's incident,
+  // clarification or disposition. Reassign only the current trusted turn.
+  startNewTaskForTurn(envelope) {
+    const key = this.scopeKey(envelope), record = this.conversations.get(key);
+    const turn = record?.turns.find((item) => item.turnId === envelope.turnId);
+    if (!turn) return null;
+    if (record.activeTask?.originalTurnId === envelope.turnId
+      && record.activeTask.latestTurnId === envelope.turnId) return copy(record.activeTask);
+    if (record.activeTask) this._suspend(record, this.now());
+    const task = newTask(record, envelope, this.now());
+    record.activeTask = task;
+    turn.taskId = task.id;
+    record.lastActivityAt = this.now();
+    return copy(task);
+  }
+
+  // Only an owner's bounded, unfinished suspended task can be resumed.
+  // Topic selection never accepts a model-supplied task ID or foreign state.
+  resumeTask(envelope, selector = null) {
+    const key = this.scopeKey(envelope), record = this.conversations.get(key);
+    if (!record) return { status: 'missing' };
+    this._pruneTasks(record);
+    const kind = String(selector || '').toLowerCase();
+    const compatible = (task) => {
+      if (!unfinished(task)) return false;
+      if (['incident', 'report'].includes(kind)) return task.kind === 'field_incident';
+      if (kind === 'disposition') return task.kind === 'disposition';
+      if (['clarification', 'assignment', 'question'].includes(kind)) return task.kind === 'task_clarification';
+      return true;
+    };
+    const candidates = record.suspendedTasks.filter(compatible);
+    if (!candidates.length) return { status: 'missing' };
+    if (kind && !['request', 'task', 'conversation'].includes(kind) && candidates.length > 1) {
+      return { status: 'ambiguous' };
+    }
+    const selected = candidates[0];
+    const turn = record.turns.find((item) => item.turnId === envelope.turnId);
+    if (!turn) return { status: 'missing' };
+    record.suspendedTasks.splice(record.suspendedTasks.indexOf(selected), 1);
+    if (record.activeTask) this._suspend(record, this.now());
+    selected.state = selected.kind === 'task_clarification' ? 'awaiting_clarification' : 'awaiting_follow_up';
+    selected.latestTurnId = envelope.turnId;
+    selected.updatedAt = this.now();
+    record.activeTask = selected;
+    record.lastActivityAt = this.now();
+    turn.taskId = selected.id;
+    return { status: 'resumed', task: copy(selected) };
   }
 
   // Pending answers use the full trusted scope AND the exact task/original
@@ -208,6 +314,10 @@ export class V3ConversationRecords {
   clearAll() { this.conversations.clear(); }
 
   _suspend(record, time) {
+    if (['canceled', 'expired'].includes(record.activeTask.state)) {
+      record.activeTask = null;
+      return;
+    }
     record.activeTask.state = 'suspended';
     record.activeTask.updatedAt = time;
     record.suspendedTasks.unshift(record.activeTask);
@@ -217,7 +327,10 @@ export class V3ConversationRecords {
 
   _pruneTasks(record) {
     const expired = (task) => this.now() - task.updatedAt > this.limits.ttlMs;
-    if (record.activeTask && expired(record.activeTask)) record.activeTask = null;
+    if (record.activeTask && expired(record.activeTask)) {
+      record.activeTask.state = 'expired';
+      record.activeTask = null;
+    }
     record.suspendedTasks = record.suspendedTasks.filter((task) => !expired(task));
     // Continuing activity must not keep old dialogue relevant indefinitely.
     // CAD facts live solely in CAD and are never subject to this cache TTL.

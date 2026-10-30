@@ -2,6 +2,18 @@ import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 
+// Task ownership comes from the trusted V3 turn, never a spoken callsign.
+// The optional legacy-free key supports the coordinator's direct unit tests.
+function incidentKey(unitRef, custody = null) {
+  const unit = normalizeUnit(unitRef);
+  if (!custody) return unit;
+  if (typeof custody.scopeKey !== 'string' || !custody.scopeKey
+    || typeof custody.taskId !== 'string' || !custody.taskId) {
+    throw new TypeError('Authenticated conversation task custody required for field incident');
+  }
+  return JSON.stringify([unit, custody.scopeKey, custody.taskId]);
+}
+
 export class V3FieldIncidentCoordinator {
   constructor({
     gateway,
@@ -32,12 +44,14 @@ export class V3FieldIncidentCoordinator {
     this.incidents = new Map();
   }
 
-  getDialogueContext(unitRef) {
-    const key = normalizeUnit(unitRef);
-    const state = this.incidents.get(key);
+  getDialogueContext(unitRef, custody = null) {
+    const key = incidentKey(unitRef, custody);
+    const state = this.incidents.get(key) || (!custody
+      ? [...this.incidents.values()].reverse().find((item) => item.callsign && normalizeUnit(item.callsign) === normalizeUnit(unitRef))
+      : null);
     if (!state) return null;
     if (state.expiresAt < this.now()) {
-      this.incidents.delete(key);
+      this.incidents.delete(state.key);
       return null;
     }
     return {
@@ -49,19 +63,22 @@ export class V3FieldIncidentCoordinator {
     };
   }
 
-  clear(unitRef) {
-    this.incidents.delete(normalizeUnit(unitRef));
+  clear(unitRef, custody = null) {
+    if (custody) this.incidents.delete(incidentKey(unitRef, custody));
+    else for (const [key, state] of this.incidents) {
+      if (normalizeUnit(state.callsign) === normalizeUnit(unitRef)) this.incidents.delete(key);
+    }
   }
 
   clearAll() {
     this.incidents.clear();
   }
 
-  async report({ input, correlationId }) {
+  async report({ input, correlationId, custody = null }) {
     const identity = await this.unitIdentityService.resolve(input.unitId, { correlationId });
     const context = await this.operationalContextService.snapshot({ speakerCallsign: identity.callsign, correlationId });
     const state = {
-      key: normalizeUnit(identity.callsign),
+      key: incidentKey(identity.callsign, custody),
       callsign: identity.callsign,
       unitId: identity.unitId,
       eventType: input.eventType,
@@ -104,18 +121,19 @@ export class V3FieldIncidentCoordinator {
     };
   }
 
-  async update({ input, correlationId }) {
+  async update({ input, correlationId, custody = null }) {
     const identity = await this.unitIdentityService.resolve(input.unitId, { correlationId });
-    let state = this.incidents.get(normalizeUnit(identity.callsign));
+    const key = incidentKey(identity.callsign, custody);
+    let state = this.incidents.get(key);
     if (state?.expiresAt < this.now()) {
-      this.incidents.delete(normalizeUnit(identity.callsign));
+      this.incidents.delete(key);
       state = null;
     }
 
     if (!state) {
       const context = await this.operationalContextService.snapshot({ speakerCallsign: identity.callsign, correlationId });
       state = {
-        key: normalizeUnit(identity.callsign), callsign: identity.callsign, unitId: identity.unitId,
+        key, callsign: identity.callsign, unitId: identity.unitId,
         eventType: 'operational_update', originalNote: input.note || input.value,
         callId: context.currentCall?.id || null, call: context.currentCall || null,
         noteRecorded: false, pendingGoals: [], deferredNotes: [], partialErrors: [],

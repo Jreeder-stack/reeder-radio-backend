@@ -16,6 +16,7 @@ import { V3SpeechPipeline } from './speechPipeline.js';
 import { V3IntentPlanner } from './intentPlanner.js';
 import { V3ConversationGate, stripV3LeadingAddress } from './conversationGate.js';
 import { V3ConversationRecords } from './conversationRecords.js';
+import { classifyV3TaskTransition, modelV3TaskTransition } from './taskTransitions.js';
 import { createV3PendingTask, resumeV3PendingTask } from './clarificationTasks.js';
 import { normalizeV3CommandText } from './deterministicIntent.js';
 import { materializeV3Plan } from './planMaterializer.js';
@@ -166,8 +167,10 @@ export class V3LiveDispatcher {
       updateCall: this.handlers[V3_ACTIONS.UPDATE_CALL],
       getUnitLocation: (callsign) => this._getFreshFieldUnitLocation(callsign),
     });
-    this.handlers[V3_ACTIONS.REPORT_FIELD_INCIDENT] = (request) => this.fieldIncidents.report(request);
-    this.handlers[V3_ACTIONS.UPDATE_FIELD_INCIDENT] = (request) => this.fieldIncidents.update(request);
+    this.handlers[V3_ACTIONS.REPORT_FIELD_INCIDENT] = (request) =>
+      this.fieldIncidents.report({ ...request, custody: this._taskCustody(request.turnEnvelope) });
+    this.handlers[V3_ACTIONS.UPDATE_FIELD_INCIDENT] = (request) =>
+      this.fieldIncidents.update({ ...request, custody: this._taskCustody(request.turnEnvelope) });
     this.executor = new V3ActionExecutor({ runtimeContext: this.context, handlers: this.handlers, diagnostics: this.diagnostics, requireTurnIdentity: true });
     this.speech = new V3SpeechPipeline({ runtimeContext: this.context, transcribe, codec: this.codec, diagnostics: this.diagnostics });
     this.planner = planner || new V3IntentPlanner({ diagnostics: this.diagnostics });
@@ -396,6 +399,13 @@ export class V3LiveDispatcher {
     return outcome.handled;
   }
 
+  // Field incident follow-ups are owned by an authenticated conversation task.
+  _taskCustody(envelope) {
+    if (!envelope) return null;
+    const record = this.conversations.get(envelope);
+    return record?.activeTask ? { scopeKey: this.conversations.scopeKey(envelope), taskId: record.activeTask.id } : null;
+  }
+
   async _handleCapturedTranscript(transmission) {
     const { unitId, turnEnvelope } = transmission;
     assertV3TurnEnvelope(turnEnvelope, this.context);
@@ -427,17 +437,23 @@ export class V3LiveDispatcher {
     }
     transmission.transcript = gate.transcript || transmission.transcript;
     transmission.pendingContext = gate.pending || null;
+    const taskTransition = classifyV3TaskTransition(transmission.transcript);
     transmission.sessionKey = sessionKey;
     const conversation = this.conversations.recordTurn(turnEnvelope, {
       transcript: transmission.transcript,
       reason: gate.reason,
-      freshRequest: gate.freshRequest === true || gate.reason === 'emergency',
+      freshRequest: (gate.freshRequest === true && !taskTransition) || gate.reason === 'emergency',
     });
     this._diag('conversation_recorded', transmission.correlationId, true, conversation, turnEnvelope);
     if (gate.reason === 'follow_up' && gate.pending) {
       const state = this._lifecycle.get(turnEnvelope.turnId);
       this._lifecycle.bindPending(state, unitId, gate.pending,
         (owner, pending) => this.conversationGate.isCurrentPending(owner, pending));
+    }
+
+    if (taskTransition) {
+      await this._handleTaskTransition(taskTransition, transmission);
+      return true;
     }
 
     if (gate.reason === 'wake_word') {
@@ -447,10 +463,12 @@ export class V3LiveDispatcher {
           plan: { action: 'RADIO_HAIL', input: { callsign: hail }, clarification: `${hail}, go ahead.` },
           result: { success: true },
         });
-        this._expectDeliveredFollowUp(unitId, {
+        const followUp = {
           kind: 'radio_hail', callsign: hail, correlationId: transmission.correlationId,
           clarification: `${hail}, go ahead.`,
-        }, turnEnvelope);
+        };
+        this.conversations.setFollowUp(turnEnvelope, followUp);
+        this._expectDeliveredFollowUp(unitId, followUp, turnEnvelope);
         this._diag('radio_hail_acknowledged', transmission.correlationId, true, { unitId, callsign: hail });
         this._queueReply(`${hail}, go ahead.`, transmission.correlationId, turnEnvelope);
         return true;
@@ -870,6 +888,101 @@ export class V3LiveDispatcher {
     this._emergencyTimers.clear();
   }
 
+  // 02-04. All dialogue controls move the ONE trusted task lifecycle. CAD
+  // mutations are never rolled back here; hardware emergency is untouched.
+  async _handleTaskTransition(control, { unitId, transcript, correlationId, turnEnvelope }) {
+    assertV3TurnEnvelope(turnEnvelope, this.context);
+    const life = this._lifecycle.get(turnEnvelope.turnId);
+    if (life) {
+      await this._lifecycle.authorize(life);
+      this._lifecycle.releasePending(life);
+    }
+    assertV3DeadlineActive();
+    const speaker = turnEnvelope.speaker.callsign;
+    const scopeKey = this.conversations.scopeKey(turnEnvelope);
+    const initial = this.conversations.get(turnEnvelope);
+    const prior = initial?.activeTask;
+    let response = null, followUp = null;
+
+    if (control.kind === 'cancel' || control.kind === 'correct') {
+      const canceled = this.conversations.cancelTask(turnEnvelope, { reason: control.kind === 'correct'
+        ? 'replaced_by_correction' : 'user_canceled' });
+      if (canceled) {
+        this.conversationGate.clear(unitId, scopeKey);
+        this.fieldIncidents.clear(speaker, { scopeKey, taskId: canceled.id });
+        if (canceled.originalTurnId !== turnEnvelope.turnId) {
+          this.cancelTurnById(canceled.originalTurnId, control.kind === 'correct' ? 'corrected_request' : 'user_canceled');
+        }
+      }
+      const submitted = (canceled?.submittedWrites || 0) > 0;
+      const caveat = submitted ? ' Earlier CAD updates were submitted and have not been reversed.' : '';
+      if (control.kind === 'cancel') {
+        response = canceled ? `${speaker}, the unfinished request is canceled.${caveat}`
+          : `${speaker}, there is no unfinished request to cancel. Earlier CAD actions are not reversed.`;
+      } else {
+        this.conversations.startNewTaskForTurn(turnEnvelope);
+        if (control.revisedRequest) {
+          this._diag('task_corrected', correlationId, true, { previousTaskId: canceled?.id || null }, turnEnvelope);
+          await this._processTranscript({ unitId, transcript: control.revisedRequest,
+            correlationId, pendingContext: null, turnEnvelope });
+          return true;
+        }
+        response = `${speaker}, state the complete corrected request.${caveat}`;
+        followUp = { kind: 'correction', clarification: response };
+      }
+      this._diag('task_' + control.kind, correlationId, !!canceled,
+        { taskId: canceled?.id || null, submittedWrites: canceled?.submittedWrites || 0 }, turnEnvelope);
+    } else if (control.kind === 'topic') {
+      this.conversationGate.clear(unitId, scopeKey);
+      this.conversations.startNewTaskForTurn(turnEnvelope);
+      if (control.revisedRequest) {
+        await this._processTranscript({ unitId, transcript: control.revisedRequest,
+          correlationId, pendingContext: null, turnEnvelope });
+        return true;
+      }
+      response = `${speaker}, go ahead with your new request.`;
+      followUp = { kind: 'new_topic', clarification: response };
+      this._diag('task_topic_suspended', correlationId, true,
+        { previousTaskId: prior?.id || null }, turnEnvelope);
+    } else if (control.kind === 'resume') {
+      this.conversationGate.clear(unitId, scopeKey);
+      const selected = this.conversations.resumeTask(turnEnvelope, control.selector);
+      if (selected.status === 'resumed') {
+        const task = selected.task;
+        const saved = task.pendingFollowUp;
+        const incident = task.kind === 'field_incident'
+          ? this.fieldIncidents.getDialogueContext(speaker, { scopeKey, taskId: task.id }) : null;
+        if (task.kind === 'field_incident' && !incident) {
+          this.conversations.cancelTask(turnEnvelope, { taskId: task.id, reason: 'incident_dialogue_expired' });
+          response = `${speaker}, that incident follow-up is no longer active. State a new request.`;
+        } else {
+          if (task.kind === 'disposition') response = `${speaker}, what's your disposition for ${saved.callId ? 'call ' + saved.callId : 'the earlier call'}?`;
+          else if (task.kind === 'field_incident') response = incident.pendingGoals.includes('location')
+            ? `${speaker}, what's your incident location?`
+            : incident.pendingGoals.includes('subject_description')
+              ? `${speaker}, what's the subject's description?`
+              : `${speaker}, continue your incident report.`;
+          else response = saved.clarification || `${speaker}, continue your previous request.`;
+          followUp = { ...saved, clarification: response };
+          this._diag('task_resumed', correlationId, true, { taskId: task.id, kind: task.kind }, turnEnvelope);
+        }
+      } else {
+        response = selected.status === 'ambiguous'
+          ? `${speaker}, more than one prior task matches. Specify the task to resume.`
+          : `${speaker}, no unfinished earlier task is available to resume.`;
+      }
+    } else return false;
+
+    this.conversations.completeControlTurn(turnEnvelope,
+      { cancel: 'CANCEL_TASK', correct: 'CORRECT_TASK', topic: 'NEW_TOPIC', resume: 'RESUME_TASK' }[control.kind]);
+    if (followUp) {
+      this.conversations.setFollowUp(turnEnvelope, followUp);
+      this._expectDeliveredFollowUp(unitId, { ...followUp, correlationId }, turnEnvelope);
+    }
+    if (response) this._queueReply(response, correlationId, turnEnvelope);
+    return true;
+  }
+
   async _processTranscript({ unitId: speakerCallsign, transcript, correlationId, pendingContext = null, turnEnvelope }) {
     assertV3TurnEnvelope(turnEnvelope, this.context);
     speakerCallsign = turnEnvelope.speaker.callsign;
@@ -881,7 +994,7 @@ export class V3LiveDispatcher {
     const ownedPendingTask = pendingContext?.kind === 'task_clarification'
       ? this.conversations.pendingTask(turnEnvelope, pendingContext.taskId, pendingContext.originalTurnId)
       : null;
-    let dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign);
+    let dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign, this._taskCustody(turnEnvelope));
     try {
       try {
         operationalContext = await this.operationalContextService.snapshot({ speakerCallsign, correlationId });
@@ -913,6 +1026,12 @@ export class V3LiveDispatcher {
         });
       }
       originalPlan = plan;
+      const semanticTransition = modelV3TaskTransition(plan);
+      if (semanticTransition) {
+        await this._handleTaskTransition(semanticTransition,
+          { unitId: speakerCallsign, transcript, correlationId, turnEnvelope });
+        return;
+      }
       if (ownedPendingTask && plan.action === ownedPendingTask.action) {
         try {
           plan = await resumeV3PendingTask({
@@ -929,6 +1048,21 @@ export class V3LiveDispatcher {
         plan = { ...plan, action: 'CLARIFY', input: {},
           clarification: plan.clarification || `${speakerCallsign}, which ${ownedPendingTask.unresolvedField === 'callId' ? 'call' : 'detail'}?`,
           pendingTask: ownedPendingTask };
+      }
+      // Independent instructions in an answer window do not rewrite the
+      // previous call, incident or disposition, even without a wake word.
+      if (pendingContext && plan.action !== 'CLARIFY' && plan.action !== 'NO_ACTION') {
+        const sameClarification = ownedPendingTask && plan.reason === 'clarified_original_task';
+        const sameDisposition = pendingContext.kind === 'disposition'
+          && [V3_ACTIONS.CLEAR_UNIT, V3_ACTIONS.CLOSE_CALL].includes(plan.action);
+        const sameIncident = pendingContext.kind === 'field_incident'
+          && plan.action === V3_ACTIONS.UPDATE_FIELD_INCIDENT;
+        if (!sameClarification && !sameDisposition && !sameIncident
+          && !['correction', 'new_topic'].includes(pendingContext.kind)) {
+          this.conversations.startNewTaskForTurn(turnEnvelope);
+          this.conversationGate.clear(speakerCallsign, this.conversations.scopeKey(turnEnvelope));
+          dialogueContext = null;
+        }
       }
       if (plan.action === 'CLARIFY' && plan.pendingTask && !ownedPendingTask) {
         // The model proposes an operation; only the server may stamp its
@@ -987,9 +1121,9 @@ export class V3LiveDispatcher {
     // answer window until the outbound lane reports completed injection.
     const life = this._lifecycle.get(turnEnvelope.turnId);
     if (life) this._lifecycle.releasePending(life);
-    dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign);
+    dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign, this._taskCustody(turnEnvelope));
     const responseText = composeV3Response({ plan, result, speakerCallsign, turnEnvelope });
-    this.conversations.completeTurn(turnEnvelope, { plan, result });
+    this.conversations.completeTurn(turnEnvelope, { plan, result, submittedWrites: life?.writeCount || 0 });
 
     let followUp = null;
     if (plan.action === 'CLARIFY') {
@@ -1016,6 +1150,7 @@ export class V3LiveDispatcher {
     // A silent response or an output rejected by the scheduler cannot create
     // a wake-free follow-up. Retain CAD facts, not an imaginary heard prompt.
     if (followUp && responseText) {
+      this.conversations.setFollowUp(turnEnvelope, followUp);
       this._expectDeliveredFollowUp(speakerCallsign, { ...followUp, correlationId }, turnEnvelope);
     } else {
       this.conversationGate.clear(speakerCallsign, this.conversations.scopeKey(turnEnvelope));
