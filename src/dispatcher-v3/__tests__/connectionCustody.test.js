@@ -73,6 +73,41 @@ describe('AI-DISP-V3-001 02-07 authenticated continuity and routing', () => {
     expect(owner.admit(id('old'))).toMatchObject({ accepted: false, reason: 'replaced_session' });
   });
 
+  it('handles repeated mobile reconnects without silently reviving a retired device', () => {
+    const owner = new V3ConnectionCustody();
+    expect(owner.admit(id('reconnect:0')).accepted).toBe(true);
+    for (let index = 1; index <= 12; index++) {
+      expect(owner.admit(id(`reconnect:${index}`))).toMatchObject({
+        accepted: true, previousConnectionId: `reconnect:${index-1}`,
+      });
+    }
+    expect(owner.admit(id('reconnect:0'))).toMatchObject({
+      accepted: false, reason: 'replaced_session',
+    });
+  });
+
+  it('a disconnected real socket can be replaced but cannot reclaim custody after reconnecting late', async () => {
+    const h = await make();
+    h.cad.current.set('A1', 'OLD-CALL');
+    h.cad.calls.get('OLD-CALL').assigned_units = [{ unit_id: 'A1' }];
+    const old = await h.principal('A1', { connectionId: 'socket:retired-radio' });
+    const oldSocket = socket(h, old, 'retired-radio');
+    await speak(h, 'Central, clear me from my call', old);
+    expect(h.runtime.conversationGate.pending.get('A1')?.kind).toBe('disposition');
+    oldSocket.connected = false; oldSocket.channels.clear(); oldSocket.rooms.clear();
+    const fresh = await h.principal('A1', {
+      accountId: old.accountId, connectionId: 'socket:replacement-radio',
+    });
+    socket(h, fresh, 'replacement-radio');
+    await speak(h, 'Central, resume disposition', fresh);
+    expect(h.runtime.conversationGate.pending.get('A1')?.kind).toBe('disposition');
+    oldSocket.connected = true;
+    oldSocket.channels.add(h.context.roomKey);
+    oldSocket.rooms.add(`channel:${h.context.roomKey}`);
+    expect((await h.capture('A1', { principal: old })).accepted).toBe(false);
+    expect(h.writes('/api/radio/dispose')).toEqual([]);
+  });
+
   it('keeps two genuinely live sibling radios independent instead of declaring an artificial reconnect', async () => {
     const h = await make();
     const a = await h.principal('A1', { connectionId: 'socket:radio-a' });
