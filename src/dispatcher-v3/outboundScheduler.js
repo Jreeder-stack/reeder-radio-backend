@@ -2,6 +2,13 @@
 // The caller's CAD execution promise never waits for this delivery lane.
 const DEFAULTS = Object.freeze({ maxQueued: 32, maxAgeMs: 20000, maxActiveMs: 22000 });
 const statuses = new Set(['completed', 'interrupted', 'expired', 'failed']);
+// Only an authenticated connection may replace its own routine output.
+// The audible recipient callsign is not a unique session identifier.
+const supersessionKey = (recipient, envelope) => envelope
+  ? JSON.stringify([
+    envelope.runtimeGeneration, envelope.dispatchCenterId,
+    envelope.speakerRef, envelope.accountId, envelope.connectionId, recipient,
+  ]) : String(recipient || '');
 function limit(value, fallback) { return Number.isSafeInteger(value) && value > 0 ? value : fallback; }
 export class V3OutboundScheduler {
   constructor({ transmit, relevant, onOutcome = () => {}, now = () => Date.now(), limits = {} } = {}) {
@@ -50,15 +57,16 @@ export class V3OutboundScheduler {
     let resolve;
     const delivery = new Promise(r => { resolve = r; });
     const entry = { id, text, recipient, channel, turnId, generation, correlationId, kind, priority,
+      supersessionKey: supersessionKey(recipient, envelope),
       envelope, source, createdAt, expiresAt: createdAt + this.limits.maxAgeMs,
       controller: new AbortController(), resolve, delivered: false, state: 'queued' };
     this.totals.queued += 1;
     if (kind === 'routine' && recipient) {
       // A newer response from this unit invalidates only undelivered, older
       // routine replies, not unrelated units or their CAD commands.
-      this.latest.set(recipient, id);
+      this.latest.set(entry.supersessionKey, id);
       for (const queued of [...this.queue]) {
-        if (queued.kind === 'routine' && queued.recipient === recipient) {
+        if (queued.kind === 'routine' && queued.supersessionKey === entry.supersessionKey) {
           this.queue.splice(this.queue.indexOf(queued), 1);
           this._settle(queued, 'expired', 'superseded_by_newer_reply');
         }
@@ -113,7 +121,7 @@ export class V3OutboundScheduler {
   isRelevant(entry) {
     return this.running && this.generation === entry.generation &&
       !entry.controller.signal.aborted && this.now() < entry.expiresAt &&
-      (entry.kind !== 'routine' || !entry.recipient || this.latest.get(entry.recipient) === entry.id) &&
+      (entry.kind !== 'routine' || !entry.recipient || this.latest.get(entry.supersessionKey) === entry.id) &&
       this.relevant(entry);
   }
   async _drain() {

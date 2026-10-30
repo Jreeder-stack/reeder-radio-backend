@@ -282,4 +282,33 @@ describe('AI-DISP-V3-001 02-08 actual five-unit PTT/CAD conversation integration
     for(const unit of UNITS) await h.send('Central, available',unit);
     expect(h.writes('/api/radio/status')).toHaveLength(5);
   });
+
+  it('two same-callsign live sockets keep BOTH queued questions through an occupied outbound lane', async () => {
+    const h = await make();
+    dynamic(h, ({transcript}) => /which call/i.test(transcript) ? question() : NO_ACTION);
+    const one = await h.principal('A1',{connectionId:'socket:pending-one'});
+    const two = await h.principal('A1',{accountId:one.accountId,connectionId:'socket:pending-two'});
+    linkedSocket(h,one,'pending-one'); linkedSocket(h,two,'pending-two');
+    const stalled = h.hold(Buffer.alloc(640));
+    h.synthesisReplies.push(stalled.promise);
+    const firstCapture = await h.capture('A1',{principal:one}); h.frame(firstCapture);
+    await finish(h.end(firstCapture,'Central, which call was that?'));
+    await until(()=>h.synthesize.mock.calls.length>0,'first speaker synthesizing');
+    const secondCapture = await h.capture('A1',{principal:two}); h.frame(secondCapture);
+    await finish(h.end(secondCapture,'Central, which call was that?'));
+    const records = [...h.runtime.conversations.conversations.values()];
+    const firstScope = records.find(r=>r.connectionId==='socket:pending-one').scopeKey;
+    const secondScope = records.find(r=>r.connectionId==='socket:pending-two').scopeKey;
+    const first = h.runtime.conversationGate.pendingFor('A1',firstScope);
+    const second = h.runtime.conversationGate.pendingFor('A1',secondScope);
+    expect(first.promptState).toBe('awaiting_delivery');
+    expect(second.promptState).toBe('awaiting_delivery');
+    stalled.resolve(Buffer.alloc(640)); await h.flushOutput();
+    expect(first.promptState).toBe('delivered');
+    expect(second.promptState).toBe('delivered');
+    expect(first.promptTurnId).not.toBe(second.promptTurnId);
+    expect(h.relay.injectAudio.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+
 });

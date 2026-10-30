@@ -58,6 +58,12 @@ const DISTRESS_RX = /\b(i\s+need\s+help|need\s+help|send\s+(?:me\s+)?(?:another\
 const RESPONDING_RX = /^(?:(?:(?:show|mark|put|set)\s+me\s+)?(?:en\s*route|responding)|i(?:'m|\s+am|'ll\s+be|\s+will\s+be)\s+(?:en\s*route|responding|going)|on\s+my\s+way|i(?:'ll|\s+will)\s+take\s+it)\s*[.!]*$/i;
 const ROUTINE_EMERGENCY_CHAT_RX = /^(10\s*[-/]?\s*4|copy|received|okay|ok|stand\s+by|repeat|go\s+ahead)[.! ]*$/i;
 const OFFLINE_UNIT_RX = /^(offline|off_duty|unavailable|not_available|out_of_service)$/i;
+// A callsign is display/routing metadata, not sufficient outbound custody.
+// Two authenticated devices may share a callsign without superseding replies.
+const outboundOwnerKey = (identity) => JSON.stringify([
+  identity.dispatchCenterId, identity.runtimeGeneration,
+  identity.speakerRef, identity.accountId, identity.connectionId,
+]);
 
 export class V3LiveDispatcher {
   constructor({
@@ -93,7 +99,7 @@ export class V3LiveDispatcher {
       relevant: (entry) => this.isRunning && entry.generation === this.runtimeGeneration
         && entry.channel === this.context.roomKey
         && (!entry.envelope || (entry.envelope.runtimeGeneration === this.runtimeGeneration
-          && (entry.kind === 'alert' || this._unitLatestIntake.get(entry.envelope.speakerRef) === entry.envelope.intakeSequence)))
+          && (entry.kind === 'alert' || this._unitLatestIntake.get(outboundOwnerKey(entry.envelope)) === entry.envelope.intakeSequence)))
         && (entry.kind !== 'routine' || !entry.envelope
           || (this._sessionCustody.isCurrent(entry.envelope) && this._pttRouteCurrent(entry.source))),
       transmit: async (entry, check) => {
@@ -407,7 +413,7 @@ export class V3LiveDispatcher {
     }
     if (admitted.previousConnectionId) this._retireReplacedConnection(identity, admitted.previousConnectionId);
     const life = this._lifecycle.accept(identity, metadata);
-    this._unitLatestIntake.set(identity.speakerRef, identity.intakeSequence);
+    this._unitLatestIntake.set(outboundOwnerKey(identity), identity.intakeSequence);
     life.owner = this._lifecycle;
     reservation.ticket.life = life;
     // Reserve in intake order before any STT/identity await.
