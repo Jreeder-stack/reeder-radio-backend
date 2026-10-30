@@ -1,6 +1,7 @@
 package com.reedersystems.commandcomms.audio.radio
 
 import android.util.Log
+import android.os.SystemClock
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,8 +24,6 @@ private const val KEEPALIVE_FAST_INTERVAL_MS = 3_000L
 private const val KEEPALIVE_FAST_DURATION_MS = 30_000L
 private const val MAX_RECEIVE_RECONNECT_ATTEMPTS = 5
 private const val RECEIVE_RECONNECT_COOLDOWN_MS = 30_000L
-// Voice frames older than this cannot be played in real time; never replay stale TX.
-private const val MAX_QUEUED_AUDIO_AGE_MS = 400L
 
 enum class TransportHealth { CONNECTED, RECONNECTING, DISCONNECTED }
 
@@ -249,7 +248,7 @@ class UdpAudioTransport(
         val payloadBytes = data.size
         val framed = framePacket(data)
         val enqueued = sendPacketQueue.trySend(
-            QueuedPacket(framed, payloadBytes, System.currentTimeMillis(), transportEpoch)
+            QueuedPacket(framed, payloadBytes, SystemClock.elapsedRealtime(), transportEpoch)
         ).isSuccess
         if (!enqueued) {
             txFailures++
@@ -262,10 +261,10 @@ class UdpAudioTransport(
         sendJob = scope.launch {
             try {
                 for (qp in sendPacketQueue) {
-                    if (qp.epoch != transportEpoch ||
-                        System.currentTimeMillis() - qp.enqueuedAtMs > MAX_QUEUED_AUDIO_AGE_MS) {
+                    val ageMs = SystemClock.elapsedRealtime() - qp.enqueuedAtMs
+                    if (!RadioTxFramePolicy.maySend(qp.epoch, transportEpoch, ageMs)) {
                         txFailures++
-                        Log.w(TAG, "TX_QUEUE_STALE_DROP ageMs=${System.currentTimeMillis() - qp.enqueuedAtMs} oldEpoch=${qp.epoch != transportEpoch}")
+                        Log.w(TAG, "TX_QUEUE_STALE_DROP ageMs=$ageMs oldEpoch=${qp.epoch != transportEpoch}")
                         continue
                     }
                     var sock = socket
