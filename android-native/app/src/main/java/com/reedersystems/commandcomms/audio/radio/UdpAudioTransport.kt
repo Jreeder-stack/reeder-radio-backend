@@ -23,6 +23,8 @@ private const val KEEPALIVE_FAST_INTERVAL_MS = 3_000L
 private const val KEEPALIVE_FAST_DURATION_MS = 30_000L
 private const val MAX_RECEIVE_RECONNECT_ATTEMPTS = 5
 private const val RECEIVE_RECONNECT_COOLDOWN_MS = 30_000L
+// Voice frames older than this cannot be played in real time; never replay stale TX.
+private const val MAX_QUEUED_AUDIO_AGE_MS = 400L
 
 enum class TransportHealth { CONNECTED, RECONNECTING, DISCONNECTED }
 
@@ -98,6 +100,9 @@ class UdpAudioTransport(
     @Volatile
     var txPacketCount: Long = 0
         private set
+    @Volatile var lastPacketSentAtMs: Long = 0L
+        private set
+    @Volatile private var transportEpoch: Long = 0L
 
     fun configure(host: String, port: Int) {
         this.relayHost = host
@@ -145,6 +150,7 @@ class UdpAudioTransport(
         try {
             val sock = DatagramSocket()
             sock.soTimeout = RECEIVE_TIMEOUT_MS
+            transportEpoch++
             socket = sock
             _connectionHealth.value = TransportHealth.CONNECTED
             Log.d(TAG, """{"event":"UDP_SOCKET_OPENED","localPort":${sock.localPort},"timeoutMs":$RECEIVE_TIMEOUT_MS}""")
@@ -158,6 +164,7 @@ class UdpAudioTransport(
     }
 
     fun stop() {
+        transportEpoch++ // invalidate frames belonging to the old socket/session
         keepaliveJob?.cancel()
         keepaliveJob = null
         receiveJob?.cancel()
@@ -172,6 +179,11 @@ class UdpAudioTransport(
         _connectionHealth.value = TransportHealth.DISCONNECTED
         fastKeepaliveUntilMs = 0L
         rxSeqTracker.clear()
+        var discardedQueuedAudio = 0
+        while (sendPacketQueue.tryReceive().isSuccess) discardedQueuedAudio++
+        if (discardedQueuedAudio > 0) {
+            Log.w(TAG, "TX_QUEUE_CLEARED_ON_STOP packets=$discardedQueuedAudio")
+        }
         Log.d(TAG, "UDP transport stopped txTotal=$txPacketCount rxTotal=$rxPacketCount txFailures=$txFailures rxDropped=$rxDropped ${RadioDiagLog.elapsedTag()}")
         rxPacketCount = 0
         txPacketCount = 0
@@ -218,24 +230,44 @@ class UdpAudioTransport(
         }
     }
 
-    private data class QueuedPacket(val framed: ByteArray, val payloadBytes: Int)
+    private data class QueuedPacket(
+        val framed: ByteArray,
+        val payloadBytes: Int,
+        val enqueuedAtMs: Long,
+        val epoch: Long
+    )
 
     private val sendPacketQueue = Channel<QueuedPacket>(capacity = 64)
 
-    fun send(data: ByteArray) {
-        if (relayHost.isBlank()) {
-            Log.w("[RadioError]", "Cannot send — relay host not configured method=send")
-            return
+    /** Report actual acceptance to the encoder; a full/dead queue is not successful TX. */
+    fun send(data: ByteArray): Boolean {
+        if (relayHost.isBlank() || socket == null || sendJob?.isActive != true) {
+            txFailures++
+            Log.w("[RadioError]", "TX_QUEUE_REJECTED reason=transport_not_ready hostConfigured=${relayHost.isNotBlank()} socket=${socket != null} sendJobActive=${sendJob?.isActive}")
+            return false
         }
         val payloadBytes = data.size
         val framed = framePacket(data)
-        sendPacketQueue.trySend(QueuedPacket(framed, payloadBytes))
+        val enqueued = sendPacketQueue.trySend(
+            QueuedPacket(framed, payloadBytes, System.currentTimeMillis(), transportEpoch)
+        ).isSuccess
+        if (!enqueued) {
+            txFailures++
+            Log.w("[RadioError]", "TX_QUEUE_FULL dropping_new_frame payloadBytes=$payloadBytes queueCapacity=64")
+        }
+        return enqueued
     }
 
     private fun startSendLoop() {
         sendJob = scope.launch {
             try {
                 for (qp in sendPacketQueue) {
+                    if (qp.epoch != transportEpoch ||
+                        System.currentTimeMillis() - qp.enqueuedAtMs > MAX_QUEUED_AUDIO_AGE_MS) {
+                        txFailures++
+                        Log.w(TAG, "TX_QUEUE_STALE_DROP ageMs=${System.currentTimeMillis() - qp.enqueuedAtMs} oldEpoch=${qp.epoch != transportEpoch}")
+                        continue
+                    }
                     var sock = socket
                     if (sock == null) {
                         var waitedMs = 0L
@@ -257,6 +289,7 @@ class UdpAudioTransport(
                             val packet = DatagramPacket(framed, framed.size, address, relayPort)
                             sock.send(packet)
                             txPacketCount++
+                            lastPacketSentAtMs = System.currentTimeMillis()
                             txSummaryBytes += framed.size
 
                             txRateLimiter.tick()
