@@ -123,6 +123,43 @@ export class V3OperationalContextService {
   }
 }
 
+
+// 02-05: fail closed against FRESH center-scoped CAD state, not the context
+// captured when an earlier prompt was composed. This validates a pending
+// implicit follow-up only; an independently authorized explicit historical
+// call reference uses the ordinary CAD resolver and action permissions.
+export function assertV3CurrentTaskCall({
+  operationalContext, expectedCallId, expectedUnitId = null, allowUnassigned = false,
+} = {}) {
+  if (!operationalContext?.speaker?.unitId || !Array.isArray(operationalContext.activeCalls)) {
+    throw new DispatcherV3Error(V3_ERROR_CODES.CAD_UNAVAILABLE,
+      'Current CAD assignment and active call data could not be verified', { statusCode: 503, retryable: true });
+  }
+  const current = clean(operationalContext.currentCall?.id);
+  const expected = clean(expectedCallId);
+  const identity = clean(operationalContext.speaker.unitId);
+  const changed = (reason) => {
+    throw new DispatcherV3Error(V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED,
+      'The previous task no longer matches the unit\'s active CAD assignment', {
+        statusCode: 409, details: { reason, expectedCallId: expected, currentCallId: current },
+      });
+  };
+
+  if (expectedUnitId && identity !== clean(expectedUnitId)) changed('speaker_identity_changed');
+  if (!expected) {
+    if (!allowUnassigned) changed('target_missing');
+    if (current) changed('new_assignment');
+    return { currentCallId: null, active: true };
+  }
+  if (current !== expected) changed(current ? 'reassigned' : 'unassigned');
+  const listed = operationalContext.activeCalls.find((call) => clean(call?.id) === expected);
+  const closed = (status) => TERMINAL_CALL_STATUSES.has(normalize(status));
+  if (closed(operationalContext.currentCall?.status) || !listed || closed(listed.status)) {
+    changed('target_not_active');
+  }
+  return { currentCallId: expected, active: true };
+}
+
 export function sanitizeV3OperationalContext(context) {
   if (!context || typeof context !== 'object') return null;
   return {

@@ -191,12 +191,12 @@ export class V3ConversationRecords {
 
   // Control utterances are committed without overwriting the task they
   // cancel, suspend or resume; they never represent a CAD operation.
-  completeControlTurn(envelope, action) {
+  completeControlTurn(envelope, action, success = true) {
     const key = this.scopeKey(envelope), record = this.conversations.get(key);
     const turn = record?.turns.find((item) => item.turnId === envelope.turnId);
     if (!turn || turn.action) return false;
     turn.action = limited(action, 40).toUpperCase();
-    turn.success = true;
+    turn.success = success === true;
     return true;
   }
 
@@ -268,6 +268,17 @@ export class V3ConversationRecords {
     record.lastActivityAt = this.now();
     turn.taskId = selected.id;
     return { status: 'resumed', task: copy(selected) };
+  }
+
+  // Temporary CAD uncertainty does not erase a still-live task. Only the
+  // authenticated owner may put the resumed task back into its bounded pool.
+  suspendActiveTask(envelope, taskId) {
+    const key = this.scopeKey(envelope), record = this.conversations.get(key);
+    if (!record?.activeTask || record.activeTask.id !== taskId
+      || !unfinished(record.activeTask)) return false;
+    this._suspend(record, this.now());
+    record.lastActivityAt = this.now();
+    return true;
   }
 
   // Pending answers use the full trusted scope AND the exact task/original

@@ -7,7 +7,7 @@ import { pageEmergencyUnits } from '../services/emergencyPagingService.js';
 import { buildV3RuntimeContext } from './runtimeContract.js';
 import { CommandLinkGateway } from './cadGateway.js';
 import { UnitIdentityService } from './unitIdentity.js';
-import { V3OperationalContextService } from './operationalContext.js';
+import { V3OperationalContextService, assertV3CurrentTaskCall } from './operationalContext.js';
 import { V3OperationalAlertService } from './operationalAlertService.js';
 import { createDefaultV3ActionHandlers } from './defaultActionHandlers.js';
 import { V3ActionExecutor } from './actionExecutor.js';
@@ -888,6 +888,45 @@ export class V3LiveDispatcher {
     this._emergencyTimers.clear();
   }
 
+  // 02-05. Only a pending implicit operation uses this strict current-call
+  // constraint. An explicit independent historical-call command still travels
+  // through the normal center-bound CAD resolver and authorization.
+  async _assertFollowUpAssignment({ turnEnvelope, callId, correlationId, allowUnassigned = false }) {
+    const fresh = await this.operationalContextService.snapshot({
+      speakerCallsign: turnEnvelope.speaker.callsign, correlationId,
+    });
+    return assertV3CurrentTaskCall({
+      operationalContext: fresh, expectedCallId: callId,
+      expectedUnitId: turnEnvelope.speaker.unitId, allowUnassigned,
+    });
+  }
+
+  _invalidateChangedFollowUp({ unitId, correlationId, turnEnvelope, error }) {
+    const speaker = turnEnvelope.speaker.callsign;
+    const scopeKey = this.conversations.scopeKey(turnEnvelope);
+    const taskId = this.conversations.get(turnEnvelope)?.activeTask?.id;
+    const life = this._lifecycle.get(turnEnvelope.turnId);
+    // Release the pending-answer lease BEFORE clearing its delivery token:
+    // Task 01's lifecycle must not misclassify this explicit invalidation
+    // as a stale asynchronous reply.
+    if (life) this._lifecycle.releasePending(life);
+    const retired = this.conversations.cancelTask(turnEnvelope, { taskId, reason: 'call_relationship_changed' });
+    this.conversationGate.clear(unitId, scopeKey);
+    if (retired) this.fieldIncidents.clear(speaker, { scopeKey, taskId: retired.id });
+    this.conversations.completeControlTurn(turnEnvelope, 'TASK_INVALIDATED', false);
+    const reason = error?.details?.reason;
+    const description = reason === 'target_not_active' ? 'the earlier call is no longer active'
+      : reason === 'speaker_identity_changed' ? 'the responding unit identity changed'
+        : 'your current assignment no longer matches the earlier call';
+    const caveat = life?.writeCount > 0 || (retired?.submittedWrites || 0) > 0
+      ? ' An earlier CAD change may have been submitted; confirm it before retrying.'
+      : ' No new CAD change was submitted for this answer.';
+    this._diag('follow_up_relationship_invalidated', correlationId, false, {
+      reason, taskId: retired?.id || taskId || null,
+    }, turnEnvelope);
+    this._queueReply(`${speaker}, ${description}. That follow-up is canceled.${caveat} Give a new complete request or identify the call explicitly.`, correlationId, turnEnvelope);
+  }
+
   // 02-04. All dialogue controls move the ONE trusted task lifecycle. CAD
   // mutations are never rolled back here; hardware emergency is untouched.
   async _handleTaskTransition(control, { unitId, transcript, correlationId, turnEnvelope }) {
@@ -952,6 +991,26 @@ export class V3LiveDispatcher {
         const saved = task.pendingFollowUp;
         const incident = task.kind === 'field_incident'
           ? this.fieldIncidents.getDialogueContext(speaker, { scopeKey, taskId: task.id }) : null;
+        // Even the question asking to resume must not revive an incident
+        // after a different dispatcher has closed or reassigned the call.
+        if ((task.kind === 'disposition' || task.kind === 'field_incident') && saved) {
+          try {
+            await this._assertFollowUpAssignment({
+              turnEnvelope, callId: task.kind === 'field_incident' ? incident?.callId : saved.callId,
+              correlationId, allowUnassigned: task.kind === 'field_incident' && !incident?.callId,
+            });
+          } catch (error) {
+            if (error?.code === V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED) {
+              this._invalidateChangedFollowUp({ unitId, correlationId, turnEnvelope, error });
+              return true;
+            }
+            this.conversations.suspendActiveTask(turnEnvelope, task.id);
+            this.conversations.completeControlTurn(turnEnvelope, 'RESUME_TASK', false);
+            this._queueReply(`${speaker}, I can't confirm that earlier call's status in CAD. Try resuming after CAD is available.`,
+              correlationId, turnEnvelope);
+            return true;
+          }
+        }
         if (task.kind === 'field_incident' && !incident) {
           this.conversations.cancelTask(turnEnvelope, { taskId: task.id, reason: 'incident_dialogue_expired' });
           response = `${speaker}, that incident follow-up is no longer active. State a new request.`;
@@ -1049,16 +1108,48 @@ export class V3LiveDispatcher {
           clarification: plan.clarification || `${speakerCallsign}, which ${ownedPendingTask.unresolvedField === 'callId' ? 'call' : 'detail'}?`,
           pendingTask: ownedPendingTask };
       }
-      // Independent instructions in an answer window do not rewrite the
-      // previous call, incident or disposition, even without a wake word.
+      // The original pending call/owner survives model interpretation. A
+      // short disposition is never allowed to switch to the *new* current
+      // call, even if the model omits or invents the call identifier.
+      let continuingDisposition = false;
+      let continuingIncident = false;
       if (pendingContext && plan.action !== 'CLARIFY' && plan.action !== 'NO_ACTION') {
         const sameClarification = ownedPendingTask && plan.reason === 'clarified_original_task';
-        const sameDisposition = pendingContext.kind === 'disposition'
-          && [V3_ACTIONS.CLEAR_UNIT, V3_ACTIONS.CLOSE_CALL].includes(plan.action);
+        const ownRef = (ref) => !ref || [speakerCallsign, 'speaker', 'me', 'my unit', 'this unit']
+          .some((own) => String(ref).trim().toLowerCase() === String(own).toLowerCase());
+        const sameDisposition = pendingContext.kind === 'disposition' && plan.action === V3_ACTIONS.CLEAR_UNIT
+          && ownRef(plan.input?.unitRef) && !plan.input?.callRef
+          && (!plan.input?.callId || plan.input.callId === pendingContext.callId);
         const sameIncident = pendingContext.kind === 'field_incident'
-          && plan.action === V3_ACTIONS.UPDATE_FIELD_INCIDENT;
+          && plan.action === V3_ACTIONS.UPDATE_FIELD_INCIDENT && !!dialogueContext
+          && ownRef(plan.input?.unitRef);
+        continuingDisposition = sameDisposition;
+        continuingIncident = sameIncident;
+        if (pendingContext.kind === 'disposition'
+          && [V3_ACTIONS.CLEAR_UNIT, V3_ACTIONS.CLOSE_CALL].includes(plan.action) && !sameDisposition) {
+          throw new DispatcherV3Error(V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED,
+            'A pending disposition cannot be redirected to a different call or unit', {
+              statusCode: 409, details: { reason: 'answer_target_mismatch' },
+            });
+        }
+        if (pendingContext.kind === 'field_incident'
+          && plan.action === V3_ACTIONS.UPDATE_FIELD_INCIDENT && !sameIncident) {
+          throw new DispatcherV3Error(V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED,
+            'The earlier incident update has no matching owned task', {
+              statusCode: 409, details: { reason: 'incident_custody_changed' },
+            });
+        }
+        if (sameDisposition) {
+          plan = { ...plan, input: { ...plan.input,
+            callId: pendingContext.callId, unitRef: speakerCallsign } };
+        }
         if (!sameClarification && !sameDisposition && !sameIncident
           && !['correction', 'new_topic'].includes(pendingContext.kind)) {
+          // The answer was a new task. Release the old delivered-question
+          // lease before clearing it so the current Task 01 turn remains
+          // live and independently authorized.
+          const life = this._lifecycle.get(turnEnvelope.turnId);
+          if (life) this._lifecycle.releasePending(life);
           this.conversations.startNewTaskForTurn(turnEnvelope);
           this.conversationGate.clear(speakerCallsign, this.conversations.scopeKey(turnEnvelope));
           dialogueContext = null;
@@ -1070,15 +1161,19 @@ export class V3LiveDispatcher {
         const pendingTask = createV3PendingTask({ plan, operationalContext, turnEnvelope });
         plan = { ...plan, pendingTask };
       }
-      if (plan.action === 'NO_ACTION' && dialogueContext && !ROUTINE_EMERGENCY_CHAT_RX.test(transcript)) {
-        plan = {
-          action: V3_ACTIONS.UPDATE_FIELD_INCIDENT,
-          input: { unitRef: speakerCallsign, informationType: 'other', value: transcript, note: transcript },
-          confidence: 1,
-          clarification: null,
-          reason: 'field_incident_no_silent_drop',
-        };
+      if (plan.action === 'CLARIFY' && pendingContext?.kind === 'disposition') {
+        await this._assertFollowUpAssignment({
+          turnEnvelope, callId: pendingContext.callId, correlationId,
+        });
+      } else if (plan.action === 'CLARIFY' && pendingContext?.kind === 'field_incident' && dialogueContext) {
+        await this._assertFollowUpAssignment({
+          turnEnvelope, callId: dialogueContext.callId,
+          correlationId, allowUnassigned: !dialogueContext.callId,
+        });
       }
+      // NO_ACTION is not a field-incident report. The previous blanket
+      // conversion wrote questions, refusals and unrelated speech to stale
+      // call IDs and endlessly revived old incident tasks.
       assertV3DeadlineActive();
       this._diag('conversation_selected', correlationId, true, {
         reason: plan?.reason || (plan?.action === 'CLARIFY' ? 'clarification' : 'planned'),
@@ -1102,10 +1197,67 @@ export class V3LiveDispatcher {
             correlationId,
             turnEnvelope,
           });
-          result = await this.executor.execute({ action: plan.action, input: plan.input }, { correlationId, turnEnvelope });
+          // A disposition answer is not a new instruction to the older call.
+          // Confirm both the original unit/call relationship and active state
+          // immediately before execution, after all model/materialization waits.
+          if (continuingDisposition) {
+            if (plan.action !== V3_ACTIONS.CLEAR_UNIT
+              || plan.input.callId !== pendingContext.callId
+              || plan.input.unitId !== turnEnvelope.speaker.unitId) {
+              throw new DispatcherV3Error(V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED,
+                'The disposition task target no longer matches the trusted speaker and call', {
+                  statusCode: 409, details: { reason: 'answer_target_mismatch' },
+                });
+            }
+            await this._assertFollowUpAssignment({
+              turnEnvelope, callId: pendingContext.callId, correlationId,
+            });
+          }
+          // Field coordinator also repeats this check before each follow-up
+          // location mutation/note, including after asynchronous resolution.
+          if (continuingIncident) {
+            if (plan.action !== V3_ACTIONS.UPDATE_FIELD_INCIDENT || !dialogueContext
+              || plan.input.unitId !== turnEnvelope.speaker.unitId) {
+              throw new DispatcherV3Error(V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED,
+                'The incident follow-up target no longer matches the trusted speaker', {
+                  statusCode: 409, details: { reason: 'incident_custody_changed' },
+                });
+            }
+            await this._assertFollowUpAssignment({
+              turnEnvelope, callId: dialogueContext.callId,
+              correlationId, allowUnassigned: !dialogueContext.callId,
+            });
+          }
+          result = await this.executor.execute({ action: plan.action, input: plan.input }, {
+            correlationId, turnEnvelope,
+            beforeCadWrite: continuingDisposition
+              ? () => this._assertFollowUpAssignment({
+                turnEnvelope, callId: pendingContext.callId, correlationId,
+              }) : null,
+          });
         }
       }
+      if (pendingContext && result?.error?.code === V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED) {
+        this._invalidateChangedFollowUp({ unitId: speakerCallsign, correlationId, turnEnvelope, error: result.error });
+        return;
+      }
     } catch (error) {
+      if (pendingContext && error?.code === V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED) {
+        this._invalidateChangedFollowUp({ unitId: speakerCallsign, correlationId, turnEnvelope, error });
+        return;
+      }
+      if (pendingContext && error?.code === V3_ERROR_CODES.CAD_UNAVAILABLE
+        && ['disposition', 'field_incident'].includes(pendingContext.kind)) {
+        const life = this._lifecycle.get(turnEnvelope.turnId);
+        if (life) this._lifecycle.releasePending(life);
+        this.conversationGate.clear(speakerCallsign, this.conversations.scopeKey(turnEnvelope));
+        const taskId = this.conversations.get(turnEnvelope)?.activeTask?.id;
+        if (taskId) this.conversations.suspendActiveTask(turnEnvelope, taskId);
+        this.conversations.completeControlTurn(turnEnvelope, 'CAD_UNAVAILABLE', false);
+        this._queueReply(`${speakerCallsign}, CAD is unavailable. I can't verify your earlier call, so that update was not submitted. Ask to resume when CAD is available.`,
+          correlationId, turnEnvelope);
+        return;
+      }
       result = { success: false, error: { code: error.code || 'CAD_UNAVAILABLE', message: error.message } };
       const pendingTask = ownedPendingTask || createV3PendingTask({
         plan: originalPlan, error, operationalContext, turnEnvelope,
@@ -1124,6 +1276,10 @@ export class V3LiveDispatcher {
     dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign, this._taskCustody(turnEnvelope));
     const responseText = composeV3Response({ plan, result, speakerCallsign, turnEnvelope });
     this.conversations.completeTurn(turnEnvelope, { plan, result, submittedWrites: life?.writeCount || 0 });
+    if (plan.action === 'NO_ACTION' && dialogueContext) {
+      this.fieldIncidents.clear(speakerCallsign, this._taskCustody(turnEnvelope));
+      dialogueContext = null;
+    }
 
     let followUp = null;
     if (plan.action === 'CLARIFY') {

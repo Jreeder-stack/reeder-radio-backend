@@ -1,4 +1,5 @@
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
+import { assertV3CurrentTaskCall } from './operationalContext.js';
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 
@@ -132,6 +133,10 @@ export class V3FieldIncidentCoordinator {
 
     if (!state) {
       const context = await this.operationalContextService.snapshot({ speakerCallsign: identity.callsign, correlationId });
+      if (!context.currentCall?.id) {
+        throw new DispatcherV3Error(V3_ERROR_CODES.CALL_NOT_FOUND,
+          'There is no current call for this independent field update. Identify a call or start a new incident.', { statusCode: 404 });
+      }
       state = {
         key, callsign: identity.callsign, unitId: identity.unitId,
         eventType: 'operational_update', originalNote: input.note || input.value,
@@ -141,13 +146,16 @@ export class V3FieldIncidentCoordinator {
       };
     }
 
+    // The retained incident's call is a historical reference, not proof of
+    // present assignment. Re-read CAD before this follow-up and each write.
+    await this._assertCurrentRelationship(state, correlationId);
     state.partialErrors = [];
     if (input.informationType === 'location') {
-      await this._applyLocation(state, input.value, correlationId);
+      await this._applyLocation(state, input.value, correlationId, { followUp: true });
       removeGoal(state, 'location');
     } else {
       const prefix = informationPrefix(input.informationType);
-      await this._tryRecordNote(state, input.note || `${prefix}${input.value}`, correlationId);
+      await this._tryRecordNote(state, input.note || `${prefix}${input.value}`, correlationId, { followUp: true });
       if (input.informationType === 'subject_description') removeGoal(state, 'subject_description');
     }
 
@@ -165,7 +173,7 @@ export class V3FieldIncidentCoordinator {
     };
   }
 
-  async _applyLocation(state, query, correlationId) {
+  async _applyLocation(state, query, correlationId, { followUp = false } = {}) {
     const resolution = await this.gateway.get('/api/radio/locations/resolve', {
       correlationId,
       query: { q: clean(query) },
@@ -179,9 +187,12 @@ export class V3FieldIncidentCoordinator {
     }
 
     if (!state.callId) {
-      await this._tryCreateCall(state, location.address, correlationId, location);
+      if (followUp) await this._assertCurrentRelationship(state, correlationId);
+      await this._tryCreateCall(state, location.address, correlationId, location, { followUp });
     } else {
+      if (followUp) await this._assertCurrentRelationship(state, correlationId);
       const updated = await this.updateCall({
+        beforeCadWrite: followUp ? () => this._assertCurrentRelationship(state, correlationId) : null,
         input: {
           callId: state.callId,
           location: location.address,
@@ -201,13 +212,14 @@ export class V3FieldIncidentCoordinator {
     }
 
     const verificationNote = locationVerificationNote(location);
-    if (verificationNote) await this._tryRecordNote(state, verificationNote, correlationId);
-    await this._flushDeferredNotes(state, correlationId);
+    if (verificationNote) await this._tryRecordNote(state, verificationNote, correlationId, { followUp });
+    await this._flushDeferredNotes(state, correlationId, { followUp });
   }
 
-  async _tryCreateCall(state, query, correlationId, resolved = null) {
+  async _tryCreateCall(state, query, correlationId, resolved = null, { followUp = false } = {}) {
     try {
       const created = await this.createCall({
+        beforeCadWrite: followUp ? () => this._assertCurrentRelationship(state, correlationId) : null,
         input: {
           type: natureForEvent(state.eventType),
           location: query,
@@ -228,34 +240,54 @@ export class V3FieldIncidentCoordinator {
       });
       state.call = created?.call || created?.data?.call || null;
       state.callId = callId(state.call) || callId(created);
-      await this._flushDeferredNotes(state, correlationId);
     } catch (error) {
+      if (followUp && [V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED, V3_ERROR_CODES.CAD_UNAVAILABLE].includes(error?.code)) throw error;
       state.partialErrors.push(errorResult(error, 'create_call'));
     }
+    // A newly created call is a real CAD mutation. A later assignment check
+    // may still fail; do not silently flush deferred notes to a changed call.
+    await this._flushDeferredNotes(state, correlationId, { followUp });
   }
 
-  async _tryRecordNote(state, note, correlationId) {
+  async _tryRecordNote(state, note, correlationId, { followUp = false } = {}) {
     const text = clean(note);
     if (!text) return;
     if (!state.callId) {
       state.deferredNotes.push(text);
       return;
     }
+    // A changed/closed call is not a transient note-write error. Do not
+    // swallow it into deferredNotes or retry later against the wrong call.
+    if (followUp) await this._assertCurrentRelationship(state, correlationId);
     try {
-      const result = await this.addCallNote({ input: { callId: state.callId, note: text, unitId: state.unitId }, correlationId });
+      const result = await this.addCallNote({
+        input: { callId: state.callId, note: text, unitId: state.unitId }, correlationId,
+        beforeCadWrite: followUp ? () => this._assertCurrentRelationship(state, correlationId) : null,
+      });
       state.call = result?.call || state.call;
       if (text === state.originalNote) state.noteRecorded = true;
     } catch (error) {
+      if (followUp && [V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED, V3_ERROR_CODES.CAD_UNAVAILABLE].includes(error?.code)) throw error;
       state.partialErrors.push(errorResult(error, 'add_note'));
       state.deferredNotes.push(text);
     }
   }
 
-  async _flushDeferredNotes(state, correlationId) {
+  async _flushDeferredNotes(state, correlationId, { followUp = false } = {}) {
     if (!state.callId || state.deferredNotes.length === 0) return;
     const pending = [...state.deferredNotes];
     state.deferredNotes = [];
-    for (const note of pending) await this._tryRecordNote(state, note, correlationId);
+    for (const note of pending) await this._tryRecordNote(state, note, correlationId, { followUp });
+  }
+
+  async _assertCurrentRelationship(state, correlationId) {
+    const current = await this.operationalContextService.snapshot({
+      speakerCallsign: state.callsign, correlationId,
+    });
+    return assertV3CurrentTaskCall({
+      operationalContext: current, expectedCallId: state.callId,
+      expectedUnitId: state.unitId, allowUnassigned: !state.callId,
+    });
   }
 
   _save(state) {

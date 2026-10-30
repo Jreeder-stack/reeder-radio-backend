@@ -16,7 +16,7 @@ function makeCoordinator({ currentCall = null } = {}) {
     resolve: vi.fn(async () => ({ unitId: 'unit-1', callsign: 'INDIANA-1' })),
   };
   const operationalContextService = {
-    snapshot: vi.fn(async () => ({ currentCall, activeCalls: currentCall ? [currentCall] : [], units: [] })),
+    snapshot: vi.fn(async () => ({ speaker: { unitId: 'unit-1', callsign: 'INDIANA-1' }, currentCall, activeCalls: currentCall ? [currentCall] : [], units: [] })),
   };
   const createCall = vi.fn(async ({ input }) => ({
     call: { id: 'call-1', type: input.type, location: '132 PECHIN RD', municipality: 'DUNBAR BOROUGH' },

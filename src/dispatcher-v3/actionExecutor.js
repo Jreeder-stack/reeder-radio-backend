@@ -74,6 +74,9 @@ export class V3ActionExecutor {
         runtimeContext: this.runtimeContext,
         correlationId,
         turnEnvelope,
+        // Internal-only, stricter follow-up revalidation. Model input is
+        // always stripped by the action contract and cannot supply this hook.
+        beforeCadWrite: typeof options.beforeCadWrite === 'function' ? options.beforeCadWrite : null,
       });
 
       assertV3DeadlineActive();

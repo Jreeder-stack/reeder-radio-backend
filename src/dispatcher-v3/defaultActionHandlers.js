@@ -103,16 +103,18 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
 
     [V3_ACTIONS.CREATE_CALL]: createCall,
 
-    [V3_ACTIONS.UPDATE_CALL]: async ({ input, correlationId }) => {
+    [V3_ACTIONS.UPDATE_CALL]: async ({ input, correlationId, beforeCadWrite = null }) => {
       const resolvedInput = await resolveLocationMutation(gateway, input, correlationId);
       const body = toCadCallMutation(resolvedInput);
+      if (beforeCadWrite) await beforeCadWrite();
       await gateway.patch(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}`, body, { correlationId });
       const call = await readCallForVerification(gateway, input.callId, correlationId);
       verifyCallMutation(call, resolvedInput, { correlationId, callId: input.callId });
       return { success: true, verified: true, call };
     },
 
-    [V3_ACTIONS.ADD_CALL_NOTE]: async ({ input, correlationId }) => {
+    [V3_ACTIONS.ADD_CALL_NOTE]: async ({ input, correlationId, beforeCadWrite = null }) => {
+      if (beforeCadWrite) await beforeCadWrite();
       await gateway.post('/api/radio/note', { call_id: input.callId, note: input.note, unit_id: input.unitId || undefined }, { correlationId });
       const call = await readCallForVerification(gateway, input.callId, correlationId);
       verifyCallNote(call, input.note, { correlationId, callId: input.callId });
@@ -157,7 +159,7 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
       return { success: true, verified: true, call };
     },
 
-    [V3_ACTIONS.CLEAR_UNIT]: async ({ input, correlationId }) => {
+    [V3_ACTIONS.CLEAR_UNIT]: async ({ input, correlationId, beforeCadWrite = null }) => {
       const identity = await resolveSafeIdentity(input.unitId, correlationId);
       let callDetails = null;
       try { callDetails = await gateway.get(`/api/radio/call/${encodeURIComponent(input.callId)}`, { correlationId }); } catch { callDetails = null; }
@@ -171,8 +173,10 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
             details: { callId: input.callId, unitId: identity.unitId, callsign: identity.callsign },
           });
         }
+        if (beforeCadWrite) await beforeCadWrite();
         await gateway.post('/api/radio/dispose', { call_id: input.callId, disposition: input.disposition, unit_ids: [identity.callsign] }, { correlationId });
       } else {
+        if (beforeCadWrite) await beforeCadWrite();
         await gateway.post('/api/radio/clear', { call_id: input.callId, unit_id: identity.callsign, disposition: input.disposition || undefined }, { correlationId });
       }
       const call = await readCallForVerification(gateway, input.callId, correlationId);

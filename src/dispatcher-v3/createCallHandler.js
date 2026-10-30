@@ -7,7 +7,7 @@ export function createResolvedCallHandler({ gateway, resolveSafeCallsign } = {})
   if (!gateway) throw new TypeError('gateway is required');
   if (typeof resolveSafeCallsign !== 'function') throw new TypeError('resolveSafeCallsign is required');
 
-  return async ({ input, correlationId }) => {
+  return async ({ input, correlationId, beforeCadWrite = null }) => {
     const callsigns = [];
     for (const unitId of input.unitIds || []) callsigns.push(await resolveSafeCallsign(unitId, correlationId));
 
@@ -61,6 +61,7 @@ export function createResolvedCallHandler({ gateway, resolveSafeCallsign } = {})
       units: callsigns,
     };
 
+    if (beforeCadWrite) await beforeCadWrite();
     const created = await gateway.post('/api/radio/v3/cad/calls', requestBody, { correlationId, timeoutMs: CREATE_CALL_TIMEOUT_MS });
     const callId = created?.call?.call_id || created?.call?.id || created?.call_id || null;
     if (!callId) {
