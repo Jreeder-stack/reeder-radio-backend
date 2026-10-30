@@ -16,6 +16,7 @@ import { V3SpeechPipeline } from './speechPipeline.js';
 import { V3IntentPlanner } from './intentPlanner.js';
 import { V3ConversationGate, stripV3LeadingAddress } from './conversationGate.js';
 import { V3ConversationRecords } from './conversationRecords.js';
+import { V3SharedIncidentFacts, clarifyV3GroupMutation } from './sharedIncidentFacts.js';
 import { classifyV3TaskTransition, modelV3TaskTransition } from './taskTransitions.js';
 import { createV3PendingTask, resumeV3PendingTask } from './clarificationTasks.js';
 import { normalizeV3CommandText } from './deterministicIntent.js';
@@ -156,6 +157,7 @@ export class V3LiveDispatcher {
     this.gateway = new CommandLinkGateway(this.context, { diagnostics: this.diagnostics });
     this.unitIdentityService = new UnitIdentityService({ gateway: this.gateway, context: this.context });
     this.operationalContextService = new V3OperationalContextService({ gateway: this.gateway, unitIdentityService: this.unitIdentityService });
+    this.sharedIncidents = new V3SharedIncidentFacts({ gateway: this.gateway, runtimeContext: this.context, getGeneration: () => this.runtimeGeneration });
     this.operationalAlertService = new V3OperationalAlertService({ signalingService: this.signaling });
     this.handlers = createDefaultV3ActionHandlers({ gateway: this.gateway, unitIdentityService: this.unitIdentityService, operationalAlertService: this.operationalAlertService });
     this.fieldIncidents = new V3FieldIncidentCoordinator({
@@ -223,6 +225,7 @@ export class V3LiveDispatcher {
     this.conversationGate.clearAll();
     this.conversations.clearAll();
     this.fieldIncidents.clearAll();
+    this.sharedIncidents.clearAll();
     this._clearEmergencyTimers();
     this._emergency = null;
     this._rawEmergencyEnds.clear();
@@ -1050,6 +1053,8 @@ export class V3LiveDispatcher {
     let originalPlan = null;
     let result = null;
     let operationalContext = null;
+    let sharedIncident = null;
+    let sharedReply = null;
     const ownedPendingTask = pendingContext?.kind === 'task_clarification'
       ? this.conversations.pendingTask(turnEnvelope, pendingContext.taskId, pendingContext.originalTurnId)
       : null;
@@ -1062,6 +1067,10 @@ export class V3LiveDispatcher {
           activeCallCount: operationalContext.activeCalls.length,
           currentCallId: operationalContext.currentCall?.id || null,
         });
+        if (operationalContext.currentCall?.id) {
+          try { sharedIncident = await this.sharedIncidents.view({ operationalContext, correlationId }); }
+          catch (e) { this._diag('shared_incident_unavailable', correlationId, false, { code: e?.code || 'CAD_UNAVAILABLE' }, turnEnvelope); }
+        }
       } catch (contextError) {
         this._diag('operational_context_failed', correlationId, false, { speakerCallsign, message: contextError.message, code: contextError.code || null });
       }
@@ -1078,6 +1087,7 @@ export class V3LiveDispatcher {
           runtimeContext: this.context,
           correlationId,
           recentContext: this.conversations.recent(turnEnvelope),
+          sharedIncident: this.sharedIncidents.forPlanner(sharedIncident),
           operationalContext,
           pendingContext,
           dialogueContext,
@@ -1179,6 +1189,8 @@ export class V3LiveDispatcher {
         reason: plan?.reason || (plan?.action === 'CLARIFY' ? 'clarification' : 'planned'),
         action: plan?.action || null, pending: !!pendingContext,
       }, turnEnvelope);
+      const groupClarification = clarifyV3GroupMutation({ plan, transcript });
+      if (groupClarification) plan = groupClarification;
       assertExplicitUnitTargets({ transcript, plan, operationalContext, speakerCallsign });
       if (plan.action !== 'NO_ACTION' && plan.action !== 'CLARIFY' && plan.confidence < MIN_EXECUTION_CONFIDENCE) {
         plan = { action: 'CLARIFY', input: {}, confidence: plan.confidence,
@@ -1269,12 +1281,23 @@ export class V3LiveDispatcher {
     }
 
     assertV3DeadlineActive();
+    if (result?.success) {
+      this.sharedIncidents.remember({ plan, result, turnEnvelope });
+      if (sharedIncident && [V3_ACTIONS.GET_CALL, V3_ACTIONS.GET_CURRENT_CALL].includes(plan?.action)) {
+        try {
+          const fresh = await this.operationalContextService.snapshot({ speakerCallsign, correlationId });
+          const candidate = await this.sharedIncidents.view({ operationalContext: fresh, correlationId });
+          if (candidate?.callId === sharedIncident.callId) sharedReply = candidate;
+        } catch (e) { this._diag('shared_incident_recheck_failed', correlationId, false, { code: e?.code || 'CAD_UNAVAILABLE' }, turnEnvelope); }
+      }
+    }
+    assertV3DeadlineActive();
     // Commit the outcome before preparing any reply. A question is not an
     // answer window until the outbound lane reports completed injection.
     const life = this._lifecycle.get(turnEnvelope.turnId);
     if (life) this._lifecycle.releasePending(life);
     dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign, this._taskCustody(turnEnvelope));
-    const responseText = composeV3Response({ plan, result, speakerCallsign, turnEnvelope });
+    const responseText = composeV3Response({ plan, result, speakerCallsign, turnEnvelope, sharedIncident: sharedReply });
     this.conversations.completeTurn(turnEnvelope, { plan, result, submittedWrites: life?.writeCount || 0 });
     if (plan.action === 'NO_ACTION' && dialogueContext) {
       this.fieldIncidents.clear(speakerCallsign, this._taskCustody(turnEnvelope));

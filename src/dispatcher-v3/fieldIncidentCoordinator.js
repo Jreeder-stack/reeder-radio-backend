@@ -87,6 +87,7 @@ export class V3FieldIncidentCoordinator {
       callId: context.currentCall?.id || null,
       call: context.currentCall || null,
       noteRecorded: false,
+      recordedReports: [],
       pendingGoals: initialGoals(input),
       deferredNotes: [],
       partialErrors: [],
@@ -117,6 +118,7 @@ export class V3FieldIncidentCoordinator {
       eventType: state.eventType,
       pendingGoals: [...state.pendingGoals],
       partialErrors: state.partialErrors,
+      recordedReports: [...state.recordedReports],
       keepListening: state.pendingGoals.length > 0,
       radioResponse: initialRadioResponse(state),
     };
@@ -141,7 +143,7 @@ export class V3FieldIncidentCoordinator {
         key, callsign: identity.callsign, unitId: identity.unitId,
         eventType: 'operational_update', originalNote: input.note || input.value,
         callId: context.currentCall?.id || null, call: context.currentCall || null,
-        noteRecorded: false, pendingGoals: [], deferredNotes: [], partialErrors: [],
+        noteRecorded: false, recordedReports: [], pendingGoals: [], deferredNotes: [], partialErrors: [],
         expiresAt: this.now() + this.ttlMs,
       };
     }
@@ -150,6 +152,7 @@ export class V3FieldIncidentCoordinator {
     // present assignment. Re-read CAD before this follow-up and each write.
     await this._assertCurrentRelationship(state, correlationId);
     state.partialErrors = [];
+    state.recordedReports = [];
     if (input.informationType === 'location') {
       await this._applyLocation(state, input.value, correlationId, { followUp: true });
       removeGoal(state, 'location');
@@ -168,6 +171,7 @@ export class V3FieldIncidentCoordinator {
       eventType: state.eventType,
       pendingGoals: [...state.pendingGoals],
       partialErrors: state.partialErrors,
+      recordedReports: [...state.recordedReports],
       keepListening: state.pendingGoals.length > 0,
       radioResponse: askForDescription ? `10-4. What's the subject's description?` : '10-4.',
     };
@@ -265,7 +269,10 @@ export class V3FieldIncidentCoordinator {
         beforeCadWrite: followUp ? () => this._assertCurrentRelationship(state, correlationId) : null,
       });
       state.call = result?.call || state.call;
-      if (text === state.originalNote) state.noteRecorded = true;
+      if (result?.verified === true) {
+        state.recordedReports = [...(state.recordedReports || []), text].slice(-8);
+        if (text === state.originalNote) state.noteRecorded = true;
+      }
     } catch (error) {
       if (followUp && [V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED, V3_ERROR_CODES.CAD_UNAVAILABLE].includes(error?.code)) throw error;
       state.partialErrors.push(errorResult(error, 'add_note'));

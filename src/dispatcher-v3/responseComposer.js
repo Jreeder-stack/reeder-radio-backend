@@ -34,7 +34,7 @@ const SMALL_NUMBER_WORDS = Object.freeze([
 
 const TENS_WORDS = Object.freeze({ 20: 'twenty', 30: 'thirty', 40: 'forty', 50: 'fifty' });
 
-export function composeV3Response({ plan, result, speakerCallsign, now = new Date(), turnEnvelope = null } = {}) {
+export function composeV3Response({ plan, result, speakerCallsign, now = new Date(), turnEnvelope = null, sharedIncident = null } = {}) {
   if (isV3TurnEnvelope(turnEnvelope) && turnEnvelope.speaker) speakerCallsign = turnEnvelope.speaker.callsign;
   const unit = clean(speakerCallsign) || 'unit';
   if (plan?.action === 'NO_ACTION') return null;
@@ -65,6 +65,12 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
   }
 
   const data = result.data || {};
+  const returned = data.call || data.assignment || data;
+  const returnedId = clean(returned?.call_id || returned?.callId || returned?.id);
+  if (sharedIncident?.verifiedCadFacts && sharedIncident.callId === returnedId
+    && [V3_ACTIONS.GET_CALL, V3_ACTIONS.GET_CURRENT_CALL].includes(plan.action)) {
+    return sharedIncidentResponse(unit, sharedIncident);
+  }
   switch (plan.action) {
     case V3_ACTIONS.RADIO_CHECK:
       return `${unit}, loud and clear.`;
@@ -94,6 +100,18 @@ function mutationVerificationSatisfied(plan, result) {
   }
   if (!VERIFIED_MUTATION_ACTIONS.has(plan?.action)) return true;
   return result?.data?.verified === true;
+}
+
+function sharedIncidentResponse(unit, shared) {
+  const call = clean(shared.callNumber) || clean(shared.callId);
+  const parts = [call ? 'call ' + call : 'your shared incident', clean(shared.nature),
+    shared.location ? 'at ' + clean(shared.location) : null].filter(Boolean);
+  const members = Array.isArray(shared.participatingUnits) ? shared.participatingUnits.slice(0, 5).map(clean).filter(Boolean) : [];
+  const reports = Array.isArray(shared.reports) ? shared.reports.slice(-2) : [];
+  const summary = parts.join(', ') + '.' + (members.length ? ' Assigned units: ' + members.join(', ') + '.' : '');
+  const notes = reports.map(report => (clean(report.reportedBy) ? clean(report.reportedBy) + ' reported: ' : 'Unattributed CAD note: ')
+    + clean(report.text).slice(0, 125) + ' (unverified report).').join(' ');
+  return (unit + ', ' + summary + (notes ? ' ' + notes : '')).slice(0, 600);
 }
 
 function activeCallsResponse(unit, data) {
