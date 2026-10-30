@@ -1,0 +1,126 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "03-03",
+  "date": "2026-10-30",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "a6c99e6982723a93130c74509d00710b5ef7fc03",
+  "priorValidatedExecutable": "f204e30082be6995d2dbc377941d7fbd84f19fd8",
+  "validatedExecutableSource": "3dc7fcf9416e96db8feef2922c1db35f44350088",
+  "implementationCommits": [
+    "0caba05d1ee4ff3d73236e2ab1b63f7ae62c8015",
+    "3dc7fcf9416e96db8feef2922c1db35f44350088"
+  ],
+  "newSource": [
+    "src/dispatcher-v3/compoundActions.js"
+  ],
+  "newTest": [
+    "src/dispatcher-v3/__tests__/compoundActions.test.js"
+  ],
+  "changedSource": [
+    "src/dispatcher-v3/semanticContract.js",
+    "src/dispatcher-v3/intentPlanner.js",
+    "src/dispatcher-v3/liveRuntime.js",
+    "src/dispatcher-v3/responseComposer.js"
+  ],
+  "changedWorkflow": [
+    ".github/workflows/ai-dispatcher-v3-ci.yml"
+  ],
+  "controls": {
+    "validatedUniqueOrderedStepIds": true,
+    "earlierOnlyDependencies": true,
+    "independentStepOptOut": true,
+    "backwardCompatibleSequentialDefault": true,
+    "onlyVerifiedPriorCallResultCanBindDependentCall": true,
+    "existingMaterializerAndExecutor": true,
+    "perStepCadAuthorization": true,
+    "existingIndependentCadReadBack": true,
+    "centerAndUnitIdentityPreserved": true,
+    "scopedPerStepOutcomeStatuses": true,
+    "priorWritesNeverSilentlyReplayed": true,
+    "consecutiveVerifiedDuplicateWritesSkipped": true,
+    "interveningDifferentStatusesNotDeduplicated": true,
+    "mixedReadWriteOutcomesSpoken": true,
+    "partialCompletionObservable": true,
+    "unconfirmedWritesNotClaimedSuccessful": true,
+    "fullTransactionOrRollbackClaimed": false,
+    "existingHardwareEmergencyPolicyUnchanged": true,
+    "invalidModelStepsFailClosed": true,
+    "noSchemaTransportCodecFirmwareProviderOrLegacyEngineChanges": true
+  },
+  "ci": {
+    "runId": 41065901952,
+    "jobId": 124097104072,
+    "nodeMajor": 20,
+    "conclusion": "failure",
+    "focused03_03": {
+      "passed": 12,
+      "failed": 0,
+      "total": 12
+    },
+    "manager": {
+      "passed": 8,
+      "failed": 0,
+      "total": 8
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "v3": {
+      "passed": 582,
+      "failed": 1,
+      "total": 583,
+      "files": 49
+    },
+    "syntaxPassed": true,
+    "legacyEngineAbsent": true,
+    "artifact": {
+      "id": 12980624807,
+      "name": "dispatcher-v3-evidence-41065901952-1",
+      "reportedSha256": "3aee1a41d3445f5bab1956c8f98d3a7e35852239011500cc074cb963fdb5718f",
+      "independentlyHashed": false
+    }
+  },
+  "soleKnownFailure": "Unchanged phase4Pipeline.test.js CREATE_CALL acknowledgment fixture lacks independent CAD read-back; original strict safety response preserved",
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "fullV3SuiteGreen": false,
+    "fullRepositoryVerified": false,
+    "newerMainIntegrated": false,
+    "liveProviderLanguageAccuracyVerified": false,
+    "realRadioVerified": false,
+    "livePilotVerified": false,
+    "productionVerified": false,
+    "releaseAccepted": false,
+    "merged": false,
+    "deployed": false,
+    "restarted": false,
+    "productionDataChanged": false,
+    "paidProviderCalls": false
+  },
+  "counts": {
+    "parent01": 8,
+    "parent02": 8,
+    "parent03": 3,
+    "parent04": 0,
+    "completed": 19,
+    "total": 32
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "knownLimits": [
+    "Model outputs and CAD boundary synthetic; no real-provider language qualification",
+    "No cross-turn duplicate registry or atomic transaction/rollback; no bulk automatic retry",
+    "03-04 reference ambiguity, 03-05 full tool audit, 03-06 standalone outcome reconciliation, 03-07 factual results, 03-08 integration remain",
+    "No full repo/mobile, newer main, live radio or pilot and production verification"
+  ],
+  "next": "03-04: Resolve unit and call references using adequate evidence"
+}
