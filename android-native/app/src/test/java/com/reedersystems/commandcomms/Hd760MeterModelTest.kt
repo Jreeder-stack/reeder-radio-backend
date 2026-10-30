@@ -34,6 +34,17 @@ class Hd760MeterModelTest {
         assertEquals(1, Hd760MeterModel.receiveBars(SignalQuality.POOR))
     }
 
+    @Test fun txAndRxAudioBarsRequireMeasuredPcm() {
+        assertEquals(0, Hd760MeterModel.audioBars(0.0))
+        assertEquals(0, Hd760MeterModel.audioBars(Double.NaN))
+        assertEquals(0, Hd760MeterModel.audioBars(Double.POSITIVE_INFINITY))
+        assertEquals(1, Hd760MeterModel.audioBars(100.0))
+        assertEquals(2, Hd760MeterModel.audioBars(300.0))
+        assertEquals(3, Hd760MeterModel.audioBars(800.0))
+        assertEquals(4, Hd760MeterModel.audioBars(2_000.0))
+        assertEquals(5, Hd760MeterModel.audioBars(5_000.0))
+    }
+
     @Test fun cellularCannotClaimUnreportedStrength() {
         assertNull(Hd760MeterModel.cellularBars(null))
         assertNull(Hd760MeterModel.cellularBars(5))
