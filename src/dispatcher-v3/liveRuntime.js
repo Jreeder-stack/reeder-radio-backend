@@ -267,6 +267,19 @@ export class V3LiveDispatcher {
       && socket.rooms?.has(`channel:${this.context.roomKey}`) === true;
   }
 
+  _activeSiblingConnection(connectionId, identity) {
+    if (!connectionId?.startsWith('socket:')) return false;
+    const socket = this.signaling?.io?.sockets?.sockets?.get?.(connectionId.slice(7));
+    const principal = socket?.pttPrincipal;
+    return !!socket && socket.connected === true && !!principal
+      && principal.accountId === identity.accountId
+      && principal.unitId === identity.speakerRef
+      && principal.credentialType === identity.credentialType
+      && socket.unitId === identity.speakerRef
+      && socket.channels?.has(this.context.roomKey) === true
+      && socket.rooms?.has(`channel:${this.context.roomKey}`) === true;
+  }
+
   _retireReplacedConnection(identity, previousConnectionId) {
     for (const state of [...this._lifecycle.turns.values()]) {
       const prior = state.identity;
@@ -383,7 +396,10 @@ export class V3LiveDispatcher {
       this._diag('turn_completed', identity.turnId, false, { outcome: reservation.reason }, null, identity);
       return false;
     }
-    const admitted = this._sessionCustody.admit(identity);
+    const existingConnection = this._sessionCustody.currentConnectionId(identity);
+    const admitted = this._sessionCustody.admit(identity, {
+      preserveExisting: this._activeSiblingConnection(existingConnection, identity),
+    });
     if (!admitted.accepted) {
       this._scheduler.cancel(reservation.ticket, admitted.reason);
       this._rememberTransmission(metadata.transmissionId, identity.turnId);

@@ -68,7 +68,46 @@ describe('AI-DISP-V3-001 02-07 authenticated continuity and routing', () => {
     expect(owner.admit(id('third'))).toMatchObject({ accepted: true });
     expect(owner.admit(id('fourth'))).toMatchObject({ accepted: false, reason: 'session_replacement_capacity' });
     time += 101;
-    expect(owner.isCurrent(id('third'))).toBe(false);
+    expect(owner.isCurrent(id('third'))).toBe(true);
+    expect(owner.isRetired(id('old'))).toBe(true);
+    expect(owner.admit(id('old'))).toMatchObject({ accepted: false, reason: 'replaced_session' });
+  });
+
+  it('keeps two genuinely live sibling radios independent instead of declaring an artificial reconnect', async () => {
+    const h = await make();
+    const a = await h.principal('A1', { connectionId: 'socket:radio-a' });
+    const b = await h.principal('A1', { accountId: a.accountId, connectionId: 'socket:radio-b' });
+    socket(h, a, 'radio-a'); socket(h, b, 'radio-b');
+    await speak(h, 'Central, available', a);
+    const first = [...h.runtime.conversations.conversations.values()].find(
+      (record) => record.connectionId === a.connectionId);
+    await speak(h, 'Central, available', b);
+    expect(h.runtime._sessionCustody.isCurrent({
+      ...h.context, runtimeGeneration: h.runtime.runtimeGeneration,
+      speakerRef: 'A1', accountId: a.accountId,
+      credentialType: a.credentialType, connectionId: a.connectionId,
+    })).toBe(true);
+    await speak(h, 'Central, available', a);
+    expect(h.writes('/api/radio/status')).toHaveLength(3);
+    expect(h.runtime.conversations.conversations.size).toBe(2);
+    expect([...h.runtime.conversations.conversations.values()].find(
+      (record) => record.connectionId === a.connectionId)?.id).toBe(first.id);
+  });
+
+  it('does not transmit an already queued routine answer after the radio leaves its channel during synthesis', async () => {
+    const h = await make();
+    const principal = await h.principal('A1', { connectionId: 'socket:delayed-output' });
+    const s = socket(h, principal, 'delayed-output');
+    const synth = h.hold(Buffer.alloc(640));
+    h.synthesisReplies.push(synth.promise);
+    const c = await h.capture('A1', { principal }); h.frame(c);
+    const turn = h.end(c, 'Central, available');
+    await finish(turn);
+    await until(() => h.synthesize.mock.calls.length > 0, 'delayed synthesis');
+    s.channels.clear(); s.rooms.clear();
+    synth.resolve(Buffer.alloc(640));
+    await h.flushOutput();
+    expect(h.relay.injectAudio).not.toHaveBeenCalled();
   });
 
   it('a reconnect can explicitly resume a disposition, but cannot answer the old delivered prompt', async () => {
