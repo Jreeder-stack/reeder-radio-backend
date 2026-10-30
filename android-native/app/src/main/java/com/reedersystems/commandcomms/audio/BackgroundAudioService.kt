@@ -839,6 +839,16 @@ class BackgroundAudioService : Service() {
                 updateNotification("Radio — Standby")
             }
         }
+        if (BuildConfig.FLAVOR == "hd760") {
+            // AI/relay audio may arrive without a tx:start event. Route the
+            // speaker from accepted media itself, not from a guessed floor grant.
+            engine.onHd760RxMediaStart = {
+                if (pttState == PttState.IDLE) applyRadioAudioRoute()
+            }
+            engine.onHd760RxMediaEnd = {
+                if (pttState == PttState.IDLE) scheduleRadioAudioRouteRelease()
+            }
+        }
         engine.start()
         engine.startReceive()
         // Pay the audio HAL cold-start cost once now, at engine init, instead
