@@ -1068,7 +1068,7 @@ export class V3LiveDispatcher {
           currentCallId: operationalContext.currentCall?.id || null,
         });
         if (operationalContext.currentCall?.id) {
-          try { sharedIncident = await this.sharedIncidents.view({ operationalContext, correlationId }); }
+          try { sharedIncident = await this.sharedIncidents.view({ operationalContext, correlationId, turnEnvelope }); }
           catch (e) { this._diag('shared_incident_unavailable', correlationId, false, { code: e?.code || 'CAD_UNAVAILABLE' }, turnEnvelope); }
         }
       } catch (contextError) {
@@ -1286,7 +1286,7 @@ export class V3LiveDispatcher {
       if (sharedIncident && [V3_ACTIONS.GET_CALL, V3_ACTIONS.GET_CURRENT_CALL].includes(plan?.action)) {
         try {
           const fresh = await this.operationalContextService.snapshot({ speakerCallsign, correlationId });
-          const candidate = await this.sharedIncidents.view({ operationalContext: fresh, correlationId });
+          const candidate = await this.sharedIncidents.view({ operationalContext: fresh, correlationId, turnEnvelope });
           if (candidate?.callId === sharedIncident.callId) sharedReply = candidate;
         } catch (e) { this._diag('shared_incident_recheck_failed', correlationId, false, { code: e?.code || 'CAD_UNAVAILABLE' }, turnEnvelope); }
       }

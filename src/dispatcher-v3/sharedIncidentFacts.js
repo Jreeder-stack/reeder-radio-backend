@@ -33,9 +33,14 @@ export class V3SharedIncidentFacts {
     this.gateway=gateway;this.context=runtimeContext;this.getGeneration=getGeneration;this.now=now;
     this.ttlMs=ttlMs;this.maxReports=maxReports;this.reports=[];
   }
-  async view({operationalContext,correlationId}={}){
-    if(!hasV3Scope(this.context,'unit.read')||!hasV3Scope(this.context,'call.read'))return null;
+  async view({operationalContext,correlationId,turnEnvelope}={}){
+    if(!turnEnvelope)return null;
+    assertV3TurnEnvelope(turnEnvelope,this.context);
+    if(turnEnvelope.runtimeGeneration!==this.getGeneration()
+      ||!hasV3Scope(this.context,'unit.read')||!hasV3Scope(this.context,'call.read'))return null;
     const speaker=operationalContext?.speaker,expected=clean(operationalContext?.currentCall?.id);
+    if(norm(speaker?.unitId)!==norm(turnEnvelope.speaker.unitId)
+      ||norm(speaker?.callsign)!==norm(turnEnvelope.speaker.callsign))return null;
     if(!speaker?.unitId||!speaker?.callsign||!expected||!active(operationalContext.currentCall)
       ||!operationalContext.activeCalls?.some(c=>clean(c.id)===expected&&active(c)))return null;
     // Fresh, center-scoped, authorized read. Neither conversation text nor a model-supplied

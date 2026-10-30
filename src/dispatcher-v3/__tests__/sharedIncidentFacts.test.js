@@ -51,9 +51,12 @@ describe('02-06 shared incident source and task isolation',()=>{
     const pending=h.runtime.conversationGate.pending.get('A1');
     expect(pending?.kind).toBe('disposition');
     await h.send('Central, what is our call?','B2');
-    const payload=JSON.parse(h.llm.mock.calls.at(-1)[0].messages[1].content);
-    expect(payload.pendingContext).toEqual({});
-    expect(payload.recentContext).toEqual([]);
+    // GET_CURRENT_CALL may be handled by the deterministic planner without
+    // invoking an external model; inspect the actual per-owner planner input.
+    const planning=h.runtime.planner.plan.mock.calls.at(-1)[0];
+    expect(planning.pendingContext).toBeNull();
+    expect(planning.recentContext).toEqual([]);
+    expect(planning.sharedIncident).toMatchObject({callId:'OLD-CALL'});
     expect(h.runtime.conversationGate.pending.get('A1')?.taskId).toBe(pending.taskId);
     expect(h.writes('/api/radio/dispose')).toEqual([]);
   });
@@ -75,6 +78,31 @@ describe('02-06 shared incident source and task isolation',()=>{
     h.cad.current.set('B2','OLD-CALL');h.cad.calls.get('OLD-CALL').status='closed';
     await h.send('Central, what about that call?','B2');
     expect(JSON.parse(h.llm.mock.calls.at(-1)[0].messages[1].content).sharedIncident).toBeNull();
+  });
+  it('refuses to share a call when the fresh resolved speaker no longer matches the authenticated PTT turn',async()=>{
+    const h=await make({llmPlans:[read()]});together(h);
+    const get=h.runtime.operationalContextService.snapshot.bind(h.runtime.operationalContextService);
+    vi.spyOn(h.runtime.operationalContextService,'snapshot').mockImplementation(async options=>{
+      const context=await get(options);
+      if(options.speakerCallsign!=='B2')return context;
+      return {...context,speaker:{...context.speaker,unitId:'center-a-A1'}};
+    });
+    await h.send('Central, what are the details of our shared call?','B2');
+    const planner=h.runtime.planner.plan.mock.calls.at(-1)[0];
+    expect(planner.sharedIncident).toBeNull();
+    expect(h.spoken().at(-1)).not.toContain('Assigned units:');
+  });
+  it('rechecks participation after planning when a unit was removed from the call',async()=>{
+    const h=await make({llmPlans:[read()]});together(h);
+    const plan=h.runtime.planner.plan.bind(h.runtime.planner);
+    vi.spyOn(h.runtime.planner,'plan').mockImplementationOnce(async args=>{
+      const value=await plan(args);
+      h.cad.calls.get('OLD-CALL').assigned_units=[{unit_id:'A1'}];
+      return value;
+    });
+    await h.send('Central, what has the other unit reported?','B2');
+    expect(h.spoken().at(-1)).not.toContain('Assigned units:');
+    expect(h.writes()).toEqual([]);
   });
   it('does not expose shared reports without call.read scope',async()=>{
     const h=await make({scopes:['unit.read','unit.write'],llmPlans:[read()]});together(h);
