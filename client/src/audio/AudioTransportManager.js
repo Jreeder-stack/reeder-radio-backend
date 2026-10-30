@@ -850,9 +850,27 @@ class AudioTransportManager {
     });
 
     try {
-      await this._capture.start(async (frame) => {
+      let capturedFrames = 0;
+      await this._capture.start((frame) => {
         if (!this._loopbackOk) return;
         const adjusted = this._applyCaptureGain(frame);
+        capturedFrames++;
+        if (capturedFrames <= 5 || capturedFrames % 250 === 0) {
+          let peak = 0;
+          let sumSquares = 0;
+          let clipped = 0;
+          for (let i = 0; i < adjusted.length; i++) {
+            const amplitude = Math.abs(adjusted[i]);
+            peak = Math.max(peak, amplitude);
+            sumSquares += amplitude * amplitude;
+            if (amplitude >= 32760) clipped++;
+          }
+          console.log('AUDIO_TX_PCM_DIAG', {
+            frame: capturedFrames, samples: adjusted.length,
+            peak, rms: Math.round(Math.sqrt(sumSquares / Math.max(adjusted.length, 1))),
+            clippedSamples: clipped, captureGain: this._captureGain,
+          });
+        }
         this._txEncoder.encode(adjusted);
       });
     } catch (captureErr) {
