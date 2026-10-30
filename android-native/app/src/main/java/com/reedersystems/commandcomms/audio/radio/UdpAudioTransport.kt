@@ -18,6 +18,9 @@ private const val RADIO_HEADER_FIXED_LEN = 1 + 1 + 2 + 2 + 4 + 1 + 2
 private const val PACKET_VERSION: Byte = 1
 private const val PACKET_VERSION_DEVICE: Byte = 2
 private const val FLAG_FEC_HINT = 0x01
+// Explicit payload codec in the existing radio packet flags byte. Never infer
+// PCM from opusPayload[0]: 0x01 is also a legal Opus TOC byte.
+internal const val RADIO_FLAG_CODEC_PCM = 0x04
 private const val KEEPALIVE_INTERVAL_MS = 8_000L
 private const val KEEPALIVE_FAST_INTERVAL_MS = 3_000L
 private const val KEEPALIVE_FAST_DURATION_MS = 30_000L
@@ -222,13 +225,13 @@ class UdpAudioTransport(
 
     private val sendPacketQueue = Channel<QueuedPacket>(capacity = 64)
 
-    fun send(data: ByteArray) {
+    fun send(data: ByteArray, isPcmFallback: Boolean = false) {
         if (relayHost.isBlank()) {
             Log.w("[RadioError]", "Cannot send — relay host not configured method=send")
             return
         }
         val payloadBytes = data.size
-        val framed = framePacket(data)
+        val framed = framePacket(data, isPcmFallback)
         sendPacketQueue.trySend(QueuedPacket(framed, payloadBytes))
     }
 
@@ -297,7 +300,7 @@ class UdpAudioTransport(
         }
     }
 
-    private fun framePacket(audioData: ByteArray): ByteArray {
+    private fun framePacket(audioData: ByteArray, isPcmFallback: Boolean): ByteArray {
         val seq = sequenceNumber++
         val senderBytes = unitId.toByteArray(Charsets.UTF_8)
         val senderLen = senderBytes.size.coerceAtMost(255)
@@ -308,7 +311,7 @@ class UdpAudioTransport(
         val frame = ByteArray(RADIO_HEADER_FIXED_LEN + senderLen + (if (useDeviceVersion) 1 + deviceLen else 0) + audioData.size)
         var offset = 0
         frame[offset++] = if (useDeviceVersion) PACKET_VERSION_DEVICE else PACKET_VERSION
-        frame[offset++] = FLAG_FEC_HINT.toByte()
+        frame[offset++] = (FLAG_FEC_HINT or (if (isPcmFallback) RADIO_FLAG_CODEC_PCM else 0)).toByte()
         frame[offset++] = ((channelIndex shr 8) and 0xFF).toByte()
         frame[offset++] = (channelIndex and 0xFF).toByte()
         frame[offset++] = ((seq shr 8) and 0xFF).toByte()
@@ -566,6 +569,11 @@ class UdpAudioTransport(
             return null
         }
         val payload = buffer.copyOfRange(offset, offset + payloadLength)
+        if ((flags and RADIO_FLAG_CODEC_PCM) != 0 &&
+            (payload.size != 1 + OpusCodec.FRAME_SIZE * 2 || payload[0] != OpusCodec.CODEC_MARKER_PCM)) {
+            Log.w("[RadioError]", "INVALID_FLAGGED_PCM_PAYLOAD length=${payload.size} seq=$sequence — dropped")
+            return null
+        }
         return OpusRadioPacket(
             channelIndex = channelNumeric,
             senderUnitId = sender,

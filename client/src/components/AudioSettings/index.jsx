@@ -8,6 +8,7 @@ const DEFAULTS = {
   playbackAmplifier: false,
   recordingAmplifier: false,
   noiseSuppression: false,
+  inputDeviceId: '',
 };
 
 function clamp(v, min, max) {
@@ -23,6 +24,7 @@ function sanitize(raw) {
     playbackAmplifier: !!raw.playbackAmplifier,
     recordingAmplifier: !!raw.recordingAmplifier,
     noiseSuppression: !!raw.noiseSuppression,
+    inputDeviceId: typeof raw.inputDeviceId === 'string' ? raw.inputDeviceId.slice(0, 255) : '',
   };
 }
 
@@ -46,9 +48,29 @@ export function getAudioSettings() {
 
 export default function AudioSettings({ open, onClose, onChange }) {
   const [settings, setSettings] = useState(load);
+  const [inputDevices, setInputDevices] = useState([]);
 
   useEffect(() => {
     if (open) setSettings(load());
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !navigator.mediaDevices?.enumerateDevices) return undefined;
+    let cancelled = false;
+    const refreshDevices = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        if (!cancelled) setInputDevices(devices.filter(device => device.kind === 'audioinput' && device.deviceId));
+      } catch (err) {
+        console.warn('[AudioSettings] Unable to enumerate microphones:', err?.message);
+      }
+    };
+    refreshDevices();
+    navigator.mediaDevices.addEventListener?.('devicechange', refreshDevices);
+    return () => {
+      cancelled = true;
+      navigator.mediaDevices.removeEventListener?.('devicechange', refreshDevices);
+    };
   }, [open]);
 
   const update = useCallback((key, value) => {
@@ -116,6 +138,28 @@ export default function AudioSettings({ open, onClose, onChange }) {
 
           <section className="space-y-4">
             <h3 className="text-xs font-bold text-dispatch-secondary uppercase tracking-widest">Transmit Audio</h3>
+
+            <div className="space-y-2">
+              <label htmlFor="comms-audio-mic" className="text-sm font-medium text-dispatch-text">
+                Microphone Input
+              </label>
+              <p className="text-[10px] text-dispatch-secondary">
+                Select the actual microphone used for desktop PTT, not a speaker loopback or radio output.
+              </p>
+              <select
+                id="comms-audio-mic"
+                value={settings.inputDeviceId}
+                onChange={event => update('inputDeviceId', event.target.value)}
+                className="w-full rounded-md border border-dispatch-border bg-dispatch-panel px-3 py-2 text-sm text-dispatch-text"
+              >
+                <option value="">Windows / system default microphone</option>
+                {inputDevices.map((device, index) => (
+                  <option key={device.deviceId} value={device.deviceId}>
+                    {device.label || `Microphone ${index + 1}`}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <SliderSetting
               label="Mic Volume"

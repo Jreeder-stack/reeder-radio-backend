@@ -135,6 +135,8 @@ class AudioTransportManager {
     this._txWatchdogTimer = null;
     this._captureGain = 1.0;
     this._audioSettings = null;
+    this._pendingInputDeviceRefresh = false;
+    this._inputDeviceRefreshPromise = null;
     this._startHealthCheck();
   }
 
@@ -756,6 +758,13 @@ class AudioTransportManager {
       }
     }
 
+    try {
+      await this._refreshInputDeviceIfNeeded();
+    } catch (err) {
+      console.error('AUDIO_TX_BLOCKED: selected microphone unavailable', err?.message);
+      return false;
+    }
+
     const _txT0 = Date.now();
     this._setPttState(PTT_STATES.ARMING);
     this._loopbackOk = true;
@@ -841,9 +850,27 @@ class AudioTransportManager {
     });
 
     try {
-      await this._capture.start(async (frame) => {
+      let capturedFrames = 0;
+      await this._capture.start((frame) => {
         if (!this._loopbackOk) return;
         const adjusted = this._applyCaptureGain(frame);
+        capturedFrames++;
+        if (capturedFrames <= 5 || capturedFrames % 250 === 0) {
+          let peak = 0;
+          let sumSquares = 0;
+          let clipped = 0;
+          for (let i = 0; i < adjusted.length; i++) {
+            const amplitude = Math.abs(adjusted[i]);
+            peak = Math.max(peak, amplitude);
+            sumSquares += amplitude * amplitude;
+            if (amplitude >= 32760) clipped++;
+          }
+          console.log('AUDIO_TX_PCM_DIAG', {
+            frame: capturedFrames, samples: adjusted.length,
+            peak, rms: Math.round(Math.sqrt(sumSquares / Math.max(adjusted.length, 1))),
+            clippedSamples: clipped, captureGain: this._captureGain,
+          });
+        }
         this._txEncoder.encode(adjusted);
       });
     } catch (captureErr) {
@@ -888,6 +915,9 @@ class AudioTransportManager {
     this._txEncoder.setOnEncoded(null);
     this._setPttState(PTT_STATES.COOLDOWN);
     this._setPttState(PTT_STATES.IDLE);
+    if (this._pendingInputDeviceRefresh) {
+      this._refreshInputDeviceIfNeeded().catch(err => console.error('AUDIO_MIC_REFRESH_FAILED', err?.message));
+    }
     this._txEncoder.init().catch((err) => {
       console.warn('[AudioTransport] Post-TX encoder re-init failed:', err?.message);
     });
@@ -904,6 +934,9 @@ class AudioTransportManager {
       this._txEncoder.setOnEncoded(null);
     }
     this._setPttState(PTT_STATES.IDLE);
+    if (this._pendingInputDeviceRefresh) {
+      this._refreshInputDeviceIfNeeded().catch(err => console.error('AUDIO_MIC_REFRESH_FAILED', err?.message));
+    }
   }
 
   forceRelease() { this.forceReleaseTransmit(); }
@@ -1375,8 +1408,34 @@ class AudioTransportManager {
     }
   }
 
+  async _refreshInputDeviceIfNeeded() {
+    if (this._inputDeviceRefreshPromise) return this._inputDeviceRefreshPromise;
+    if (!this._pendingInputDeviceRefresh || this.pttState !== PTT_STATES.IDLE) return;
+    this._inputDeviceRefreshPromise = (async () => {
+      while (this._pendingInputDeviceRefresh && this.pttState === PTT_STATES.IDLE) {
+        this._pendingInputDeviceRefresh = false;
+        await this._capture.shutdown();
+        await this._capture.warmup();
+        console.log('AUDIO_MIC_INPUT_REFRESHED', {
+          requestedDeviceId: this._capture.inputDeviceId || 'system-default',
+        });
+      }
+    })().finally(() => {
+      this._inputDeviceRefreshPromise = null;
+    });
+    return this._inputDeviceRefreshPromise;
+  }
+
   applyAudioSettings(settings) {
     this._audioSettings = settings;
+    const selectedId = typeof settings.inputDeviceId === 'string' ? settings.inputDeviceId : '';
+    if (this._capture.inputDeviceId !== selectedId) {
+      this._capture.inputDeviceId = selectedId;
+      this._pendingInputDeviceRefresh = true;
+      if (this.pttState === PTT_STATES.IDLE) {
+        this._refreshInputDeviceIfNeeded().catch(err => console.error('AUDIO_MIC_REFRESH_FAILED', err?.message));
+      }
+    }
     this._playback.updateDspSettings({
       incomingVolume: settings.incomingVolume ?? 100,
       playbackAmplifier: settings.playbackAmplifier ?? false,

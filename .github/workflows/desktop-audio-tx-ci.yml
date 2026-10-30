@@ -1,0 +1,52 @@
+name: Desktop Audio TX Regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'client/src/audio/**'
+      - 'client/public/pcm-capture-worklet.js'
+      - 'client/src/components/AudioSettings/**'
+      - 'src/services/audioRelayService.js'
+      - 'src/services/radioAudioCodecFlags.js'
+      - 'src/services/__tests__/radioAudioCodecFlags.test.js'
+      - 'android-native/app/src/main/java/com/reedersystems/commandcomms/audio/radio/**'
+      - '.github/workflows/desktop-audio-tx-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audio-codec-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install backend dependencies
+        run: npm ci
+      - name: Validate audio module syntax
+        run: |
+          node --check src/services/audioRelayService.js
+          node --check src/services/radioAudioCodecFlags.js
+          node --check client/src/audio/AudioTransportManager.js
+          node --check client/src/audio/OpusBrowserEncoder.js
+          node --check client/src/audio/StreamingPcmFrameResampler.js
+          node --check client/public/pcm-capture-worklet.js
+      - name: Run targeted audio regressions
+        run: |
+          npx vitest run \
+            client/src/audio/__tests__/captureResampling.test.js \
+            client/src/audio/__tests__/OpusPacketDuration.test.js \
+            client/src/audio/__tests__/OpusBrowserEncoder.test.js \
+            client/src/audio/__tests__/AudioTransportManager.ptt.test.js \
+            src/services/__tests__/radioAudioCodecFlags.test.js \
+            src/services/__tests__/audioRelaySiblingDeviceHardening.test.js
+      - name: Install desktop/web UI dependencies
+        run: npm ci --prefix client --ignore-scripts
+      - name: Build desktop/web UI
+        run: npm run build --prefix client

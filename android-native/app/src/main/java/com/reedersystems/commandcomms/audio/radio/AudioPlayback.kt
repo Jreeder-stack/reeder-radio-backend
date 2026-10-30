@@ -427,15 +427,20 @@ class AudioPlayback(
                     }
 
                     if (jitterBuffer.hasPacket(expectedSeq)) {
-                        val data = jitterBuffer.take(expectedSeq)
+                        val packet = jitterBuffer.takeFrame(expectedSeq)
+                        val data = packet?.payload
                         jitterBuffer.advancePlaybackSeq()
                         missWaitStartMs = 0L
                         lastDataTimeMs = System.currentTimeMillis()
 
                         if (data != null) {
-                            val isPcmFallback = data.size > 1 && data[0] == OpusCodec.CODEC_MARKER_PCM
+                            val isPcmFallback = ((packet?.flags ?: 0) and RADIO_FLAG_CODEC_PCM) != 0
                             try {
                                 val pcm = if (isPcmFallback) {
+                                    require(data.size == 1 + OpusCodec.FRAME_SIZE * 2 &&
+                                        data[0] == OpusCodec.CODEC_MARKER_PCM) {
+                                        "Invalid explicitly flagged PCM frame"
+                                    }
                                     data.copyOfRange(1, data.size)
                                 } else {
                                     opusCodec.decode(data)
@@ -534,10 +539,10 @@ class AudioPlayback(
                             delay(1L)
                         } else {
                             // Try Opus inband FEC recovery using the next packet, if available.
-                            val nextPacket = jitterBuffer.peekNextPacket(expectedSeq)
+                            val nextPacket = jitterBuffer.peekNextFrame(expectedSeq)
                             val fecCandidate = nextPacket?.takeIf {
-                                it.isNotEmpty() && it[0] != OpusCodec.CODEC_MARKER_PCM
-                            }
+                                it.payload.isNotEmpty() && (it.flags and RADIO_FLAG_CODEC_PCM) == 0
+                            }?.payload
                             val fecPcm = if (fecCandidate != null) {
                                 try { opusCodec.decodeFec(fecCandidate) } catch (_: Exception) { null }
                             } else null
