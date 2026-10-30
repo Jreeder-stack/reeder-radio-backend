@@ -86,6 +86,30 @@ export class V3OutboundScheduler {
     this._signalIdle();
     return count;
   }
+  // Cancel even a previously completed turn's queued speech when its source
+  // connection has been replaced. A turn-only cancellation is not enough.
+  cancelByConnection(identity, previousConnectionId, reason = 'session_replaced') {
+    const matches = (entry) => entry.envelope
+      && entry.envelope.accountId === identity.accountId
+      && entry.envelope.speakerRef === identity.speakerRef
+      && entry.envelope.runtimeGeneration === identity.runtimeGeneration
+      && entry.envelope.connectionId === previousConnectionId
+      && entry.kind === 'routine';
+    let count = 0;
+    for (const entry of [...this.queue]) {
+      if (!matches(entry)) continue;
+      this.queue.splice(this.queue.indexOf(entry), 1);
+      this._settle(entry, 'interrupted', reason);
+      count++;
+    }
+    if (this.active && matches(this.active)) {
+      this.active.controller.abort();
+      count++;
+    }
+    this._signalIdle();
+    return count;
+  }
+
   isRelevant(entry) {
     return this.running && this.generation === entry.generation &&
       !entry.controller.signal.aborted && this.now() < entry.expiresAt &&

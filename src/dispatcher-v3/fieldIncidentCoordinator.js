@@ -71,6 +71,19 @@ export class V3FieldIncidentCoordinator {
     }
   }
 
+  // Move only the same authenticated owner's still-live task state after a
+  // validated session handoff. No CAD mutation or incident fact is fabricated.
+  rebindCustody(unitRef, prior, current) {
+    const oldKey = incidentKey(unitRef, prior);
+    const newKey = incidentKey(unitRef, current);
+    const state = this.incidents.get(oldKey);
+    if (!state || state.expiresAt < this.now() || this.incidents.has(newKey)) return false;
+    this.incidents.delete(oldKey);
+    state.key = newKey;
+    this.incidents.set(newKey, state);
+    return true;
+  }
+
   clearAll() {
     this.incidents.clear();
   }

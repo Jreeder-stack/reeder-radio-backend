@@ -85,6 +85,39 @@ export class V3ConversationRecords {
     return copy(record);
   }
 
+  // A newly authenticated connection may recover only unfinished, bounded
+  // tasks from its own replaced connection. Old prompt receipts are NOT moved:
+  // a fresh, explicitly addressed resume request must be heard and delivered.
+  adoptConnection(envelope, previousConnectionId) {
+    const key = this.scopeKey(envelope);
+    this._prune();
+    if (!previousConnectionId || previousConnectionId === envelope.connectionId) return null;
+    const scope = JSON.parse(key);
+    scope[scope.length - 1] = previousConnectionId;
+    const oldKey = JSON.stringify(scope);
+    const prior = this.conversations.get(oldKey);
+    if (!prior || prior.accountId !== envelope.accountId
+      || prior.speakerRef !== envelope.speakerRef
+      || prior.speakerUnitId !== envelope.speaker.unitId
+      || prior.credentialType !== envelope.credentialType) return null;
+    this._pruneTasks(prior);
+    this.conversations.delete(oldKey);
+    if (this.conversations.has(key)) return null;
+    const pending = [prior.activeTask, ...prior.suspendedTasks].filter(unfinished)
+      .slice(0, this.limits.maxSuspended);
+    if (!pending.length) return null;
+    const adopted = {
+      ...prior, scopeKey: key, connectionId: envelope.connectionId,
+      activeTask: null, suspendedTasks: pending.map((task) => ({ ...task, state: 'suspended' })),
+      turns: [], lastActivityAt: this.now(),
+    };
+    this.conversations.set(key, adopted);
+    return {
+      conversationId: adopted.id, previousScopeKey: oldKey, scopeKey: key,
+      taskIds: adopted.suspendedTasks.map((task) => task.id),
+    };
+  }
+
   recordTurn(envelope, { transcript, reason = null, freshRequest = false } = {}) {
     const key = this.scopeKey(envelope);
     this._prune();
@@ -97,6 +130,7 @@ export class V3ConversationRecords {
         speakerUnitId: envelope.speaker.unitId,
         speakerRef: envelope.speakerRef,
         accountId: envelope.accountId, connectionId: envelope.connectionId,
+        credentialType: envelope.credentialType,
         createdAt: time, lastActivityAt: time,
         activeTask: null, suspendedTasks: [], turns: [],
       };

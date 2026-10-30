@@ -16,6 +16,7 @@ import { V3SpeechPipeline } from './speechPipeline.js';
 import { V3IntentPlanner } from './intentPlanner.js';
 import { V3ConversationGate, stripV3LeadingAddress } from './conversationGate.js';
 import { V3ConversationRecords } from './conversationRecords.js';
+import { V3ConnectionCustody } from './connectionCustody.js';
 import { V3SharedIncidentFacts, clarifyV3GroupMutation } from './sharedIncidentFacts.js';
 import { classifyV3TaskTransition, modelV3TaskTransition } from './taskTransitions.js';
 import { createV3PendingTask, resumeV3PendingTask } from './clarificationTasks.js';
@@ -86,12 +87,15 @@ export class V3LiveDispatcher {
     this.isRunning = false;
     this.connected = false;
     this._sequence = 1;
+    this._sessionCustody = new V3ConnectionCustody();
     this._outbound = new V3OutboundScheduler({
       limits: outboundLimits,
       relevant: (entry) => this.isRunning && entry.generation === this.runtimeGeneration
         && entry.channel === this.context.roomKey
         && (!entry.envelope || (entry.envelope.runtimeGeneration === this.runtimeGeneration
-          && (entry.kind === 'alert' || this._unitLatestIntake.get(entry.envelope.speakerRef) === entry.envelope.intakeSequence))),
+          && (entry.kind === 'alert' || this._unitLatestIntake.get(entry.envelope.speakerRef) === entry.envelope.intakeSequence)))
+        && (entry.kind !== 'routine' || !entry.envelope
+          || (this._sessionCustody.isCurrent(entry.envelope) && this._pttRouteCurrent(entry.source))),
       transmit: async (entry, check) => {
         check();
         if (entry.source) {
@@ -118,7 +122,11 @@ export class V3LiveDispatcher {
     });
     this._lifecycle = new V3TurnLifecycle({
       getGeneration: () => this.isRunning ? this.runtimeGeneration : null,
-      validator: (source) => revalidatePttActor(source, this.context),
+      validator: async (source, identity) => this._sessionCustody.isCurrent(identity)
+        && this._pttRouteCurrent(source)
+        && await revalidatePttActor(source, this.context)
+        && this._sessionCustody.isCurrent(identity)
+        && this._pttRouteCurrent(source),
     });
     this._scheduler = new V3TurnScheduler({ limits: schedulerLimits, onTerminal: (ticket, outcome) => {
       this._diag('turn_scheduler_terminal', ticket.identity.turnId, outcome.handled, {
@@ -223,6 +231,7 @@ export class V3LiveDispatcher {
     this._ambiguousSources.clear();
     this._ambiguousSourcesOverflow = false;
     this.conversationGate.clearAll();
+    this._sessionCustody.clearAll();
     this.conversations.clearAll();
     this.fieldIncidents.clearAll();
     this.sharedIncidents.clearAll();
@@ -241,6 +250,49 @@ export class V3LiveDispatcher {
 
   matchesChannel(channelId) {
     return this.channelAliases.has(String(channelId));
+  }
+
+  // Socket.IO routing is verified from the server's actual socket and room,
+  // never from a user-supplied channel label. Credential-backed HTTP PTT has
+  // no socket presence signal and retains its bound-channel/grant validation.
+  _pttRouteCurrent(source) {
+    const connectionId = source?.principal?.connectionId;
+    if (typeof connectionId !== 'string') return false;
+    if (!connectionId.startsWith('socket:')) return true;
+    const socket = this.signaling?.io?.sockets?.sockets?.get?.(connectionId.slice(7));
+    return !!socket && socket.connected === true
+      && socket.pttPrincipal === source.principal
+      && String(socket.unitId) === source.principal.unitId
+      && socket.channels?.has(this.context.roomKey) === true
+      && socket.rooms?.has(`channel:${this.context.roomKey}`) === true;
+  }
+
+  _retireReplacedConnection(identity, previousConnectionId) {
+    for (const state of [...this._lifecycle.turns.values()]) {
+      const prior = state.identity;
+      if (prior.runtimeGeneration === identity.runtimeGeneration
+        && prior.dispatchCenterId === identity.dispatchCenterId
+        && prior.speakerRef === identity.speakerRef
+        && prior.accountId === identity.accountId
+        && prior.credentialType === identity.credentialType
+        && prior.connectionId === previousConnectionId) {
+        this.cancelTurnById(prior.turnId, 'session_replaced');
+      }
+    }
+    this._outbound.cancelByConnection(identity, previousConnectionId);
+    const pending = this.conversationGate.pending.get(identity.speakerRef);
+    if (pending?.sessionKey) {
+      try {
+        const parts = JSON.parse(pending.sessionKey);
+        if (parts[0] === identity.runtimeId && parts[1] === identity.runtimeGeneration
+          && parts[2] === identity.dispatchCenterId && parts[4] === identity.speakerRef
+          && parts[5] === identity.accountId && parts[6] === previousConnectionId) {
+          this.conversationGate.clear(identity.speakerRef, pending.sessionKey);
+        }
+      } catch (_) { /* malformed pending scope never grants authority */ }
+    }
+    this._diag('session_connection_replaced', identity.turnId, true,
+      { speakerRef: identity.speakerRef, priorOutputCanceled: true }, null, identity);
   }
 
   getPipelineStatus() {
@@ -278,6 +330,17 @@ export class V3LiveDispatcher {
       return false;
     }
     if (this._intake.has(metadata.transmissionId) || this._seenTransmissions.has(metadata.transmissionId)) return false;
+    const sourceIdentity = {
+      runtimeId: this.context.runtimeId, runtimeGeneration: this.runtimeGeneration,
+      dispatchCenterId: this.context.dispatchCenterId,
+      speakerRef: metadata.principal.unitId, accountId: metadata.principal.accountId,
+      credentialType: metadata.principal.credentialType,
+      connectionId: metadata.principal.connectionId,
+    };
+    if (this._sessionCustody.isRetired(sourceIdentity) || !this._pttRouteCurrent(metadata)) {
+      this._diag('turn_intake_rejected', null, false, { reason: 'retired_or_unrouted_session' });
+      return false;
+    }
     const speakerKey = String(metadata.principal.unitId).trim().toUpperCase();
     const blocked = this._ambiguousSources.get(speakerKey);
     if (blocked || this._ambiguousSourcesOverflow) {
@@ -320,6 +383,14 @@ export class V3LiveDispatcher {
       this._diag('turn_completed', identity.turnId, false, { outcome: reservation.reason }, null, identity);
       return false;
     }
+    const admitted = this._sessionCustody.admit(identity);
+    if (!admitted.accepted) {
+      this._scheduler.cancel(reservation.ticket, admitted.reason);
+      this._rememberTransmission(metadata.transmissionId, identity.turnId);
+      this._diag('turn_intake_rejected', identity.turnId, false, { reason: admitted.reason }, null, identity);
+      return false;
+    }
+    if (admitted.previousConnectionId) this._retireReplacedConnection(identity, admitted.previousConnectionId);
     const life = this._lifecycle.accept(identity, metadata);
     this._unitLatestIntake.set(identity.speakerRef, identity.intakeSequence);
     life.owner = this._lifecycle;
@@ -414,6 +485,22 @@ export class V3LiveDispatcher {
     assertV3TurnEnvelope(turnEnvelope, this.context);
 
     if (await this._handleEmergencyTranscript(transmission)) return true;
+
+    const previousConnection = this._sessionCustody.previousFor(turnEnvelope);
+    if (previousConnection) {
+      const life = this._lifecycle.get(turnEnvelope.turnId);
+      if (life) await this._lifecycle.authorize(life);
+      const adopted = this.conversations.adoptConnection(turnEnvelope, previousConnection);
+      if (adopted) {
+        for (const taskId of adopted.taskIds) {
+          this.fieldIncidents.rebindCustody(turnEnvelope.speaker.callsign,
+            { scopeKey: adopted.previousScopeKey, taskId },
+            { scopeKey: adopted.scopeKey, taskId });
+        }
+        this._diag('conversation_session_resumed', transmission.correlationId, true,
+          { conversationId: adopted.conversationId, recoverableTasks: adopted.taskIds.length }, turnEnvelope);
+      }
+    }
 
     const sessionKey = this.conversations.scopeKey(turnEnvelope);
     const ownedConversation = this.conversations.get(turnEnvelope);
