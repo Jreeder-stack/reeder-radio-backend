@@ -27,6 +27,7 @@ export class PcmCaptureEngine {
     this._warmupPromise = null;
     this._preBuffer = [];
     this.noiseSuppression = false;
+    this.inputDeviceId = '';
   }
 
   async warmup() {
@@ -46,6 +47,7 @@ export class PcmCaptureEngine {
 
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
+        ...(this.inputDeviceId ? { deviceId: { exact: this.inputDeviceId } } : {}),
         channelCount: 1,
         sampleRate: PCM_SPEC.sampleRate,
         echoCancellation: true,
@@ -97,6 +99,8 @@ export class PcmCaptureEngine {
       requestedRate: PCM_SPEC.sampleRate,
       audioContextRate: actualRate,
       microphoneTrackRate: inputTrackRate || 'unspecified',
+      selectedDeviceId: this.inputDeviceId || 'system-default',
+      activeDeviceId: micTrack?.getSettings?.().deviceId || 'unspecified',
       resampling: actualRate !== PCM_SPEC.sampleRate,
     });
 
