@@ -11,9 +11,11 @@ import android.media.MediaRecorder
 import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import com.reedersystems.commandcomms.BuildConfig
 import com.reedersystems.commandcomms.hd760.Hd760ScanPolicy
+import com.reedersystems.commandcomms.hd760.Hd760MeterModel
 import com.reedersystems.commandcomms.data.prefs.SpeakerBoostPrefs
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
@@ -160,6 +162,7 @@ class RadioAudioEngine(private val context: Context) {
         encodeJob = null
         encodeQueue = null
         isTransmitting = false
+        stateManager.setTxCaptureActive(false)
         stopTxHeartbeatMonitor()
         isPreCapturing = false
         synchronized(preBufferLock) {
@@ -1096,9 +1099,12 @@ class RadioAudioEngine(private val context: Context) {
             }
             while (preBuffer.isNotEmpty()) {
                 val frame = preBuffer.removeFirst()
-                udpTransport.send(frame)
-                flushedFrames++
-                txSessionStats.packetsSent++
+                if (udpTransport.send(frame)) {
+                    flushedFrames++
+                    txSessionStats.packetsSent++
+                } else {
+                    txSessionStats.failures++
+                }
             }
             isTransmitting = true
             preCapturingToBuffer = false
@@ -1344,6 +1350,8 @@ class RadioAudioEngine(private val context: Context) {
 
             isTransmitting = true
             lastSuccessfulSendMs = System.currentTimeMillis()
+            stateManager.setTxCaptureActive(true)
+            stateManager.setTxAudioBars(0)
             stateManager.txPipelineRunning = true
             stateManager.transitionTo(RadioState.TRANSMITTING, "tx_started")
             Log.d("[AudioCapture]", "TX_CAPTURE_STARTED sampleRate=$actualSampleRate channelCount=$actualChannelCount frameMs=$CAPTURE_INTERVAL_MS frameSizeSamples=$actualFrameSizeSamples frameSizeBytes=$actualFrameSizeBytes ${RadioDiagLog.elapsedTag()}")
@@ -1383,8 +1391,9 @@ class RadioAudioEngine(private val context: Context) {
                                 val monoFrameByteCount = actualFrameSizeSamples * 2
                                 Log.d(TAG, "LATENCY_FIRST_TX_FRAME_SENT frame=$frameCounter samplesPerFrame=$actualFrameSizeSamples pcmBytesToEncode=$monoFrameByteCount opusFrameSize=${opusCodec.encoderFrameSize} encodedBytes=${encoded.size} latencyMs=$latencyMs ${RadioDiagLog.elapsedTag()}")
                             }
-                            udpTransport.send(encoded)
-                            lastSuccessfulSendMs = System.currentTimeMillis()
+                            if (!udpTransport.send(encoded)) {
+                                txSessionStats.failures++
+                            }
                         } else {
                             txSessionStats.failures++
                         }
@@ -1452,6 +1461,15 @@ class RadioAudioEngine(private val context: Context) {
                                         lowPassFilter(monoFrame, monoFrameSizeBytes)
                                         softwareCompressor(monoFrame, monoFrameSizeBytes)
                                         applyGain(monoFrame, monoFrameSizeBytes, txGain)
+
+                                        if (BuildConfig.FLAVOR == "hd760") {
+                                            val nowMs = SystemClock.elapsedRealtime()
+                                            if (nowMs - lastHd760TxMeterMs >= 100L) {
+                                                lastHd760TxMeterMs = nowMs
+                                                val outputRms = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes).rms
+                                                stateManager.setTxAudioBars(Hd760MeterModel.audioBars(outputRms))
+                                            }
+                                        }
 
                                         if (preStats != null) {
                                             val postStats = RadioDiagLog.pcmStats(monoFrame, monoFrameSizeBytes)
@@ -1528,6 +1546,7 @@ class RadioAudioEngine(private val context: Context) {
             return
         }
         isTransmitting = false
+        stateManager.setTxCaptureActive(false)
         stopTxHeartbeatMonitor()
         txSessionStats.stopReason = "ptt_release"
         captureJob?.cancel()
@@ -1595,7 +1614,11 @@ class RadioAudioEngine(private val context: Context) {
                 delay(TX_HEARTBEAT_CHECK_INTERVAL_MS)
                 if (!isTransmitting) break
                 val now = System.currentTimeMillis()
-                val gap = now - lastSuccessfulSendMs
+                // Queue acceptance is not proof that UDP actually transmitted.
+                val sentSinceStart = udpTransport.txPacketCount > txSessionStartPacketCount
+                val lastActualSendMs = if (sentSinceStart) udpTransport.lastPacketSentAtMs
+                    else txSessionStats.startTimeMs
+                val gap = now - lastActualSendMs
                 if (gap > TX_STALL_THRESHOLD_MS && !stallReported) {
                     stallReported = true
                     val reason = "tx_heartbeat_stall_gap=${gap}ms"
@@ -1628,6 +1651,9 @@ class RadioAudioEngine(private val context: Context) {
         rxPacketRateLimiter.reset()
         rxSummaryDropped = 0
         audioPlayback.onFrameDecoded = { rxSessionStats.packetsDecoded++ }
+        audioPlayback.onPcmAudioFrame = if (BuildConfig.FLAVOR == "hd760") {
+            { rms -> stateManager.setRxAudioBars(Hd760MeterModel.audioBars(rms)) }
+        } else null
         audioPlayback.onUnderrun = { rxSessionStats.underruns++ }
         audioPlayback.onDecodeFailure = { rxSessionStats.failures++ }
         audioPlayback.onFecRecovery = { rxSessionStats.fecRecoveries++ }
@@ -1648,6 +1674,8 @@ class RadioAudioEngine(private val context: Context) {
         stateManager.updateSignalQuality(SignalQuality.NONE)
         audioPlayback.stop()
         audioPlayback.onFrameDecoded = null
+        audioPlayback.onPcmAudioFrame = null
+        clearHd760MediaActivity()
         audioPlayback.onUnderrun = null
         audioPlayback.onDecodeFailure = null
         audioPlayback.onFecRecovery = null
@@ -1765,6 +1793,13 @@ class RadioAudioEngine(private val context: Context) {
             while (isActive) {
                 delay(RX_DIAG_INTERVAL_MS)
                 val currentRxCount = udpTransport.rxPacketCount
+                if (currentRxCount < lastDiagRxCount) {
+                    // Transport restart resets counters; never interpret rollover as packet loss.
+                    Log.d(TAG, "RX_COUNTER_RESET old=$lastDiagRxCount new=$currentRxCount")
+                    lastDiagRxCount = currentRxCount
+                    noRxDataStartMs = 0L
+                    noRxSocketRecreated = false
+                }
                 val newPackets = currentRxCount - lastDiagRxCount
                 lastDiagRxCount = currentRxCount
                 val bufSize = jitterBuffer.size
@@ -1806,23 +1841,27 @@ class RadioAudioEngine(private val context: Context) {
                     }
                 }
 
-                if (newPackets == 0L && currentRxCount > 0 && udpTransport.connectionHealth.value == TransportHealth.CONNECTED) {
+                // Silence is normal when nobody is transmitting. Recover the RX socket
+                // only when signaling says another unit currently holds this channel.
+                val expectedRemoteAudio = stateManager.currentState == RadioState.RECEIVING &&
+                    !isTransmitting && !isPreCapturing
+                if (expectedRemoteAudio && newPackets == 0L &&
+                    udpTransport.connectionHealth.value == TransportHealth.CONNECTED) {
                     if (noRxDataStartMs == 0L) {
                         noRxDataStartMs = System.currentTimeMillis()
                     }
                     val noRxDurationMs = System.currentTimeMillis() - noRxDataStartMs
-                    if (noRxDurationMs >= 60_000L && !noRxSocketRecreated) {
-                        Log.w(TAG, "RX_WATCHDOG_SOCKET_RECREATE noRxMs=$noRxDurationMs rxTotal=$currentRxCount — forcing UDP socket recreate and re-register ${RadioDiagLog.elapsedTag()}")
+                    if (noRxDurationMs >= 15_000L && !noRxSocketRecreated) {
+                        Log.w(TAG, "RX_WATCHDOG_EXPECTED_AUDIO_SOCKET_RECREATE noRxMs=$noRxDurationMs — active remote TX but no UDP frames")
                         noRxSocketRecreated = true
                         udpTransport.forceSocketRecreate()
-                    } else if (noRxDurationMs >= 30_000L) {
-                        Log.w(TAG, "RX_WATCHDOG_NO_DATA noRxMs=$noRxDurationMs rxTotal=$currentRxCount — triggering fast keepalive burst ${RadioDiagLog.elapsedTag()}")
+                    } else if (noRxDurationMs >= 5_000L) {
+                        Log.w(TAG, "RX_WATCHDOG_EXPECTED_AUDIO_MISSING noRxMs=$noRxDurationMs — fast keepalive")
                         udpTransport.activateFastKeepaliveExternal()
                     }
-                } else if (newPackets > 0L) {
-                    if (noRxDataStartMs > 0L) {
-                        val recoveredAfterMs = System.currentTimeMillis() - noRxDataStartMs
-                        Log.d(TAG, "RX_WATCHDOG_RECOVERED rxNew=$newPackets afterMs=$recoveredAfterMs ${RadioDiagLog.elapsedTag()}")
+                } else {
+                    if (newPackets > 0L && noRxDataStartMs > 0L) {
+                        Log.d(TAG, "RX_WATCHDOG_RECOVERED rxNew=$newPackets afterMs=${System.currentTimeMillis() - noRxDataStartMs} ${RadioDiagLog.elapsedTag()}")
                     }
                     noRxDataStartMs = 0L
                     noRxSocketRecreated = false
@@ -1833,17 +1872,52 @@ class RadioAudioEngine(private val context: Context) {
 
     private val rxPacketRateLimiter = RadioDiagLog.RateLimiter(detailCount = 5, summaryIntervalMs = 1000L)
     private var rxSummaryDropped: Long = 0
+    private var lastHd760TxMeterMs = 0L
     private val hd760Scan = Hd760ScanPolicy()
     @Volatile private var hd760ScanOn = false
     @Volatile private var hd760ScanPaused = false
     @Volatile private var hd760ScanChannels: Set<Int> = emptySet()
     var onHd760ScanReception: ((Int?) -> Unit)? = null
+    var onHd760RxMediaStart: (() -> Unit)? = null
+    var onHd760RxMediaEnd: (() -> Unit)? = null
+    @Volatile private var hd760LastRxPacketMs: Long = 0L
+    private var hd760RxIdleJob: Job? = null
+
+    private fun noteHd760MediaPacket() {
+        hd760LastRxPacketMs = SystemClock.elapsedRealtime()
+        if (!stateManager.rxMediaActive.value) {
+            stateManager.setRxMediaActive(true)
+            onHd760RxMediaStart?.invoke()
+        }
+        if (hd760RxIdleJob?.isActive != true) {
+            hd760RxIdleJob = scope.launch {
+                while (isActive && SystemClock.elapsedRealtime() - hd760LastRxPacketMs <= 650L) {
+                    delay(150L)
+                }
+                if (isActive) {
+                    stateManager.setRxMediaActive(false)
+                    onHd760RxMediaEnd?.invoke()
+                }
+            }
+        }
+    }
+
+    private fun clearHd760MediaActivity() {
+        if (BuildConfig.FLAVOR != "hd760") return
+        hd760RxIdleJob?.cancel()
+        hd760RxIdleJob = null
+        hd760LastRxPacketMs = 0L
+        val wasReceiving = stateManager.rxMediaActive.value
+        stateManager.setRxMediaActive(false)
+        if (wasReceiving) onHd760RxMediaEnd?.invoke()
+    }
 
     fun configureHd760Scan(enabled: Boolean, channels: Set<Int>) {
         if (BuildConfig.FLAVOR != "hd760") return
         hd760ScanOn = enabled
         hd760ScanChannels = if (enabled) channels else emptySet()
         hd760Scan.reset()
+        clearHd760MediaActivity()
         jitterBuffer.flushAndEnterIdle()
         audioPlayback.clearStaleFrames()
         onHd760ScanReception?.invoke(null)
@@ -1854,6 +1928,7 @@ class RadioAudioEngine(private val context: Context) {
         if (BuildConfig.FLAVOR != "hd760") return
         hd760ScanPaused = suspend
         hd760Scan.reset()
+        clearHd760MediaActivity()
         jitterBuffer.flushAndEnterIdle()
         audioPlayback.clearStaleFrames()
         onHd760ScanReception?.invoke(null)
@@ -1896,6 +1971,7 @@ class RadioAudioEngine(private val context: Context) {
             }
             return
         }
+        if (BuildConfig.FLAVOR == "hd760") noteHd760MediaPacket()
         if (rxPacketRateLimiter.shouldLogDetail()) {
             Log.d(TAG, "RADIO_RX_CHANNEL_MATCH packetChannel=${packet.channelIndex} local=${udpTransport.channelIndex}")
             Log.d(TAG, "RADIO_RX_PACKET_RECEIVED seq=${packet.sequence} sender=${packet.senderUnitId} payload=${packet.opusPayload.size}")

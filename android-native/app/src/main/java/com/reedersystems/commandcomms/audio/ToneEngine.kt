@@ -28,6 +28,7 @@ class ToneEngine(private val context: Context) {
     private var talkPermitJob: Job? = null
     private var talkPermitPlayer: MediaPlayer? = null
     private val talkPermitLock = Any()
+    private var activeTalkPermitGate: TalkPermitGate? = null
     private var bonkPlayer: MediaPlayer? = null
     private val bonkLock = Any()
 
@@ -52,11 +53,23 @@ class ToneEngine(private val context: Context) {
                 }
                 mp.setOnErrorListener { errMp, what, extra ->
                     Log.w(TAG, "Persistent talk-permit MediaPlayer error what=$what extra=$extra; releasing for lazy recreate")
-                    synchronized(talkPermitLock) {
-                        if (talkPermitPlayer === errMp) talkPermitPlayer = null
+                    val waiting = synchronized(talkPermitLock) {
+                        if (talkPermitPlayer === errMp) {
+                            talkPermitPlayer = null
+                            activeTalkPermitGate.also { activeTalkPermitGate = null }
+                        } else null
                     }
+                    waiting?.failed()
                     runCatching { errMp.release() }
                     true
+                }
+                mp.setOnCompletionListener { completed ->
+                    val waiting = synchronized(talkPermitLock) {
+                        if (talkPermitPlayer === completed) {
+                            activeTalkPermitGate.also { activeTalkPermitGate = null }
+                        } else null
+                    }
+                    waiting?.played()
                 }
                 talkPermitPlayer = mp
                 Log.d(TAG, "Talk-permit MediaPlayer pre-prepared")
@@ -97,6 +110,10 @@ class ToneEngine(private val context: Context) {
     fun stopTalkPermitTone() {
         talkPermitJob?.cancel()
         talkPermitJob = null
+        val waiting = synchronized(talkPermitLock) {
+            activeTalkPermitGate.also { activeTalkPermitGate = null }
+        }
+        waiting?.stopped()
         synchronized(talkPermitLock) {
             talkPermitPlayer?.let { mp ->
                 runCatching { if (mp.isPlaying) mp.pause() }
@@ -105,49 +122,81 @@ class ToneEngine(private val context: Context) {
         }
     }
 
-    suspend fun playTalkPermitToneAndAwait() {
+    /**
+     * Return true only after a real permit tone (or the verified fallback)
+     * has finished. A stale/error MediaPlayer must not hold a granted floor
+     * forever or authorize microphone capture.
+     */
+    suspend fun playTalkPermitToneAndAwait(): Boolean {
+        var player: MediaPlayer? = null
+        var gate: TalkPermitGate? = null
+        var outcome: TalkPermitGate.Outcome? = null
         try {
-            val deferred = CompletableDeferred<Unit>()
-            var mp: MediaPlayer? = synchronized(talkPermitLock) { talkPermitPlayer }
-            if (mp == null) {
-                initTalkPermitPlayer()
-                mp = synchronized(talkPermitLock) { talkPermitPlayer }
+            player = synchronized(talkPermitLock) { talkPermitPlayer }
+            if (player == null) {
+                withContext(Dispatchers.Main.immediate) { initTalkPermitPlayer() }
+                player = synchronized(talkPermitLock) { talkPermitPlayer }
             }
-            if (mp == null) {
+            if (player == null) {
                 Log.w(TAG, "Talk-permit MediaPlayer unavailable, retrying once")
                 delay(50)
-                initTalkPermitPlayer()
-                mp = synchronized(talkPermitLock) { talkPermitPlayer }
+                withContext(Dispatchers.Main.immediate) { initTalkPermitPlayer() }
+                player = synchronized(talkPermitLock) { talkPermitPlayer }
             }
-            if (mp != null) {
-                val player = mp
-                player.setOnCompletionListener {
-                    runCatching { it.seekTo(0) }
-                    deferred.complete(Unit)
+            val current = player
+            if (current != null) {
+                val attempt = TalkPermitGate()
+                gate = attempt
+                val claimed = synchronized(talkPermitLock) {
+                    if (talkPermitPlayer !== current) false else {
+                        activeTalkPermitGate?.stopped()
+                        activeTalkPermitGate = attempt
+                        true
+                    }
                 }
-                runCatching { if (player.isPlaying) player.pause() }
-                runCatching { player.seekTo(0) }
-                player.start()
-                try {
-                    deferred.await()
-                } catch (e: CancellationException) {
-                    runCatching { if (player.isPlaying) player.pause() }
-                    runCatching { player.seekTo(0) }
-                    throw e
+                if (claimed) {
+                    withContext(Dispatchers.Main.immediate) {
+                        if (current.isPlaying) current.pause()
+                        current.seekTo(0)
+                        current.start()
+                    }
+                    outcome = attempt.await()
+                    when (outcome) {
+                        TalkPermitGate.Outcome.PLAYED -> return true
+                        TalkPermitGate.Outcome.STOPPED -> return false
+                        TalkPermitGate.Outcome.ERROR ->
+                            Log.w(TAG, "Talk-permit player error; attempting bounded fallback")
+                        TalkPermitGate.Outcome.TIMED_OUT ->
+                            Log.e(TAG, "TALK_PERMIT_TIMEOUT: completion callback not received")
+                        else -> {}
+                    }
                 }
-                return
             }
-            Log.w(TAG, "Talk-permit MediaPlayer unavailable after retry, using oscillator fallback")
         } catch (e: CancellationException) {
+            gate?.stopped()
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "WAV playback failed, using oscillator fallback: ${e.message}")
+            Log.w(TAG, "Talk-permit WAV playback failed: ${e.message}; attempting bounded fallback")
+        } finally {
             synchronized(talkPermitLock) {
-                talkPermitPlayer?.let { runCatching { it.release() } }
-                talkPermitPlayer = null
+                if (activeTalkPermitGate === gate) activeTalkPermitGate = null
+            }
+            // Never reuse a player that failed to complete its permit attempt.
+            if (outcome != TalkPermitGate.Outcome.PLAYED &&
+                outcome != TalkPermitGate.Outcome.STOPPED && player != null) {
+                val stale = player
+                val owned = synchronized(talkPermitLock) {
+                    if (talkPermitPlayer === stale) {
+                        talkPermitPlayer = null
+                        true
+                    } else false
+                }
+                if (owned) runCatching { stale.release() }
             }
         }
-        playBeeps(800f, count = 3, durationMs = 40, gapMs = 30, volume = 0.5f)
+        return withTimeoutOrNull(1_500L) {
+            playBeeps(800f, count = 3, durationMs = 40, gapMs = 30, volume = 0.5f)
+        } == true
     }
 
     fun playEndOfTxTone() {
@@ -378,7 +427,7 @@ class ToneEngine(private val context: Context) {
         durationMs: Int,
         gapMs: Int,
         volume: Float
-    ) = withContext(Dispatchers.IO) {
+    ): Boolean = withContext(Dispatchers.IO) {
         val samples = SAMPLE_RATE * durationMs / 1000
         val buf = ShortArray(samples)
         val inc = 2.0 * PI * freqHz / SAMPLE_RATE
@@ -394,15 +443,17 @@ class ToneEngine(private val context: Context) {
             if (phase > 2.0 * PI) phase -= 2.0 * PI
         }
 
+        var allPlayed = true
         repeat(count) { idx ->
-            runCatching {
+            try {
                 val track = synchronized(beepTrackLock) { beepTrack }
                 if (track != null) {
                     try {
                         if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
                             track.play()
                         }
-                        track.write(buf, 0, buf.size)
+                        val written = track.write(buf, 0, buf.size)
+                        if (written != buf.size) throw IllegalStateException("Beep write incomplete: $written/${buf.size}")
                         delay(durationMs.toLong() + 20)
                     } catch (e: Exception) {
                         Log.w(TAG, "Reusable beep track error, recreating: ${e.message}")
@@ -418,8 +469,14 @@ class ToneEngine(private val context: Context) {
                     playBeepFallback(buf, durationMs)
                 }
                 if (idx < count - 1 && gapMs > 0) delay(gapMs.toLong())
-            }.onFailure { Log.w(TAG, "Beep error: ${it.message}") }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                allPlayed = false
+                Log.w(TAG, "Beep error: ${e.message}")
+            }
         }
+        allPlayed
     }
 
     private suspend fun playBeepFallback(buf: ShortArray, durationMs: Int) {
@@ -432,11 +489,15 @@ class ToneEngine(private val context: Context) {
             .setBufferSizeInBytes(maxOf(minBuf, buf.size * 2))
             .setTransferMode(AudioTrack.MODE_STATIC)
             .build()
-        track.write(buf, 0, buf.size)
-        track.play()
-        delay(durationMs.toLong() + 20)
-        track.stop()
-        track.release()
+        try {
+            val written = track.write(buf, 0, buf.size)
+            if (written != buf.size) throw IllegalStateException("Fallback beep write incomplete: $written/${buf.size}")
+            track.play()
+            delay(durationMs.toLong() + 20)
+        } finally {
+            runCatching { track.stop() }
+            track.release()
+        }
     }
 
     private fun audioAttribs() = AudioAttributes.Builder()
