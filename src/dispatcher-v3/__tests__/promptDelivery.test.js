@@ -20,7 +20,7 @@ const question = () => ({
 });
 const assign = () => ({ action: 'ASSIGN_UNIT', confidence: 1, input: { unitRef: 'A1', callRef: 'that call' } });
 const answer = (id = 'OLD-CALL') => ({ action: 'ASSIGN_UNIT', confidence: 1, input: { callId: id } });
-const speaker = (h, unit = 'A1') => h.runtime.conversationGate.pending.get(unit);
+const speaker = (h, unit = 'A1') => h.runtime.conversationGate.pendingFor(unit);
 const scope = {
   sessionKey: 'session-A1', conversationId: 'conversation-A1',
   taskId: 'task-A1', promptTurnId: 'first-turn', runtimeGeneration: 'generation-1',
@@ -89,7 +89,7 @@ describe('AI-DISP-V3-001 02-03 delivery-correlated follow-up gate', () => {
     expect(gate.shouldProcess({ ...scope, unitId: 'A1', transcript: 'OLD-CALL', taskId: 'other-task' })).toMatchObject({
       allowed: false, reason: 'pending_task_changed',
     });
-    expect(gate.pending.has('A1')).toBe(false);
+    expect(Boolean(gate.pendingFor('A1'))).toBe(false);
   });
 
   it.each(['failed', 'interrupted', 'expired'])('%s output cannot open a reply window', (status) => {
@@ -97,7 +97,7 @@ describe('AI-DISP-V3-001 02-03 delivery-correlated follow-up gate', () => {
     const original = gate.expectFollowUp('A1', { ...scope });
     expect(gate.settlePromptDelivery({ ...scope, unitId: 'A1', status })).toBe(true);
     expect(gate.isCurrentPending('A1', original)).toBe(false);
-    expect(gate.pending.has('A1')).toBe(false);
+    expect(Boolean(gate.pendingFor('A1'))).toBe(false);
     expect(gate.shouldProcess({ ...scope, unitId: 'A1', transcript: 'OLD-CALL' }).allowed).toBe(false);
   });
 

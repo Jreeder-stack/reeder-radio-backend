@@ -39,7 +39,7 @@ const report = (unitRef = 'A1') => ({ action: 'REPORT_FIELD_INCIDENT', confidenc
 const update = (informationType = 'subject_description', value = 'blue jacket') => ({
   action: 'UPDATE_FIELD_INCIDENT', confidence: 1, input: { unitRef: 'A1', informationType, value },
 });
-const lastPending = (h) => h.runtime.conversationGate.pending.get('A1');
+const lastPending = (h) => h.runtime.conversationGate.pendingFor('A1');
 const originalEnvelope = (h) => h.runtime.planner.plan.mock.calls[0][0].turnEnvelope;
 const context = ({ current = 'OLD-CALL', listed = true, unit = 'center-a-A1', status = 'active' } = {}) => ({
   speaker: { unitId: unit }, currentCall: current ? { id: current, status } : null,
@@ -87,7 +87,8 @@ describe('AI-DISP-V3-001 02-05 real V3 PTT, task and CAD path', () => {
     const h = await make();
     h.cad.current.set('A1', 'OLD-CALL');
     await h.send('Central, clear me from my call');
-    expect(lastPending(h)).toMatchObject({ kind: 'disposition', callId: 'OLD-CALL', promptState: 'delivered' });
+    expect(lastPending(h)).toMatchObject({ kind: 'disposition', promptState: 'delivered' });
+    expect(h.runtime.conversations.get(originalEnvelope(h)).activeTask.pendingFollowUp.callId).toBe('OLD-CALL');
     h.cad.current.set('A1', 'NEW-CALL');
     await h.send('report taken');
     expect(h.writes('/api/radio/dispose')).toEqual([]);

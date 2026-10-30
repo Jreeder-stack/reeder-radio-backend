@@ -145,7 +145,7 @@ describe('01-01 audit regressions: repaired assertions plus remaining known defe
     const speech = h.hold(Buffer.alloc(640)); h.synthesisReplies.push(speech.promise);
     const question = await h.begin('Central, clear me from my call');
     await until(() => h.synthesize.mock.calls.length === 1, 'disposition question synthesis');
-    const pending = h.runtime.conversationGate.pending.get('A1');
+    const pending = h.runtime.conversationGate.pendingFor('A1');
     expect(pending.kind).toBe('disposition');
     const answer = await h.begin('report taken');
     await until(() => h.transcribe.mock.calls.length === 2, 'disposition answer transcription');
@@ -275,8 +275,9 @@ describe('01-01 audit regressions: repaired assertions plus remaining known defe
     const h = await make({ llmPlans: [plan('ASSIGN_UNIT', { unitRef: 'A1', callRef: 'that call' })] });
     await h.send('Central, put me on that call');
     expect(h.spoken().at(-1)).toBe('A1, which call?');
-    const pending = h.runtime.conversationGate.pending.get('A1');
-    const observed = { originalTaskRetained: JSON.stringify(pending).includes('ASSIGN_UNIT'), inputKeys: Object.keys(pending.input || {}) };
+    const origin = h.runtime.planner.plan.mock.calls[0][0].turnEnvelope;
+    const pending = h.runtime.conversations.get(origin)?.activeTask?.pendingTask;
+    const observed = { originalTaskRetained: pending?.action === 'ASSIGN_UNIT', inputKeys: Object.keys(pending?.input || {}) };
     record('R12', 'F6', 'Clarification must retain the original action and resolved task parameters.', observed,
       { originalTaskRetained: false, inputKeys: [] }, (o) => o.originalTaskRetained);
   });

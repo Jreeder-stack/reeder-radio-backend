@@ -120,7 +120,7 @@ describe('AI-DISP-V3-001 02-01 unit-owned conversations through real V3 runtime'
     const h = await make({ llmPlans: [{ action: 'CLARIFY', input: {}, confidence: 1, clarification: 'Which incident?' }] });
     await h.send('Central, please explain the assignment I mentioned earlier', 'A1');
     const first = plannerEnvelope(h);
-    const pending = h.runtime.conversationGate.pending.get('A1');
+    const pending = h.runtime.conversationGate.pendingFor('A1');
     expect(pending).toMatchObject({ clarification: 'Which incident?' });
     expect(pending.sessionKey).toBe(h.runtime.conversations.scopeKey(first));
     const callsBefore = h.runtime.planner.plan.mock.calls.length;
@@ -132,7 +132,7 @@ describe('AI-DISP-V3-001 02-01 unit-owned conversations through real V3 runtime'
     const otherEnvelope = h.runtime.speech.endTransmission.mock.calls.at(-1)[0].turnEnvelope;
     expect(h.runtime.conversations.get(otherEnvelope)).toBeNull();
     expect(h.runtime.conversations.scopeKey(otherEnvelope)).not.toBe(h.runtime.conversations.scopeKey(first));
-    expect(h.runtime.conversationGate.pending.get('A1')).toBe(pending);
+    expect(h.runtime.conversationGate.pendingFor('A1')).toBe(pending);
     expect(await h.send('the actual alarm', 'A1')).toBe(true);
   });
 

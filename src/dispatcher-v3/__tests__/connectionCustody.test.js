@@ -93,14 +93,14 @@ describe('AI-DISP-V3-001 02-07 authenticated continuity and routing', () => {
     const old = await h.principal('A1', { connectionId: 'socket:retired-radio' });
     const oldSocket = socket(h, old, 'retired-radio');
     await speak(h, 'Central, clear me from my call', old);
-    expect(h.runtime.conversationGate.pending.get('A1')?.kind).toBe('disposition');
+    expect(h.runtime.conversationGate.pendingFor('A1')?.kind).toBe('disposition');
     oldSocket.connected = false; oldSocket.channels.clear(); oldSocket.rooms.clear();
     const fresh = await h.principal('A1', {
       accountId: old.accountId, connectionId: 'socket:replacement-radio',
     });
     socket(h, fresh, 'replacement-radio');
     await speak(h, 'Central, resume disposition', fresh);
-    expect(h.runtime.conversationGate.pending.get('A1')?.kind).toBe('disposition');
+    expect(h.runtime.conversationGate.pendingFor('A1')?.kind).toBe('disposition');
     oldSocket.connected = true;
     oldSocket.channels.add(h.context.roomKey);
     oldSocket.rooms.add(`channel:${h.context.roomKey}`);
@@ -151,19 +151,19 @@ describe('AI-DISP-V3-001 02-07 authenticated continuity and routing', () => {
     h.cad.calls.get('OLD-CALL').assigned_units = [{ unit_id: 'A1' }];
     const first = await h.principal('A1', { connectionId: 'reconnect:old' });
     await speak(h, 'Central, clear me from my call', first);
-    const oldPrompt = h.runtime.conversationGate.pending.get('A1');
+    const oldPrompt = h.runtime.conversationGate.pendingFor('A1');
     expect(oldPrompt?.kind).toBe('disposition');
     const original = [...h.runtime.conversations.conversations.values()].find((value) => value.accountId === first.accountId);
     const second = await h.principal('A1', { accountId: first.accountId, connectionId: 'reconnect:new' });
     expect(await speak(h, 'No further action', second)).toBe(false);
-    expect(h.runtime.conversationGate.pending.get('A1')).toBeUndefined();
+    expect(h.runtime.conversationGate.pendingFor('A1')).toBeUndefined();
     expect(h.writes('/api/radio/dispose')).toEqual([]);
     const record = [...h.runtime.conversations.conversations.values()].find((value) => value.accountId === second.accountId);
     expect(record.id).toBe(original.id);
     expect(record.connectionId).toBe('reconnect:new');
     expect(record.suspendedTasks.some((task) => task.kind === 'disposition')).toBe(true);
     await speak(h, 'Central, resume disposition', second);
-    const nextPrompt = h.runtime.conversationGate.pending.get('A1');
+    const nextPrompt = h.runtime.conversationGate.pendingFor('A1');
     expect(nextPrompt?.kind).toBe('disposition');
     expect(nextPrompt?.promptState).toBe('delivered');
     expect(nextPrompt.sessionKey).not.toBe(oldPrompt.sessionKey);

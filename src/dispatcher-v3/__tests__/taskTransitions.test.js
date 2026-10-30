@@ -37,7 +37,7 @@ afterEach(async () => {
   }
 });
 async function make(options = {}) { const h = await createHarness(options); harnesses.push(h); return h; }
-const pending = (h, unit = 'A1') => h.runtime.conversationGate.pending.get(unit);
+const pending = (h, unit = 'A1') => h.runtime.conversationGate.pendingFor(unit);
 const original = (h) => h.runtime.planner.plan.mock.calls[0][0].turnEnvelope;
 
 describe('AI-DISP-V3-001 02-04 task controls and real V3 runtime', () => {
@@ -175,7 +175,9 @@ describe('AI-DISP-V3-001 02-04 task controls and real V3 runtime', () => {
     expect(pending(h).kind).toBe('disposition');
     await h.send('Central, new topic: radio check');
     await h.send('Central, resume my earlier disposition');
-    expect(pending(h)).toMatchObject({ kind: 'disposition', callId: 'OLD-CALL', promptState: 'delivered' });
+    expect(pending(h)).toMatchObject({ kind: 'disposition', promptState: 'delivered' });
+    expect(h.runtime.conversations.get(h.runtime.planner.plan.mock.calls[0][0].turnEnvelope)
+      .activeTask.pendingFollowUp.callId).toBe('OLD-CALL');
     await h.send('cancelled by complainant');
     expect(h.writes('/api/radio/dispose')).toHaveLength(1);
     expect(h.cad.current.get('A1')).toBeNull();

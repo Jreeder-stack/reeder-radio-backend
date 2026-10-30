@@ -48,7 +48,7 @@ describe('02-06 shared incident source and task isolation',()=>{
     h.cad.calls.get('OLD-CALL').assigned_units=[{unit_id:'A1'}];
     await h.send('Central, clear me from my call','A1');
     h.cad.calls.get('OLD-CALL').assigned_units.push({unit_id:'B2'});
-    const pending=h.runtime.conversationGate.pending.get('A1');
+    const pending=h.runtime.conversationGate.pendingFor('A1');
     expect(pending?.kind).toBe('disposition');
     await h.send('Central, what is our call?','B2');
     // GET_CURRENT_CALL may be handled by the deterministic planner without
@@ -57,7 +57,7 @@ describe('02-06 shared incident source and task isolation',()=>{
     expect(planning.pendingContext).toBeNull();
     expect(planning.recentContext).toEqual([]);
     expect(planning.sharedIncident).toMatchObject({callId:'OLD-CALL'});
-    expect(h.runtime.conversationGate.pending.get('A1')?.taskId).toBe(pending.taskId);
+    expect(h.runtime.conversationGate.pendingFor('A1')?.taskId).toBe(pending.taskId);
     expect(h.writes('/api/radio/dispose')).toEqual([]);
   });
   it('rejects B2 shared membership based on current-call endpoint alone',async()=>{

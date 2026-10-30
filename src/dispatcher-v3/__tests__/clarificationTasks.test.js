@@ -44,7 +44,8 @@ async function make(options = {}) {
 }
 const initial = () => ({ action: 'ASSIGN_UNIT', input: { unitRef: 'A1', callRef: 'that call' }, confidence: 1 });
 const answer = (callId) => ({ action: 'ASSIGN_UNIT', input: { callId }, confidence: 1 });
-const gatePending = (h) => h.runtime.conversationGate.pending.get('A1');
+const gatePending = (h) => h.runtime.conversationGate.pendingFor('A1');
+const ownedTask = (h) => h.runtime.conversations.get(firstEnvelope(h))?.activeTask?.pendingTask;
 const firstEnvelope = (h) => h.runtime.planner.plan.mock.calls[0][0].turnEnvelope;
 
 describe('AI-DISP-V3-001 02-02 retained clarification tasks, actual V3 runtime', () => {
@@ -58,20 +59,21 @@ describe('AI-DISP-V3-001 02-02 retained clarification tasks, actual V3 runtime',
     expect(h.writes('/api/radio/assign')).toEqual([]);
     expect(pending).toMatchObject({
       kind: 'task_clarification', taskId: record.activeTask.id,
-      originalTurnId: turn.turnId, sessionKey: h.runtime.conversations.scopeKey(turn),
-      pendingTask: {
-        action: 'ASSIGN_UNIT', input: { unitRef: 'A1', callRef: 'that call' },
-        unresolvedField: 'callId', originalTurnId: turn.turnId,
-        candidateIds: ['OLD-CALL', 'NEW-CALL'],
-        callRelationship: { speakerUnitId: turn.speaker.unitId, requestedCallRef: 'that call' },
-      },
+      promptTurnId: turn.turnId, sessionKey: h.runtime.conversations.scopeKey(turn),
+    });
+    expect(pending).not.toHaveProperty('pendingTask');
+    expect(record.activeTask.pendingTask).toMatchObject({
+      action: 'ASSIGN_UNIT', input: { unitRef: 'A1', callRef: 'that call' },
+      unresolvedField: 'callId', originalTurnId: turn.turnId,
+      candidateIds: ['OLD-CALL', 'NEW-CALL'],
+      callRelationship: { speakerUnitId: turn.speaker.unitId, requestedCallRef: 'that call' },
     });
     expect(record.activeTask).toMatchObject({
       state: 'awaiting_clarification', action: 'ASSIGN_UNIT',
       requestedInput: { unitRef: 'A1', callRef: 'that call' },
     });
     expect(record.turns[0].action).toBe('CLARIFY'); // Spoken question, not task action.
-    expect(pending.pendingTask).not.toHaveProperty('permissionGrants');
+    expect(record.activeTask.pendingTask).not.toHaveProperty('permissionGrants');
   });
 
   it('resumes and verifies the original assignment from a call-only answer, not a reconstructed command', async () => {
@@ -86,16 +88,16 @@ describe('AI-DISP-V3-001 02-02 retained clarification tasks, actual V3 runtime',
     const result = await h.lastResult();
     expect(result).toMatchObject({ success: true, data: { verified: true } });
     expect(h.cad.current.get('A1')).toBe('OLD-CALL');
-    expect(h.runtime.conversationGate.pending.has('A1')).toBe(false);
+    expect(h.runtime.Boolean(h.runtime.conversationGate.pendingFor('A1'))).toBe(false);
     const record = h.runtime.conversations.get(firstEnvelope(h));
-    expect(record.activeTask.originalTurnId).toBe(pending.originalTurnId);
+    expect(record.activeTask.originalTurnId).toBe(pending.promptTurnId);
     expect(record.activeTask.pendingTask).toBeNull();
     expect(record.activeTask.lastOutcome).toBe('completed_operation');
     const payload = JSON.parse(h.llm.mock.calls[1][0].messages[1].content);
     expect(payload.pendingContext).toMatchObject({
       kind: 'task_clarification', intendedAction: 'ASSIGN_UNIT',
       resolvedInput: { unitRef: 'A1', callRef: 'that call' },
-      unresolvedField: 'callId', originalTurnId: pending.originalTurnId,
+      unresolvedField: 'callId', originalTurnId: pending.promptTurnId,
       candidateIds: ['OLD-CALL', 'NEW-CALL'],
     });
   });
@@ -132,7 +134,7 @@ describe('AI-DISP-V3-001 02-02 retained clarification tasks, actual V3 runtime',
       answer('NEW-CALL'),
     ] });
     await h.send('Central, assign me to the incident you mentioned');
-    expect(gatePending(h).pendingTask).toMatchObject({ action: 'ASSIGN_UNIT', unresolvedField: 'callId' });
+    expect(ownedTask(h)).toMatchObject({ action: 'ASSIGN_UNIT', unresolvedField: 'callId' });
     await h.send('NEW-CALL');
     expect(h.cad.current.get('A1')).toBe('NEW-CALL');
     expect(h.writes('/api/radio/assign')).toHaveLength(1);
@@ -143,10 +145,10 @@ describe('AI-DISP-V3-001 02-02 retained clarification tasks, actual V3 runtime',
     await h.send('Central, put me on that call');
     const other = { ...h.cad.calls.get('OLD-CALL'), id: 'THIRD-CALL', call_id: 'THIRD-CALL', call_number: 'THIRD-CALL' };
     h.cad.calls.set('THIRD-CALL', other);
-    const task = gatePending(h).pendingTask;
+    const task = ownedTask(h);
     await h.send('THIRD-CALL');
     expect(h.writes('/api/radio/assign')).toHaveLength(0);
-    expect(gatePending(h).pendingTask).toEqual(task);
+    expect(ownedTask(h)).toEqual(task);
     expect(h.spoken().at(-1)).toContain('not among the original candidates');
     await h.send('OLD-CALL');
     expect(h.writes('/api/radio/assign')).toHaveLength(1);
@@ -158,7 +160,7 @@ describe('AI-DISP-V3-001 02-02 retained clarification tasks, actual V3 runtime',
     h.cad.calls.get('OLD-CALL').status = 'closed';
     await h.send('OLD-CALL');
     expect(h.writes('/api/radio/assign')).toHaveLength(0);
-    expect(gatePending(h).pendingTask.action).toBe('ASSIGN_UNIT');
+    expect(ownedTask(h).action).toBe('ASSIGN_UNIT');
     expect(h.spoken().at(-1)).toContain('no longer active');
   });
 
@@ -169,7 +171,7 @@ describe('AI-DISP-V3-001 02-02 retained clarification tasks, actual V3 runtime',
     h.cad.current.set('A1', 'NEW-CALL');
     await h.send('OLD-CALL');
     expect(h.writes('/api/radio/assign')).toHaveLength(0);
-    expect(gatePending(h).pendingTask.callRelationship.currentCallIdAtRequest).toBe('OLD-CALL');
+    expect(ownedTask(h).callRelationship.currentCallIdAtRequest).toBe('OLD-CALL');
   });
 
   it('does not allow another unit or authenticated connection to answer the pending task', async () => {
@@ -204,7 +206,7 @@ describe('AI-DISP-V3-001 02-02 retained clarification tasks, actual V3 runtime',
     await h.send('Central, mark me available');
     expect(h.writes('/api/radio/assign')).toHaveLength(0);
     expect(h.cad.units[0].status).toBe('available');
-    expect(h.runtime.conversationGate.pending.has('A1')).toBe(false);
+    expect(h.runtime.Boolean(h.runtime.conversationGate.pendingFor('A1'))).toBe(false);
   });
 
   it('does not create an executable task from generic CLARIFY without a known intended action', async () => {
