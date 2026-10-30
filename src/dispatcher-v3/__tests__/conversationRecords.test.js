@@ -121,7 +121,9 @@ describe('AI-DISP-V3-001 02-01 unit-owned conversations through real V3 runtime'
     await h.send('Central, please explain the assignment I mentioned earlier', 'A1');
     const first = plannerEnvelope(h);
     const pending = h.runtime.conversationGate.pendingFor('A1');
-    expect(pending).toMatchObject({ clarification: 'Which incident?' });
+    expect(pending).toMatchObject({ kind: 'clarification', promptState: 'delivered' });
+    expect(pending).not.toHaveProperty('clarification');
+    expect(h.runtime.conversations.get(first).activeTask.pendingFollowUp.clarification).toBe('Which incident?');
     expect(pending.sessionKey).toBe(h.runtime.conversations.scopeKey(first));
     const callsBefore = h.runtime.planner.plan.mock.calls.length;
     const newPrincipal = await h.principal('A1', { connectionId: 'second-authenticated-socket' });

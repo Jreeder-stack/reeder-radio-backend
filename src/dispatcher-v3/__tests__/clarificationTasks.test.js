@@ -88,7 +88,7 @@ describe('AI-DISP-V3-001 02-02 retained clarification tasks, actual V3 runtime',
     const result = await h.lastResult();
     expect(result).toMatchObject({ success: true, data: { verified: true } });
     expect(h.cad.current.get('A1')).toBe('OLD-CALL');
-    expect(h.runtime.Boolean(h.runtime.conversationGate.pendingFor('A1'))).toBe(false);
+    expect(Boolean(h.runtime.conversationGate.pendingFor('A1'))).toBe(false);
     const record = h.runtime.conversations.get(firstEnvelope(h));
     expect(record.activeTask.originalTurnId).toBe(pending.promptTurnId);
     expect(record.activeTask.pendingTask).toBeNull();
@@ -206,7 +206,7 @@ describe('AI-DISP-V3-001 02-02 retained clarification tasks, actual V3 runtime',
     await h.send('Central, mark me available');
     expect(h.writes('/api/radio/assign')).toHaveLength(0);
     expect(h.cad.units[0].status).toBe('available');
-    expect(h.runtime.Boolean(h.runtime.conversationGate.pendingFor('A1'))).toBe(false);
+    expect(Boolean(h.runtime.conversationGate.pendingFor('A1'))).toBe(false);
   });
 
   it('does not create an executable task from generic CLARIFY without a known intended action', async () => {

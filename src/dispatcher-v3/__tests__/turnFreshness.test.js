@@ -104,7 +104,7 @@ describe('01-05 actual authenticated V3 turn freshness and authorization', () =>
   it('a still-pending reply is rejected if its original task expires during planning', async () => {
     const h=await make({llmPlans:[{...plan('CLARIFY'),clarification:'Which location?'}]});
     await h.send('Central, clarify the location from earlier');
-    const original=h.runtime.conversationGate.pending.get('A1');
+    const original=h.runtime.conversationGate.pendingFor('A1');
     expect(original).toBeTruthy();
     original.expiresAt=Date.now()+10;
     const wait=pending();h.llm.mockImplementationOnce(()=>wait.promise);

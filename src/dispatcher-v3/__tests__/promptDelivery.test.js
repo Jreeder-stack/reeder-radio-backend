@@ -257,7 +257,9 @@ describe('AI-DISP-V3-001 02-03 actual V3 transmission and CAD path', () => {
     expect(second.originalTurnId).toBe(originalId);
     expect(second.taskId).toBe(first.taskId);
     expect(second.promptState).toBe('delivered');
-    expect(second.clarification).toMatch(/Which call/);
+    expect(second).not.toHaveProperty('clarification');
+    expect(h.runtime.conversations.conversations.get(second.sessionKey)
+      .activeTask.pendingFollowUp.clarification).toMatch(/Which call/);
     expect(h.writes()).toEqual([]);
     await h.send('NEW-CALL');
     expect(h.cad.current.get('A1')).toBe('NEW-CALL');
@@ -300,7 +302,9 @@ describe('AI-DISP-V3-001 02-03 actual V3 transmission and CAD path', () => {
     h.cad.current.set('A1', 'OLD-CALL');
     await h.send('Central, clear me from my call');
     const pending = speaker(h);
-    expect(pending).toMatchObject({ kind: 'disposition', callId: 'OLD-CALL', promptState: 'delivered' });
+    expect(pending).toMatchObject({ kind: 'disposition', promptState: 'delivered' });
+    expect(h.runtime.conversations.conversations.get(pending.sessionKey)
+      .activeTask.pendingFollowUp.callId).toBe('OLD-CALL');
     await h.send('report taken');
     expect(h.writes('/api/radio/dispose').length).toBeGreaterThan(0);
     expect(h.cad.current.get('A1')).toBeNull();
