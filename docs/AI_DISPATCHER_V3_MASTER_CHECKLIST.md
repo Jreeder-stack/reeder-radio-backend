@@ -1,9 +1,9 @@
 # AI Dispatcher V3 master checklist
 
-Plan AI-DISP-V3-001, version 1.10, October 29, 2026.
+Plan AI-DISP-V3-001, version 1.11, October 29, 2026.
 Repository: `Jreeder-stack/reeder-radio-backend`.
 Branch: `test/dispatcher-v3-01-01-baseline-20261028`; PR #163, unmerged.
-Latest scoped-validated source: `233afa7c1af7ca36c6efae8b292e1f20c323296d` (02-01 unit-owned dialogue, GitHub CI 40973313285 on Node 20: 10/10 new, 424/425 V3, 81/81 PTT, 7/7 manager; unchanged CREATE_CALL verification fixture remains sole failure).
+Latest scoped-validated executable source: `b10d55931b5f6bd548114bbd0303edd356868833` (02-02 clarification custody, CI 40979565361 on Node 20: 13/13 new, 26/26 audit including repaired R12, 437/438 V3, 81/81 PTT, 7/7 manager; unchanged CREATE_CALL verification fixture remains the sole failure).
 Main at the implementation baseline: `c5ce5feed7a4feadb86ddca3d6d8c89e2c2f90fa`, identical to the audit. Latest inspected main independently advanced to `1c9a5d6df338dddf7b1333adb4ba1c477713194e` (later commits including PRs #164/#165/#166); integration with those revisions and the production revision remain unverified.
 
 ## Fixed objective and boundaries
@@ -19,20 +19,22 @@ Coding completion, scoped validation, pilot verification and release are separat
 | Parent | Scope | Coding | Validated |
 | --- | --- | ---: | ---: |
 | 01 | Reliable request processing | 8/8 | 8/8 |
-| 02 | Multi-unit conversation management | 1/8 | 1/8 |
+| 02 | Multi-unit conversation management | 2/8 | 2/8 |
 | 03 | Meaning-based understanding and safe CAD actions | 1/8 | 1/8 |
 | 04 | Natural conversation and useful responses | 0/8 | 0/8 |
-| Total | Original 32 items | 10/32 | 10/32 |
+| Total | Original 32 items | 11/32 | 11/32 |
 
-**02-01 is coded and scoped-validated** at `233afa7c1af7ca36c6efae8b292e1f20c323296d`. The previously global `_recentContext` is replaced by authenticated center/unit/account/connection-owned conversation/task records, bounded suspended topics, per-turn and per-conversation expiration, and runtime-generation custody; channel remains a routing field, not an owner. The R01 cross-unit stale-dialogue defect now has a fixed-behavior assertion in the existing audit, with all 26/26 audit tests passing. GitHub CI **40973313285** (Node 20) confirms **10/10 new 02-01 tests**, **7/7 actual manager integration**, **81/81 PTT** and **424/425 V3**. The sole unchanged failure is the CREATE_CALL verification fixture; safety and acceptance gates remain unchanged. See `dispatcher-v3/02-01-unit-owned-conversations-20261029.md` and `dispatcher-v3/validation/02-01-results.json`. **Task 02 is now 1/8, overall 10/32; next 02-02.**
+**02-02 is coded and scoped-validated** at `b10d55931b5f6bd548114bbd0303edd356868833`. Clarification now retains the original authorized-speaker-owned operation, known parameters, unresolved field, bounded CAD-scoped candidates, task/turn IDs, and the original call relationship. The answer fills only the missing field, with fresh CAD context, candidate, identity, materializer, authorization and verified-mutation checks before execution. The initial model-proposal custody defect was found by CI 40979319846 and repaired before the validated CI run. GitHub Actions **40979565361**: **13/13 new actual-V3 clarification cases**, **26/26 audit including R12 repaired**, **7/7 manager**, **81/81 PTT**, and **437/438 V3**. The one unchanged failure is the CREATE_CALL verification fixture; no false success was permitted. See `dispatcher-v3/02-02-retained-clarification-20261029.md` and `dispatcher-v3/validation/02-02-results.json`. **Task 02 is 2/8; total 11/32; next 02-03.** No G-01–G-04 release gate is claimed.
+
+**Historical 02-01 checkpoint:** 02-01 was coded and scoped-validated at `233afa7c1af7ca36c6efae8b292e1f20c323296d`. The previously global `_recentContext` is replaced by authenticated center/unit/account/connection-owned conversation/task records, bounded suspended topics, per-turn and per-conversation expiration, and runtime-generation custody; channel remains a routing field, not an owner. The R01 cross-unit stale-dialogue defect now has a fixed-behavior assertion in the existing audit, with all 26/26 audit tests passing. GitHub CI **40973313285** (Node 20) confirms **10/10 new 02-01 tests**, **7/7 actual manager integration**, **81/81 PTT** and **424/425 V3**. The sole unchanged failure is the CREATE_CALL verification fixture; safety and acceptance gates remain unchanged. See `dispatcher-v3/02-01-unit-owned-conversations-20261029.md` and `dispatcher-v3/validation/02-01-results.json`. **Task 02 is now 1/8, overall 10/32; next 02-02.**
 
 **Historical 01-08 checkpoint:** All eight Task 01 items (01-01–01-08) plus urgent 03-01 are complete for coding and scoped mocked validation. GitHub CI **40969353725** (Node 20) independently confirmed **7/7 new actual manager-to-V3 integration cases**, **81/81 PTT checks** and **414/415 V3 checks**. Source/runtime integration covers trusted PTT binding, per-unit FIFO under reversed STT, B2 independence, duplicate-end suppression, center isolation, backpressure, stop/restart, CAD response-body timeout and detached speech. At that historical checkpoint, R02/R03/R04/R06/R07/R09/R10 were repaired; R01/R05/R08/R11/R12/R13/R14 were known defects. R01 has since been repaired and validated under 02-01; R05/R08/R11/R12/R13/R14 remain pending. The single unchanged CREATE_CALL fixture expects success speech without independent CAD read-back evidence; the runtime refuses false verification and the test remains red. See `dispatcher-v3/01-08-task01-integration-20261029.md` and `dispatcher-v3/validation/01-08-results.json`. **Task 01 coding/scoped validation 8/8 is not G-01 release acceptance; no full green V3 suite is claimed.**
 
 Read `dispatcher-v3/01-02-intake-trace-20261029.md`, `dispatcher-v3/validation/01-02-results.json` and `dispatcher-v3/validation/01-02-audit-results.json` for current implementation, commands, source hashes, CI comparison and limitations. The earlier `dispatcher-v3/03-01-phrase-containment-20261029.md` and `dispatcher-v3/validation/03-01-results.json` retain their historical evidence; the 01-01 baseline/results are also not rewritten as repair evidence.
 
-Next is **02-02: Retain the complete task during clarification**. Task 01 is 8/8 coded/scoped-validated; Task 02 is 1/8; the existing CREATE_CALL fixture and G-01 remain open, with main integration unverified. Continue Task02, remaining Task03, Task04 and gates. Credential freshness and cancellation are owned by 01-05. No mutating pilot is authorized by this completion. Use one coordinated implementation stream for shared runtime/planner/state files. Write and run focused tests with each change; prefer mocked checks before paid calls and do not rerun unchanged expensive jobs without a diagnosis.
+Next is **02-03: Correlate follow-ups with delivered prompts**. Task 01 is 8/8 coded/scoped-validated; Task 02 is 2/8; the existing CREATE_CALL fixture and G-01–G-04 remain open, with main integration unverified. Continue Task02, remaining Task03, Task04 and gates. Credential freshness and cancellation are owned by 01-05. No mutating pilot is authorized by this completion. Use one coordinated implementation stream for shared runtime/planner/state files. Write and run focused tests with each change; prefer mocked checks before paid calls and do not rerun unchanged expensive jobs without a diagnosis.
 
-The deliverables and acceptance paragraphs below are retained verbatim from version1.0. Repeated pending-evidence boilerplate is consolidated: for every item except 01-01, 01-02, 01-03, 01-04, 01-05, 01-06, 01-07, 01-08, 02-01 and 03-01, commits/tests/implementation evidence remain pending and live/pilot status remains unverified for every item. Do not silently shorten requirements when implementing an item.
+The deliverables and acceptance paragraphs below are retained verbatim from version1.0. Repeated pending-evidence boilerplate is consolidated: for every item except 01-01, 01-02, 01-03, 01-04, 01-05, 01-06, 01-07, 01-08, 02-01, 02-02 and 03-01, commits/tests/implementation evidence remain pending and live/pilot status remains unverified for every item. Do not silently shorten requirements when implementing an item.
 
 ## Task 01: Reliable request processing
 
@@ -102,7 +104,7 @@ The deliverables and acceptance paragraphs below are retained verbatim from vers
 | ID | Work item | Coded | Validated |
 | --- | --- | --- | --- |
 | 02-01 | Create unit-owned conversation and task records | [x] | [x] |
-| 02-02 | Retain the complete task during clarification | [ ] | [ ] |
+| 02-02 | Retain the complete task during clarification | [x] | [x] |
 | 02-03 | Correlate follow-ups with delivered prompts | [ ] | [ ] |
 | 02-04 | Implement correction, cancel, topic change and resumption | [ ] | [ ] |
 | 02-05 | Revalidate incident and assignment relationships | [ ] | [ ] |
@@ -123,6 +125,8 @@ The deliverables and acceptance paragraphs below are retained verbatim from vers
 **Deliverable:** Keep the intended action, resolved parameters, unresolved field, candidate IDs, original turn and call relationship when asking a question. Clarification changes the task state rather than replacing the original plan with an empty CLARIFY action.
 
 **Acceptance:** After “Put me on that call” and “Which call?”, the answer resumes the assignment request with its original ownership and constraints. The model need not reconstruct the entire task from raw transcripts.
+
+**Completion evidence (October 29, 2026):** implementation `9d225cb87d84499a57eab83a40bc21bdf0527ff3`; trusted origin-stamping correction `b10d55931b5f6bd548114bbd0303edd356868833` (latest independently CI-tested executable source). The real runtime now keeps the original action in the 02-01 owner-bound active task, with known parameters, the missing field, candidate identifiers constrained to authorized CAD context, original turn and call relationship. Follow-up input fills only the requested field and cannot substitute a different action, unit or arbitrary additional parameters. Resumption re-fetches current CAD context and goes through existing unit materialization, permissions, 01-05 turn lifecycle and verified CAD executor. The same owner/session is required. CI [40979565361](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/40979565361) on Node 20: 13/13 new actual-runtime clarification tests, 26/26 audit including R12 repaired, 7/7 manager integration, 81/81 PTT and 437/438 V3. The sole unchanged failure is the unverified CREATE_CALL success fixture. The CI workflow remains red; no full-green or live acceptance is claimed. Prompt-delivery answer timing, full correction/topic resumption, broader shared-incident revalidation, reconnect policy and five-unit 02-08 integration remain separate. Report and machine evidence: `dispatcher-v3/02-02-retained-clarification-20261029.md`, `dispatcher-v3/validation/02-02-results.json`.
 
 ### 02-03: Correlate follow-ups with delivered prompts
 

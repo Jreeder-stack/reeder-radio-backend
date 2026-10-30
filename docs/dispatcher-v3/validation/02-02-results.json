@@ -1,0 +1,149 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "02-02",
+  "date": "2026-10-29",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "ebdeebf981a52ff4b1dbf30bab56bc0fcbd926dd",
+  "implementationCommits": [
+    "9d225cb87d84499a57eab83a40bc21bdf0527ff3",
+    "b10d55931b5f6bd548114bbd0303edd356868833"
+  ],
+  "validatedExecutableSource": "b10d55931b5f6bd548114bbd0303edd356868833",
+  "implementation": {
+    "newModule": "src/dispatcher-v3/clarificationTasks.js",
+    "existingRuntime": "src/dispatcher-v3/liveRuntime.js",
+    "planner": "src/dispatcher-v3/intentPlanner.js",
+    "unitTaskRecords": "src/dispatcher-v3/conversationRecords.js",
+    "audit": "src/dispatcher-v3/__tests__/auditBaseline.test.js",
+    "focusedTests": "src/dispatcher-v3/__tests__/clarificationTasks.test.js",
+    "retains": [
+      "intendedAction",
+      "resolvedParameters",
+      "unresolvedField",
+      "centerScopedCandidateIds",
+      "originalTurnId",
+      "taskId",
+      "historicalCallRelationship"
+    ],
+    "custody": [
+      "authenticatedUnit",
+      "speaker",
+      "dispatchCenter",
+      "account",
+      "connection",
+      "runtimeGeneration"
+    ],
+    "emergencyActionsAllowed": false,
+    "cadReadBackAndAuthorizationPreserved": true
+  },
+  "ci": {
+    "initialRunId": 40979319846,
+    "initialNewFailure": "model-originated CLARIFY was not server-stamped; fixed in b10d55931",
+    "runId": 40979565361,
+    "jobId": 123815931446,
+    "nodeMajor": 20,
+    "conclusion": "failure",
+    "failureCategory": "unchanged CREATE_CALL verification fixture",
+    "focused02_02": {
+      "passed": 13,
+      "failed": 0,
+      "total": 13
+    },
+    "audit": {
+      "passed": 26,
+      "failed": 0,
+      "total": 26,
+      "repairedR12": true
+    },
+    "manager": {
+      "passed": 7,
+      "failed": 0,
+      "total": 7
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "v3": {
+      "passed": 437,
+      "failed": 1,
+      "total": 438,
+      "files": 41
+    },
+    "artifact": {
+      "id": 12944481302,
+      "name": "dispatcher-v3-evidence-40979565361-1",
+      "reportedSha256": "ff4321e3c611b951f222bfb498be02ebc87175beb7fff0e2915889603848e9ca",
+      "independentlyHashed": false
+    }
+  },
+  "expectedKnownFailure": "src/dispatcher-v3/__tests__/phase4Pipeline.test.js expects verified CREATE_CALL announcement without independent CAD read-back; unchanged and still red",
+  "repairedAuditCases": [
+    "R01",
+    "R02",
+    "R03",
+    "R04",
+    "R06",
+    "R07",
+    "R09",
+    "R10",
+    "R12"
+  ],
+  "pendingAuditCases": [
+    "R05",
+    "R08",
+    "R11",
+    "R13",
+    "R14"
+  ],
+  "acceptance": {
+    "originalAssignmentTaskRetained": true,
+    "followupResumesWithOriginalOwner": true,
+    "candidatesRetainedAndChecked": true,
+    "fieldsAndCallRelationshipRetained": true,
+    "originalTurnTracked": true,
+    "doesNotReconstructFullTaskFromRawTranscripts": true,
+    "expiredAndForeignRepliesCannotExecute": true,
+    "scopeChecked": true,
+    "noModelAuthorizationOrEmergencyGranted": true
+  },
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "fullV3SuiteGreen": false,
+    "fullRepositoryVerified": false,
+    "realRadioProviderVerified": false,
+    "newerMainIntegrated": false,
+    "merged": false,
+    "deployed": false,
+    "releaseAccepted": false,
+    "paidProviderCalls": false,
+    "productionDataChanged": false
+  },
+  "counts": {
+    "parent01": 8,
+    "parent02": 2,
+    "parent03": 1,
+    "parent04": 0,
+    "completed": 11,
+    "total": 32
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "caveats": [
+    "02-03 delivery-timed reply windows pending",
+    "02-04 full correction/cancellation/resumption lifecycle pending",
+    "02-05 fuller incident relationship validation pending",
+    "02-08 five-unit integration pending",
+    "newer main PR conflicts unresolved",
+    "no live radio/pilot/production accepted"
+  ],
+  "next": "02-03: Correlate follow-ups with delivered prompts"
+}
