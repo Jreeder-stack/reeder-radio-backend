@@ -740,7 +740,11 @@ export class V3LiveDispatcher {
       return false;
     }
 
+    let announcedRx = false;
     try {
+      const activity = this.signaling.publishAiRadioAudio?.(channel, this.identity, true);
+      if (activity === false) throw new Error('AI alert radio floor lost before transmission');
+      announcedRx = activity === true;
       const tone = buildMdcTonePcm(MDC_TONE_MS);
       const toneFrames = this.codec.encodePcmToOpus(tone);
       for (const frame of toneFrames) {
@@ -768,6 +772,7 @@ export class V3LiveDispatcher {
     } finally {
       const released = this.floorControl.releaseFloor(channel, AI_FLOOR_IDENTITY);
       if (!released) this.floorControl.releaseAllForUnit?.(AI_FLOOR_IDENTITY);
+      if (announcedRx) this.signaling.publishAiRadioAudio?.(channel, this.identity, false);
     }
   }
 
@@ -780,12 +785,25 @@ export class V3LiveDispatcher {
     }
 
     let framesSent = 0;
+    let announcedRx = false;
     let lastRearmAt = Date.now();
     try {
       const started = Date.now();
       const pcm = await this.synthesize(text);
       const opusFrames = this.codec.encodePcmToOpus(pcm);
       this._diag('tts_ready', correlationId, true, { text, frames: opusFrames.length, latencyMs: Date.now() - started });
+      if (opusFrames.length > 0) {
+        // Synthesis can take long enough for the previously granted floor
+        // to expire. Reconfirm ownership before the first audible packet.
+        const preflight = this.floorControl.requestFloor(channel, AI_FLOOR_IDENTITY);
+        if (!preflight?.granted) {
+          throw new Error('AI speech radio floor unavailable after synthesis');
+        }
+        lastRearmAt = Date.now();
+        const activity = this.signaling.publishAiRadioAudio?.(channel, this.identity, true);
+        if (activity === false) throw new Error('AI speech radio floor lost before transmission');
+        announcedRx = activity === true;
+      }
 
       for (const frame of opusFrames) {
         if (Date.now() - lastRearmAt >= FLOOR_REARM_MS) {
@@ -807,6 +825,7 @@ export class V3LiveDispatcher {
     } finally {
       const released = this.floorControl.releaseFloor(channel, AI_FLOOR_IDENTITY);
       if (!released) this.floorControl.releaseAllForUnit?.(AI_FLOOR_IDENTITY);
+      if (announcedRx) this.signaling.publishAiRadioAudio?.(channel, this.identity, false);
     }
   }
 

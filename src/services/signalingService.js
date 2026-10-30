@@ -1,5 +1,5 @@
 import { Server } from 'socket.io';
-import { floorControlService } from './floorControlService.js';
+import { floorControlService, AI_FLOOR_IDENTITY } from './floorControlService.js';
 import { audioRelayService } from './audioRelayService.js';
 import { opusCodec } from './opusCodec.js';
 import { canonicalChannelKey } from './channelKeyUtils.js';
@@ -1496,6 +1496,31 @@ _handlePttStart(socket, data) {
         s.emit(event, data);
       }
     });
+  }
+
+  /**
+   * Server-owned audio source state for AI Dispatcher speech. Radio clients
+   * cannot invoke this. The floor must belong to the dedicated AI identity,
+   * and only already-authorized channel room members receive these events.
+   */
+  publishAiRadioAudio(channelId, senderUnitId, active) {
+    const key = canonicalChannelKey(channelId);
+    const holder = floorControlService.getFloorHolder(key);
+    if (active && holder?.floorKey !== AI_FLOOR_IDENTITY) {
+      console.warn('[AI-RX] TX_START_SUPPRESSED_NO_AI_FLOOR channel=' + key);
+      return false;
+    }
+    const payload = { channelId: key, senderUnitId, timestamp: Date.now() };
+    if (active) {
+      this._emitToChannelAll(key, RADIO_EVENTS.TX_START, payload);
+      return true;
+    }
+    // A late AI stop must not clear the RX indication of a new floor owner.
+    if (holder) return false;
+    this._emitToChannelAll(key, RADIO_EVENTS.TX_STOP, payload);
+    this._emitToChannelAll(key, RADIO_EVENTS.CHANNEL_IDLE,
+      { channelId: key, timestamp: Date.now() });
+    return true;
   }
 
   _emitToChannelAll(channelId, event, data) {

@@ -218,7 +218,13 @@ class UdpAudioTransport(
         }
     }
 
-    private data class QueuedPacket(val framed: ByteArray, val payloadBytes: Int)
+    // Null provider leaves existing T320/SD7/phone behavior untouched.
+    // HD760 packets carry a physical-press token, preventing queued audio
+    // from escaping after release or during a later PTT generation.
+    @Volatile var audioPermitGeneration: (() -> Long?)? = null
+    private data class QueuedPacket(
+        val framed: ByteArray, val payloadBytes: Int, val permitGeneration: Long?
+    )
 
     private val sendPacketQueue = Channel<QueuedPacket>(capacity = 64)
 
@@ -227,15 +233,27 @@ class UdpAudioTransport(
             Log.w("[RadioError]", "Cannot send — relay host not configured method=send")
             return
         }
+        val tokenProvider = audioPermitGeneration
+        val permit = tokenProvider?.invoke()
+        if (tokenProvider != null && permit == null) {
+            Log.w("CC-HD760", "TX_UDP_BLOCKED no_tpt_permit")
+            return
+        }
         val payloadBytes = data.size
         val framed = framePacket(data)
-        sendPacketQueue.trySend(QueuedPacket(framed, payloadBytes))
+        sendPacketQueue.trySend(QueuedPacket(framed, payloadBytes, permit))
     }
 
     private fun startSendLoop() {
         sendJob = scope.launch {
             try {
                 for (qp in sendPacketQueue) {
+                    val tokenProvider = audioPermitGeneration
+                    if (tokenProvider != null && (qp.permitGeneration == null ||
+                        qp.permitGeneration != tokenProvider.invoke())) {
+                        Log.w("CC-HD760", "TX_UDP_QUEUED_FRAME_DROPPED revoked_or_old_press")
+                        continue
+                    }
                     var sock = socket
                     if (sock == null) {
                         var waitedMs = 0L
@@ -254,6 +272,12 @@ class UdpAudioTransport(
                     try {
                         val address = resolveAddress()
                         if (address != null) {
+                            val currentPermit = audioPermitGeneration
+                            if (currentPermit != null && (qp.permitGeneration == null ||
+                                qp.permitGeneration != currentPermit.invoke())) {
+                                Log.w("CC-HD760", "TX_UDP_FRAME_DROPPED before_send")
+                                continue
+                            }
                             val packet = DatagramPacket(framed, framed.size, address, relayPort)
                             sock.send(packet)
                             txPacketCount++

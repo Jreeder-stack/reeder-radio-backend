@@ -73,23 +73,23 @@ private enum class StatusIcon { LOCK, SCAN, GPS, BLUETOOTH, WIFI, CELLULAR }
 @Composable
 private fun FixedIndicatorSlot(kind: StatusIcon, active: Boolean, bars: Int? = null) {
     Column(
-        modifier = Modifier.width(13.dp).height(23.dp),
+        modifier = Modifier.width(14.dp).height(25.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(Modifier.size(12.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(14.dp), contentAlignment = Alignment.Center) {
             if (active) when (kind) {
                 StatusIcon.LOCK -> Icon(Icons.Filled.Lock, "Keypad locked",
-                    modifier = Modifier.size(12.dp), tint = Color.White)
-                StatusIcon.SCAN -> ScanZ(Modifier.size(11.dp))
+                    modifier = Modifier.size(14.dp), tint = Color.White)
+                StatusIcon.SCAN -> ScanZ(Modifier.size(13.dp))
                 StatusIcon.GPS -> Icon(Icons.Filled.GpsFixed, "GPS fix",
-                    modifier = Modifier.size(12.dp), tint = Color.White)
+                    modifier = Modifier.size(14.dp), tint = Color.White)
                 StatusIcon.BLUETOOTH -> Icon(Icons.Filled.Bluetooth, "Bluetooth connected",
-                    modifier = Modifier.size(12.dp), tint = Color.White)
+                    modifier = Modifier.size(14.dp), tint = Color.White)
                 StatusIcon.WIFI -> Icon(Icons.Filled.Wifi, "Wi-Fi connected",
-                    modifier = Modifier.size(12.dp), tint = Color.White)
+                    modifier = Modifier.size(14.dp), tint = Color.White)
                 StatusIcon.CELLULAR -> Icon(Icons.Filled.SignalCellularAlt, "Cellular connected",
-                    modifier = Modifier.size(12.dp), tint = Color.White)
+                    modifier = Modifier.size(14.dp), tint = Color.White)
             }
         }
         Spacer(Modifier.height(1.dp))
@@ -110,11 +110,13 @@ private fun FixedIndicatorSlot(kind: StatusIcon, active: Boolean, bars: Int? = n
 }
 
 @Composable
-private fun SharedTxRxMeter(tx: Boolean, rx: Boolean, rxBars: Int?) {
+private fun SharedTxRxMeter(tx: Boolean, rx: Boolean, txBars: Int?, rxBars: Int?) {
     // Fixed-height space stays completely blank when idle.
     Box(Modifier.fillMaxWidth().height(29.dp), contentAlignment = Alignment.Center) {
         if (tx || rx) {
-            val known = if (tx) null else rxBars
+            // TX represents measured access-network strength; RX represents
+            // decoded audio loss/jitter. Neither invents end-to-end delivery quality.
+            val known = if (tx) txBars else rxBars
             val count = known ?: 0
             val filled = when {
                 known == null -> Muted
@@ -191,7 +193,8 @@ fun RadioFlavorScreen(
         }
     }
     val tx = state.pttState == PttState.TRANSMITTING
-    val rx = !tx && state.radioState == RadioState.RECEIVING
+    val scanDisplay = !tx && state.isScanning && state.scanActiveChannel != null
+    val rx = !tx && (state.radioState == RadioState.RECEIVING || (scanDisplay && state.scanRxActive))
     val emergency = state.myEmergencyActive
     val accent = if (emergency) Color(0xFFB71C1C) else Color(0xFF17618F)
 
@@ -199,10 +202,10 @@ fun RadioFlavorScreen(
         Modifier.fillMaxSize().background(if (emergency) Color(0xFFFFD9D9) else Color(0xFFF8FAFC))
     ) {
         val compact = maxWidth < 240.dp || maxHeight < 320.dp
-        val channelSize = if (compact) 32.sp else 39.sp
+        val channelSize = if (compact) 37.sp else 44.sp
         Column(Modifier.fillMaxSize()) {
             Row(
-                Modifier.fillMaxWidth().height(31.dp).background(Bottom)
+                Modifier.fillMaxWidth().height(35.dp).background(Bottom)
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -213,7 +216,7 @@ fun RadioFlavorScreen(
                     verticalAlignment = Alignment.CenterVertically) {
                     FixedIndicatorSlot(StatusIcon.LOCK, state.isKeyLocked)
                     FixedIndicatorSlot(StatusIcon.SCAN, state.isScanning)
-                    FixedIndicatorSlot(StatusIcon.GPS, indicators.gpsFix, indicators.gpsBars)
+                    FixedIndicatorSlot(StatusIcon.GPS, indicators.gpsEnabled, indicators.gpsBars)
                     FixedIndicatorSlot(StatusIcon.BLUETOOTH, indicators.bluetoothConnected,
                         indicators.bluetoothBars)
                     FixedIndicatorSlot(StatusIcon.WIFI, indicators.wifiConnected, indicators.wifiBars)
@@ -266,43 +269,58 @@ fun RadioFlavorScreen(
                 Column(
                     Modifier.weight(1f).fillMaxWidth()
                         .padding(horizontal = 5.dp, vertical = 3.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceEvenly
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("ZN", fontSize = 13.sp, color = Muted, fontWeight = FontWeight.Medium)
-                    Text(state.currentZone?.name?.uppercase() ?: "NO ZONE",
-                        color = Ink, fontWeight = FontWeight.Bold,
-                        fontSize = if (compact) 22.sp else 25.sp,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center)
-                    Text("CH", fontSize = 13.sp, color = Muted, fontWeight = FontWeight.Medium)
-                    Text(if (state.hd760SlotEmpty) "UNPROGRAMMED" else
-                        state.currentChannel?.name ?: "NO CHANNEL",
-                        fontSize = channelSize, color = Ink,
-                        fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis,
-                        lineHeight = if (compact) 35.sp else 42.sp)
+                    // Group zone and channel centrally instead of spreading them
+                    // across the entire display with oversized blank gaps.
+                    Column(
+                        Modifier.weight(1f).fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("ZN", fontSize = 14.sp, color = Muted,
+                            fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(5.dp))
+                        Text((if (scanDisplay) state.scanActiveZone
+                            else state.currentZone?.name)?.uppercase() ?: "NO ZONE",
+                            color = Ink, fontWeight = FontWeight.Bold,
+                            fontSize = if (compact) 24.sp else 30.sp,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(if (compact) 16.dp else 23.dp))
+                        Text("CH", fontSize = 14.sp, color = Muted,
+                            fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(5.dp))
+                        Text(if (scanDisplay) state.scanActiveChannel ?: "NO CHANNEL"
+                            else if (state.hd760SlotEmpty) "UNPROGRAMMED"
+                            else state.currentChannel?.name ?: "NO CHANNEL",
+                            fontSize = channelSize, color = Ink,
+                            fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis,
+                            lineHeight = if (compact) 39.sp else 47.sp)
+                    }
 
-                    // Always reserve the same room for caller ID and lock feedback.
-                    Box(Modifier.fillMaxWidth().height(35.dp),
+                    // RX caller uses reserved space. No STANDBY or TX text.
+                    Box(Modifier.fillMaxWidth().height(42.dp),
                         contentAlignment = Alignment.Center) {
                         val label = when {
-                            state.hd760LockFeedback != null -> state.hd760LockFeedback
                             emergency -> "EMERGENCY"
-                            rx -> state.scanActiveUnit ?: state.activeTransmittingUnit
+                            state.hd760LockFeedback != null -> state.hd760LockFeedback
+                            scanDisplay -> state.scanActiveUnit
+                            rx -> state.activeTransmittingUnit
                             else -> null
                         }
                         if (!label.isNullOrBlank()) {
                             Text(label, color = if (emergency) Color(0xFFB71C1C) else Ink,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = if (compact) 17.sp else 20.sp,
+                                fontSize = if (compact) 19.sp else 23.sp,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 textAlign = TextAlign.Center)
                         }
                     }
                     if (state.error != null) {
                         Text(state.error ?: "", color = Color.Red,
-                            fontSize = 9.sp, maxLines = 1)
+                            fontSize = 10.sp, maxLines = 1)
                     }
                 }
             }
@@ -311,6 +329,8 @@ fun RadioFlavorScreen(
                 SharedTxRxMeter(
                     tx = tx,
                     rx = rx,
+                    txBars = if (indicators.wifiConnected) indicators.wifiBars
+                        else if (indicators.cellConnected) indicators.cellBars else null,
                     rxBars = Hd760MeterModel.receiveBars(state.signalQuality)
                 )
             } else {
