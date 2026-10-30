@@ -72,7 +72,8 @@ class RadioAudioEngine(private val context: Context) {
     private var preCapturingToBuffer = false
     @Volatile
     private var preCaptureAborted = false
-    private val preBuffer = ArrayDeque<ByteArray>()
+    private data class EncodedRadioFrame(val payload: ByteArray, val isPcmFallback: Boolean)
+    private val preBuffer = ArrayDeque<EncodedRadioFrame>()
     private val preBufferLock = Any()
     @Volatile
     private var lastDiagRxCount: Long = 0
@@ -908,7 +909,8 @@ class RadioAudioEngine(private val context: Context) {
                             Log.d("[AudioDSP]", "DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=$frameCounter ${RadioDiagLog.elapsedTag()}")
                         }
                         if (encoded != null) {
-                            if (opusCodec.lastEncodeWasPcmFallback) {
+                            val isPcmFallback = opusCodec.lastEncodeWasPcmFallback
+                            if (isPcmFallback) {
                                 txSessionStats.pcmFallbackFrames++
                             }
                             frameCounter++
@@ -918,14 +920,14 @@ class RadioAudioEngine(private val context: Context) {
                                     if (preBuffer.size >= PRE_BUFFER_MAX_FRAMES) {
                                         preBuffer.removeFirst()
                                     }
-                                    preBuffer.addLast(encoded)
+                                    preBuffer.addLast(EncodedRadioFrame(encoded, isPcmFallback))
                                 } else {
                                     txSessionStats.packetsSent++
                                     if (frameCounter == 1) {
                                         val latencyMs = System.currentTimeMillis() - captureStartMs
                                         Log.d(TAG, "LATENCY_FIRST_LIVE_TX_FRAME frame=$frameCounter latencyMs=$latencyMs ${RadioDiagLog.elapsedTag()}")
                                     }
-                                    udpTransport.send(encoded)
+                                    udpTransport.send(encoded, isPcmFallback)
                                     lastSuccessfulSendMs = System.currentTimeMillis()
                                 }
                             }
@@ -1096,7 +1098,7 @@ class RadioAudioEngine(private val context: Context) {
             }
             while (preBuffer.isNotEmpty()) {
                 val frame = preBuffer.removeFirst()
-                udpTransport.send(frame)
+                udpTransport.send(frame.payload, frame.isPcmFallback)
                 flushedFrames++
                 txSessionStats.packetsSent++
             }
@@ -1372,7 +1374,8 @@ class RadioAudioEngine(private val context: Context) {
                             Log.d("[AudioDSP]", "DSP_STATE_RESET_PENDING reason=encoder_reinitialized frame=$frameCounter ${RadioDiagLog.elapsedTag()}")
                         }
                         if (encoded != null) {
-                            if (opusCodec.lastEncodeWasPcmFallback) {
+                            val isPcmFallback = opusCodec.lastEncodeWasPcmFallback
+                            if (isPcmFallback) {
                                 txSessionStats.pcmFallbackFrames++
                             }
                             frameCounter++
@@ -1383,7 +1386,7 @@ class RadioAudioEngine(private val context: Context) {
                                 val monoFrameByteCount = actualFrameSizeSamples * 2
                                 Log.d(TAG, "LATENCY_FIRST_TX_FRAME_SENT frame=$frameCounter samplesPerFrame=$actualFrameSizeSamples pcmBytesToEncode=$monoFrameByteCount opusFrameSize=${opusCodec.encoderFrameSize} encodedBytes=${encoded.size} latencyMs=$latencyMs ${RadioDiagLog.elapsedTag()}")
                             }
-                            udpTransport.send(encoded)
+                            udpTransport.send(encoded, isPcmFallback)
                             lastSuccessfulSendMs = System.currentTimeMillis()
                         } else {
                             txSessionStats.failures++
@@ -1909,7 +1912,7 @@ class RadioAudioEngine(private val context: Context) {
         if (udpTransport.rxPacketCount == 1L) {
             Log.d(TAG, "LATENCY_FIRST_RX_PACKET seq=${packet.sequence} sender=${packet.senderUnitId} ${RadioDiagLog.elapsedTag()}")
         }
-        jitterBuffer.enqueue(packet.sequence, packet.opusPayload)
+        jitterBuffer.enqueue(packet.sequence, packet.opusPayload, packet.flags)
     }
 
     // --- DSP state ---
