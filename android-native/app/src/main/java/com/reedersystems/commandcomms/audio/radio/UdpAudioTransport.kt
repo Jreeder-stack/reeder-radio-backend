@@ -237,12 +237,24 @@ class UdpAudioTransport(
     )
 
     private val sendPacketQueue = Channel<QueuedPacket>(capacity = 64)
+    private var lastQueueDropLogMs: Long = 0L
+    private var queuedDropCount: Long = 0L
+
+    @Synchronized private fun recordQueueDrop(reason: String) {
+        txFailures++
+        queuedDropCount++
+        val now = SystemClock.elapsedRealtime()
+        if (lastQueueDropLogMs == 0L || now - lastQueueDropLogMs >= 1_000L) {
+            Log.w("[RadioError]", "TX_QUEUE_DROP reason=$reason droppedSinceLast=$queuedDropCount")
+            queuedDropCount = 0L
+            lastQueueDropLogMs = now
+        }
+    }
 
     /** Report actual acceptance to the encoder; a full/dead queue is not successful TX. */
     fun send(data: ByteArray): Boolean {
         if (relayHost.isBlank() || socket == null || sendJob?.isActive != true) {
-            txFailures++
-            Log.w("[RadioError]", "TX_QUEUE_REJECTED reason=transport_not_ready hostConfigured=${relayHost.isNotBlank()} socket=${socket != null} sendJobActive=${sendJob?.isActive}")
+            recordQueueDrop("transport_not_ready")
             return false
         }
         val payloadBytes = data.size
@@ -251,8 +263,7 @@ class UdpAudioTransport(
             QueuedPacket(framed, payloadBytes, SystemClock.elapsedRealtime(), transportEpoch)
         ).isSuccess
         if (!enqueued) {
-            txFailures++
-            Log.w("[RadioError]", "TX_QUEUE_FULL dropping_new_frame payloadBytes=$payloadBytes queueCapacity=64")
+            recordQueueDrop("queue_full_capacity_64")
         }
         return enqueued
     }
@@ -263,8 +274,8 @@ class UdpAudioTransport(
                 for (qp in sendPacketQueue) {
                     val ageMs = SystemClock.elapsedRealtime() - qp.enqueuedAtMs
                     if (!RadioTxFramePolicy.maySend(qp.epoch, transportEpoch, ageMs)) {
-                        txFailures++
-                        Log.w(TAG, "TX_QUEUE_STALE_DROP ageMs=$ageMs oldEpoch=${qp.epoch != transportEpoch}")
+                        recordQueueDrop(if (qp.epoch != transportEpoch) "old_socket_generation"
+                            else "stale_audio_age_ms_$ageMs")
                         continue
                     }
                     var sock = socket
