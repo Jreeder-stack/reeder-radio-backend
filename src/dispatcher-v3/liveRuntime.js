@@ -535,6 +535,10 @@ export class V3LiveDispatcher {
     });
     this._diag('turn_addressed', transmission.correlationId, gate.allowed, {
       reason: gate.reason, pending: !!gate.pending,
+      // "Unaddressed" is established by the trusted PTT conversation gate,
+      // never by a model-proposed classification or a call sign in speech.
+      intentType: !gate.allowed && ['not_addressed', 'unit_to_unit'].includes(gate.reason)
+        ? 'unaddressed' : null,
     }, turnEnvelope);
     if (!gate.allowed) {
       this._diag('transmission_ignored', transmission.correlationId, true, { unitId, reason: gate.reason, transcript: transmission.transcript });
