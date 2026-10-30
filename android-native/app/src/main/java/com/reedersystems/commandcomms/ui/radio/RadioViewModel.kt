@@ -93,6 +93,10 @@ data class RadioUiState(
     val pageAlertMessage: String = "",
     val pageAlertSender: String = "DISPATCH",
     val signalQuality: SignalQuality = SignalQuality.NONE,
+    val txMediaActive: Boolean = false,
+    val rxMediaActive: Boolean = false,
+    val txAudioBars: Int = 0,
+    val rxAudioBars: Int = 0,
     val hd760KnobPosition: Int? = null,
     val hd760SlotEmpty: Boolean = false,
     val hd760MenuOpen: Boolean = false,
@@ -693,6 +697,28 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             radioStateManager.signalQuality.collect { quality ->
                 _uiState.update { it.copy(signalQuality = quality) }
+            }
+        }
+        if (isHd760) {
+            viewModelScope.launch {
+                radioStateManager.txCaptureActive.collect { active ->
+                    _uiState.update { it.copy(txMediaActive = active) }
+                }
+            }
+            viewModelScope.launch {
+                radioStateManager.rxMediaActive.collect { active ->
+                    _uiState.update { it.copy(rxMediaActive = active) }
+                }
+            }
+            viewModelScope.launch {
+                radioStateManager.txAudioBars.collect { bars ->
+                    _uiState.update { it.copy(txAudioBars = bars) }
+                }
+            }
+            viewModelScope.launch {
+                radioStateManager.rxAudioBars.collect { bars ->
+                    _uiState.update { it.copy(rxAudioBars = bars) }
+                }
             }
         }
     }
