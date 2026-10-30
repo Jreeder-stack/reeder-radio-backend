@@ -260,10 +260,27 @@ class OpusCodec {
     }
 
     private fun wrapPcmFallback(pcmData: ByteArray): ByteArray {
-        val wrapped = ByteArray(1 + pcmData.size)
-        wrapped[0] = CODEC_MARKER_PCM
-        System.arraycopy(pcmData, 0, wrapped, 1, pcmData.size)
-        return wrapped
+        // Keep fallback at the decoder's fixed 20 ms / 16 kHz contract.
+        val frame = ByteArray(FRAME_SIZE * 2)
+        if (pcmData.size >= 2 && pcmData.size % 2 == 0) {
+            val count = pcmData.size / 2
+            fun sampleAt(i: Int): Int {
+                val off = i * 2
+                return (((pcmData[off + 1].toInt() shl 8) or
+                    (pcmData[off].toInt() and 255)).toShort()).toInt()
+            }
+            for (i in 0 until FRAME_SIZE) {
+                val from = (i.toLong() * count / FRAME_SIZE).toInt()
+                val to = (((i + 1).toLong() * count / FRAME_SIZE).toInt())
+                    .coerceAtLeast(from + 1).coerceAtMost(count)
+                var sum = 0L
+                for (j in from until to) sum += sampleAt(j)
+                val pcm = (sum / (to - from)).toInt().coerceIn(-32768, 32767)
+                frame[2 * i] = pcm.toByte()
+                frame[2 * i + 1] = (pcm shr 8).toByte()
+            }
+        }
+        return byteArrayOf(CODEC_MARKER_PCM) + frame
     }
 
     fun encode(pcmData: ByteArray): ByteArray? {
