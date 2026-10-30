@@ -103,11 +103,16 @@ export class V3LiveDispatcher {
             ? this._transmitAlert(entry.text, entry.correlationId, entry.envelope, { signal: entry.controller.signal, check })
             : this._speak(entry.text, entry.correlationId, entry.envelope, { signal: entry.controller.signal, check })));
       },
-      onOutcome: (result, entry) => this._diag('outbound_' + result.status,
-        result.correlationId, result.status === 'completed', {
-          recipient: result.recipient, channel: result.channel, reason: result.reason,
-          elapsedMs: result.elapsedMs, deliveryId: result.id, kind: result.kind,
-        }, entry.envelope || null),
+      onOutcome: (result, entry) => {
+        // The outbound terminal outcome, NOT the question creation time,
+        // establishes the answer clock for exactly this trusted unit/task.
+        if (entry.kind === 'routine') this._settlePromptFromOutput(result, entry.envelope, entry.generation);
+        this._diag('outbound_' + result.status,
+          result.correlationId, result.status === 'completed', {
+            recipient: result.recipient, channel: result.channel, reason: result.reason,
+            elapsedMs: result.elapsedMs, deliveryId: result.id, kind: result.kind,
+          }, entry.envelope || null);
+      },
     });
     this._lifecycle = new V3TurnLifecycle({
       getGeneration: () => this.isRunning ? this.runtimeGeneration : null,
@@ -398,7 +403,15 @@ export class V3LiveDispatcher {
     if (await this._handleEmergencyTranscript(transmission)) return true;
 
     const sessionKey = this.conversations.scopeKey(turnEnvelope);
-    const gate = this.conversationGate.shouldProcess({ unitId, transcript: transmission.transcript, sessionKey });
+    const ownedConversation = this.conversations.get(turnEnvelope);
+    const gate = this.conversationGate.shouldProcess({
+      unitId, transcript: transmission.transcript, sessionKey,
+      conversationId: ownedConversation?.id || null,
+      taskId: ownedConversation?.activeTask?.id || null,
+      runtimeGeneration: turnEnvelope.runtimeGeneration,
+      channelId: this.context.roomKey,
+      dispatcherIdentity: this.identity,
+    });
     this._diag('turn_addressed', transmission.correlationId, gate.allowed, {
       reason: gate.reason, pending: !!gate.pending,
     }, turnEnvelope);
@@ -408,7 +421,7 @@ export class V3LiveDispatcher {
     }
     // An evicted or expired conversation cannot resume an orphaned prompt.
     if (gate.reason === 'follow_up' && !this.conversations.get(turnEnvelope)) {
-      this.conversationGate.clear(unitId);
+      this.conversationGate.clear(unitId, sessionKey);
       this._diag('transmission_ignored', transmission.correlationId, true, { unitId, reason: 'conversation_expired' }, turnEnvelope);
       return false;
     }
@@ -430,16 +443,14 @@ export class V3LiveDispatcher {
     if (gate.reason === 'wake_word') {
       const hail = normalizeV3RadioHail(transmission.transcript);
       if (hail) {
-        this.conversationGate.expectFollowUp(unitId, {
-          kind: 'radio_hail',
-          callsign: hail,
-          correlationId: transmission.correlationId,
-          sessionKey,
-        });
         this.conversations.completeTurn(turnEnvelope, {
           plan: { action: 'RADIO_HAIL', input: { callsign: hail }, clarification: `${hail}, go ahead.` },
           result: { success: true },
         });
+        this._expectDeliveredFollowUp(unitId, {
+          kind: 'radio_hail', callsign: hail, correlationId: transmission.correlationId,
+          clarification: `${hail}, go ahead.`,
+        }, turnEnvelope);
         this._diag('radio_hail_acknowledged', transmission.correlationId, true, { unitId, callsign: hail });
         this._queueReply(`${hail}, go ahead.`, transmission.correlationId, turnEnvelope);
         return true;
@@ -972,41 +983,43 @@ export class V3LiveDispatcher {
     }
 
     assertV3DeadlineActive();
-    // The reply remains bound through all possible CAD side effects, then may
-    // consume/replace its pending state without invalidating outbound speech.
+    // Commit the outcome before preparing any reply. A question is not an
+    // answer window until the outbound lane reports completed injection.
     const life = this._lifecycle.get(turnEnvelope.turnId);
     if (life) this._lifecycle.releasePending(life);
     dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign);
+    const responseText = composeV3Response({ plan, result, speakerCallsign, turnEnvelope });
+    this.conversations.completeTurn(turnEnvelope, { plan, result });
+
+    let followUp = null;
     if (plan.action === 'CLARIFY') {
       const task = plan.pendingTask;
-      const ownedRecord = task ? this.conversations.get(turnEnvelope) : null;
-      this.conversationGate.expectFollowUp(speakerCallsign, {
+      followUp = {
         clarification: plan.clarification,
-        ...(task && ownedRecord?.activeTask ? {
+        ...(task ? {
           kind: 'task_clarification',
-          taskId: ownedRecord.activeTask.id, originalTurnId: task.originalTurnId,
-          pendingTask: task,
+          originalTurnId: task.originalTurnId, pendingTask: task,
         } : { input: plan.input || {} }),
-        correlationId, sessionKey: this.conversations.scopeKey(turnEnvelope),
-      });
+      };
     } else if (result?.error?.code === 'DISPOSITION_REQUIRED') {
-      this.conversationGate.expectFollowUp(speakerCallsign, {
+      followUp = {
         kind: 'disposition',
         callId: result.error.details?.callId || plan.input?.callId || null,
         unitRef: speakerCallsign,
-        correlationId,
-        sessionKey: this.conversations.scopeKey(turnEnvelope),
-      });
+      };
     } else if (dialogueContext) {
-      this.conversationGate.expectFollowUp(speakerCallsign, { ...dialogueContext, correlationId, sessionKey: this.conversations.scopeKey(turnEnvelope) });
+      followUp = { ...dialogueContext };
     } else if (pendingContext?.kind === 'disposition' && plan.action !== V3_ACTIONS.CLEAR_UNIT && plan.action !== V3_ACTIONS.CLOSE_CALL) {
-      this.conversationGate.expectFollowUp(speakerCallsign, { ...pendingContext, correlationId, sessionKey: this.conversations.scopeKey(turnEnvelope) });
-    } else {
-      this.conversationGate.clear(speakerCallsign);
+      followUp = { ...pendingContext };
     }
 
-    const responseText = composeV3Response({ plan, result, speakerCallsign, turnEnvelope });
-    this.conversations.completeTurn(turnEnvelope, { plan, result });
+    // A silent response or an output rejected by the scheduler cannot create
+    // a wake-free follow-up. Retain CAD facts, not an imaginary heard prompt.
+    if (followUp && responseText) {
+      this._expectDeliveredFollowUp(speakerCallsign, { ...followUp, correlationId }, turnEnvelope);
+    } else {
+      this.conversationGate.clear(speakerCallsign, this.conversations.scopeKey(turnEnvelope));
+    }
     if (responseText) this._queueReply(responseText, correlationId, turnEnvelope);
   }
 
@@ -1044,14 +1057,59 @@ export class V3LiveDispatcher {
     return { success: true, action: 'MULTI_ACTION', correlationId, turnEnvelope, data: { steps } };
   }
 
+  // A question is correlated to a trusted runtime generation, speaker,
+  // authenticated session, conversation, active task, routing channel and turn.
+  _expectDeliveredFollowUp(unitId, details, envelope) {
+    if (!envelope || !this.isRunning) return null;
+    const conversation = this.conversations.get(envelope);
+    const task = conversation?.activeTask;
+    if (!task || task.latestTurnId !== envelope.turnId) return null;
+    return this.conversationGate.expectFollowUp(unitId, {
+      ...details, sessionKey: this.conversations.scopeKey(envelope),
+      conversationId: conversation.id, taskId: task.id,
+      promptTurnId: envelope.turnId,
+      runtimeGeneration: envelope.runtimeGeneration, channelId: this.context.roomKey,
+    });
+  }
+
+  // Called only by the real outbound scheduler's terminal receipt, or the
+  // immediate reject path. "completed" means locally observed relay injection,
+  // not confirmation that a person heard the transmission.
+  _settlePromptFromOutput(outcome, envelope, generation = this.runtimeGeneration) {
+    if (!envelope || envelope.runtimeGeneration !== generation || generation !== this.runtimeGeneration
+      || !this.isRunning) return false;
+    let conversation;
+    try { conversation = this.conversations.get(envelope); } catch (_) { return false; }
+    if (!conversation?.activeTask) return false;
+    const settled = this.conversationGate.settlePromptDelivery({
+      unitId: outcome.recipient, promptTurnId: envelope.turnId,
+      sessionKey: conversation.scopeKey, conversationId: conversation.id,
+      taskId: conversation.activeTask.id, runtimeGeneration: generation,
+      channelId: outcome.channel, status: outcome.status,
+    });
+    if (settled) this._diag('follow_up_prompt_' + outcome.status, envelope.turnId,
+      outcome.status === 'completed', {
+        taskId: conversation.activeTask.id, conversationId: conversation.id,
+        recipient: outcome.recipient, channel: outcome.channel,
+        verifiedReceipt: 'local_transmission_only',
+      }, envelope);
+    return settled;
+  }
+
   _queueReply(text, correlationId, envelope) {
+    const recipient = envelope?.speaker?.callsign || envelope?.speakerRef || null;
     const queued = this._outbound.enqueue({
-      text, correlationId, envelope, recipient: envelope?.speaker?.callsign || envelope?.speakerRef || null,
+      text, correlationId, envelope, recipient,
       source: envelope ? this._lifecycle.get(envelope.turnId)?.source || null : null,
       channel: this.context.roomKey, generation: this.runtimeGeneration, turnId: envelope?.turnId || null,
     });
-    if (!queued.accepted) this._diag('outbound_failed', correlationId, false,
-      { reason: queued.reason, recipient: envelope?.speaker?.callsign || null }, envelope || null);
+    if (!queued.accepted) {
+      this._settlePromptFromOutput({
+        recipient, channel: this.context.roomKey, status: 'failed',
+      }, envelope);
+      this._diag('outbound_failed', correlationId, false,
+        { reason: queued.reason, recipient }, envelope || null);
+    }
     return queued;
   }
 

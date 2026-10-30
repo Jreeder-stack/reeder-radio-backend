@@ -24,7 +24,7 @@ if (!['baseline', 'acceptance'].includes(mode)) throw new Error(`Unknown DISPATC
 const ledger = [];
 // Repaired cases must assert the fixed behavior in EVERY mode. Unrepaired
 // cases retain their pinned baseline until their owning work item is finished.
-const repairedCases = new Set(['R01', 'R02', 'R03', 'R04', 'R06', 'R07', 'R09', 'R10', 'R12']);
+const repairedCases = new Set(['R01', 'R02', 'R03', 'R04', 'R06', 'R07', 'R09', 'R10', 'R11', 'R12']);
 let harnesses = [];
 let networkGuard;
 
@@ -258,8 +258,13 @@ describe('01-01 audit regressions: repaired assertions plus remaining known defe
     const speech = h.hold(Buffer.alloc(640)); h.synthesisReplies.push(speech.promise);
     const question = await h.begin('Central, please explain the assignment I mentioned earlier');
     await until(() => h.synthesize.mock.calls.length === 1, 'delayed clarification');
-    await vi.advanceTimersByTimeAsync(31000);
-    speech.resolve(Buffer.alloc(640)); await finish(question);
+    // The legacy 31-second blocked-synthesis fixture exceeds 01-06's 22s
+    // outbound active deadline. Exercise a genuinely delivered question
+    // delayed within that bound, then answer after creation+30s but before
+    // delivery+30s. This still reproduces the old creation-time expiry.
+    await vi.advanceTimersByTimeAsync(10000);
+    speech.resolve(Buffer.alloc(640)); await finish(question); await h.flushOutput();
+    await vi.advanceTimersByTimeAsync(22000);
     const answerAccepted = await h.send('the alarm');
     const observed = { answerAccepted, modelCalls: h.llm.mock.calls.length };
     record('R11', 'F6', 'An answer immediately after a delivered question must retain its valid reply window.', observed,

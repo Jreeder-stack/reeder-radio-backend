@@ -1,4 +1,5 @@
 const DEFAULT_PENDING_MS = 30000;
+const TERMINAL_DELIVERY = new Set(['completed', 'failed', 'expired', 'interrupted']);
 const EMERGENCY_RX = /\b(officer\s+down|shots?\s+fired|10[-\s/]?33|ten\s+thirty[-\s]?three|emergency\s+traffic|signal\s+100)\b/i;
 const NUMBER_WORDS = Object.freeze({
   zero: '0', oh: '0',
@@ -16,10 +17,14 @@ export class V3ConversationGate {
     this.wakeWords = normalizeWakeWords(wakeWords);
   }
 
-  shouldProcess({ unitId, transcript, sessionKey = null } = {}) {
+  shouldProcess({ unitId, transcript, sessionKey = null, conversationId = null,
+    taskId = null, runtimeGeneration = null, channelId = null, dispatcherIdentity = null } = {}) {
     const unit = clean(unitId);
     const text = clean(transcript);
     if (!unit || !text) return { allowed: false, reason: 'empty' };
+    if (dispatcherIdentity && unit.toUpperCase() === clean(dispatcherIdentity)?.toUpperCase()) {
+      return { allowed: false, reason: 'dispatcher_output' };
+    }
     const matched = this.wakeWords.find((word) => new RegExp(`^\\s*${escapeRx(word)}(?:\\b|[,.:;-])`, 'i').test(text));
     // Urgent traffic keeps its addressing exemption. Normalize only a known
     // leading address, as for routine traffic, so complete urgent declarations
@@ -30,7 +35,9 @@ export class V3ConversationGate {
     // must run BEFORE pending-follow-up handling; otherwise a stale CLARIFY
     // window can hijack "Central, ..." and keep asking the same old question.
     if (matched) {
-      this.pending.delete(unit);
+      // A new explicitly addressed command supersedes this session's prompt.
+      // An unrelated authenticated connection cannot clear the owner's task.
+      this.clear(unit, sessionKey);
       const remainder = stripLeadingWake(text, matched);
       if (looksLikeSpeakerHail(remainder, unit)) {
         return {
@@ -46,41 +53,87 @@ export class V3ConversationGate {
     }
 
     const pending = this.pending.get(unit);
-    // Task 02-02/02-03 still owns the legacy follow-up lifecycle. This
-    // compatibility slot is never usable from a different authenticated session.
-    if (pending?.sessionKey && pending.sessionKey !== sessionKey) {
-      return { allowed: false, reason: 'not_addressed' };
-    }
-    if (pending && pending.expiresAt >= this.now()) {
-      if (looksLikeUnitToUnitTraffic(text, unit, pending)) {
-        this.pending.delete(unit);
-        return { allowed: false, reason: 'unit_to_unit', transcript: text };
-      }
-      return { allowed: true, reason: 'follow_up', transcript: text, pending };
-    }
-    if (pending) this.pending.delete(unit);
+    if (!pending) return { allowed: false, reason: 'not_addressed' };
 
-    return { allowed: false, reason: 'not_addressed' };
+    // A callsign is not custody. Only the exact authenticated conversation,
+    // active task, generation and channel of the transmitted question may reply.
+    if (pending.sessionKey !== sessionKey) return { allowed: false, reason: 'not_addressed' };
+    if (!matchesScope(pending, { sessionKey, conversationId, taskId, runtimeGeneration, channelId })) {
+      this.pending.delete(unit);
+      return { allowed: false, reason: 'pending_task_changed' };
+    }
+    if (pending.promptState !== 'delivered') {
+      // The speech may still be queued, blocked, synthesizing or interrupted.
+      return { allowed: false, reason: 'prompt_not_delivered' };
+    }
+    if (pending.expiresAt < this.now()) {
+      this.pending.delete(unit);
+      return { allowed: false, reason: 'prompt_expired' };
+    }
+    if (looksLikeUnitToUnitTraffic(text, unit, pending)) {
+      // Overheard traffic is not an answer and must not cancel a valid prompt.
+      return { allowed: false, reason: 'unit_to_unit', transcript: text };
+    }
+    return { allowed: true, reason: 'follow_up', transcript: text, pending };
   }
 
+  // Creates a NON-ACTIONABLE prompt awaiting an outbound transmission receipt.
+  // The reply clock is not started here, and there is no legacy timer fallback.
   expectFollowUp(unitId, context = {}) {
     const unit = clean(unitId);
-    if (!unit) return;
-    this.pending.set(unit, { ...context, expiresAt: this.now() + this.pendingMs });
+    const required = ['sessionKey', 'conversationId', 'taskId', 'promptTurnId', 'runtimeGeneration', 'channelId'];
+    if (!unit || required.some((key) => !clean(context[key]))) return null;
+    const pending = {
+      ...context, promptState: 'awaiting_delivery', createdAt: this.now(),
+      deliveredAt: null, expiresAt: null,
+    };
+    this.pending.set(unit, pending);
+    return pending;
+  }
+
+  // Only the actual outbound terminal result can open the answer window.
+  // Matching the original turn (plus session/task/channel/generation) prevents
+  // a superseded or another unit's completion from opening a newer question.
+  settlePromptDelivery({ unitId, promptTurnId, sessionKey, conversationId, taskId,
+    runtimeGeneration, channelId, status } = {}) {
+    if (!TERMINAL_DELIVERY.has(status)) return false;
+    const unit = clean(unitId), pending = this.pending.get(unit);
+    if (!pending || pending.promptState !== 'awaiting_delivery' || pending.promptTurnId !== promptTurnId
+      || !matchesScope(pending, { sessionKey, conversationId, taskId, runtimeGeneration, channelId })) return false;
+    if (status === 'completed') {
+      pending.promptState = 'delivered';
+      pending.deliveredAt = this.now();
+      pending.expiresAt = pending.deliveredAt + this.pendingMs;
+    } else {
+      this.pending.delete(unit);
+    }
+    return true;
   }
 
   isCurrentPending(unitId, pending) {
     const unit = clean(unitId);
-    return !!unit && !!pending && this.pending.get(unit) === pending && pending.expiresAt >= this.now();
+    return !!unit && !!pending && this.pending.get(unit) === pending
+      && pending.promptState === 'delivered'
+      && Number.isFinite(pending.expiresAt) && pending.expiresAt >= this.now();
   }
 
-  clear(unitId) {
-    this.pending.delete(clean(unitId));
+  clear(unitId, sessionKey = null) {
+    const unit = clean(unitId);
+    if (!unit) return;
+    const pending = this.pending.get(unit);
+    if (!pending || (sessionKey != null && pending.sessionKey !== sessionKey)) return;
+    this.pending.delete(unit);
   }
 
   clearAll() {
     this.pending.clear();
   }
+}
+
+function matchesScope(pending, { sessionKey, conversationId, taskId, runtimeGeneration, channelId }) {
+  return !!pending && pending.sessionKey === sessionKey && pending.conversationId === conversationId
+    && pending.taskId === taskId && pending.runtimeGeneration === runtimeGeneration
+    && pending.channelId === channelId;
 }
 
 function normalizeWakeWords(value) {
@@ -129,6 +182,12 @@ function looksLikeUnitToUnitTraffic(text, speakerUnitId, pending) {
       return normalizedText.length > addressed[0].length;
     }
   }
+
+  // Direct callsigns from another family explicitly hailed at the beginning
+  // also address another radio unit; an isolated callsign can still answer
+  // "Which unit?" and must not be discarded as cross-unit speech.
+  const directed = text.match(/^\s*([a-z][a-z0-9_-]*\s*\d+)\s*[,;:]\s*(\S.+)$/i);
+  if (directed && normalizeCallsign(directed[1]) !== speaker) return true;
 
   const genericAddress = normalizedText.match(/^(?:unit|car|officer|patrol|security|radio)\s+\d+(?:\b|$)/i);
   if (!genericAddress) return false;
