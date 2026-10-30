@@ -1,4 +1,5 @@
 import { PCM_SPEC } from './PcmPacket.js';
+import { StreamingPcmFrameResampler } from './StreamingPcmFrameResampler.js';
 import { getSharedAudioContext } from './iosAudioUnlock.js';
 
 const PRE_BUFFER_MS = 400;
@@ -16,6 +17,7 @@ export class PcmCaptureEngine {
     this._workletNode = null;
     this._fallbackProcessor = null;
     this._fallbackBuffer = new Int16Array(0);
+    this._fallbackConverter = null;
     this.running = false;
     this.onFrame = null;
     this.onTrackEnded = null;
@@ -46,7 +48,7 @@ export class PcmCaptureEngine {
       audio: {
         channelCount: 1,
         sampleRate: PCM_SPEC.sampleRate,
-        echoCancellation: false,
+        echoCancellation: true,
         noiseSuppression: this.noiseSuppression,
         autoGainControl: false,
       },
@@ -89,6 +91,14 @@ export class PcmCaptureEngine {
     }
 
     this.audioContext = audioContext;
+    const actualRate = this.audioContext.sampleRate;
+    const inputTrackRate = micTrack?.getSettings?.().sampleRate;
+    console.log('[PcmCaptureEngine] CAPTURE_RATE', {
+      requestedRate: PCM_SPEC.sampleRate,
+      audioContextRate: actualRate,
+      microphoneTrackRate: inputTrackRate || 'unspecified',
+      resampling: actualRate !== PCM_SPEC.sampleRate,
+    });
 
     if (this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
@@ -112,7 +122,9 @@ export class PcmCaptureEngine {
       this._workletNode = new AudioWorkletNode(this.audioContext, 'pcm-capture-processor');
 
       this._workletNode.port.onmessage = (event) => {
-        if (event.data.type === 'pcmFrame') {
+        if (event.data.type === 'captureConfig') {
+          console.log('[PcmCaptureEngine] WORKLET_CAPTURE_CONFIG', event.data);
+        } else if (event.data.type === 'pcmFrame') {
           if (this.running && this.onFrame) {
             this.onFrame(event.data.samples);
           } else {
@@ -168,6 +180,7 @@ export class PcmCaptureEngine {
       this._fallbackProcessor.onaudioprocess = null;
       this._fallbackProcessor = null;
       this._fallbackBuffer = new Int16Array(0);
+      this._fallbackConverter = null;
     }
     if (this.source) {
       this.source.disconnect();
@@ -186,30 +199,24 @@ export class PcmCaptureEngine {
   _useFallback() {
     this._fallbackProcessor = this.audioContext.createScriptProcessor(1024, 1, 1);
     this._fallbackBuffer = new Int16Array(0);
-
+    this._fallbackConverter = new StreamingPcmFrameResampler(
+      this.audioContext.sampleRate, PCM_SPEC.sampleRate, PCM_SPEC.frameSamples
+    );
+    console.log('[PcmCaptureEngine] Fallback capture rate conversion', {
+      sourceRate: this.audioContext.sampleRate,
+      targetRate: PCM_SPEC.sampleRate,
+    });
     this._fallbackProcessor.onaudioprocess = (event) => {
       const input = event.inputBuffer.getChannelData(0);
-      const pcmChunk = new Int16Array(input.length);
-      for (let i = 0; i < input.length; i++) {
-        const s = Math.max(-1, Math.min(1, input[i]));
-        pcmChunk[i] = s < 0 ? s * 32768 : s * 32767;
-      }
-
-      const merged = new Int16Array(this._fallbackBuffer.length + pcmChunk.length);
-      merged.set(this._fallbackBuffer, 0);
-      merged.set(pcmChunk, this._fallbackBuffer.length);
-      this._fallbackBuffer = merged;
-
-      while (this._fallbackBuffer.length >= PCM_SPEC.frameSamples) {
-        const frame = this._fallbackBuffer.slice(0, PCM_SPEC.frameSamples);
-        this._fallbackBuffer = this._fallbackBuffer.slice(PCM_SPEC.frameSamples);
-
+      // Never route microphone samples to speaker playback.
+      event.outputBuffer.getChannelData(0).fill(0);
+      this._fallbackConverter.push(input, (frame) => {
         if (this.running && this.onFrame) {
           this.onFrame(frame);
         } else {
           this._pushPreBuffer(frame);
         }
-      }
+      });
     };
 
     this.source.connect(this._fallbackProcessor);
@@ -287,6 +294,7 @@ export class PcmCaptureEngine {
       this._fallbackProcessor.onaudioprocess = null;
       this._fallbackProcessor = null;
       this._fallbackBuffer = new Int16Array(0);
+      this._fallbackConverter = null;
     }
 
     if (this.source) {
