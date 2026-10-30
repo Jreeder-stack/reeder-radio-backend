@@ -1,0 +1,149 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "02-04",
+  "date": "2026-10-29",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "53ae003699e7657f13ca996013ffc8db6d72de3e",
+  "validatedExecutableSource": "2dc054bf6a9b40d4eacc02a1df4323843a1bf81d",
+  "sourceCommit": "2dc054bf6a9b40d4eacc02a1df4323843a1bf81d",
+  "modified": [
+    "src/dispatcher-v3/conversationRecords.js",
+    "src/dispatcher-v3/liveRuntime.js",
+    "src/dispatcher-v3/fieldIncidentCoordinator.js",
+    "src/dispatcher-v3/intentPlanner.js",
+    "src/dispatcher-v3/__tests__/auditBaseline.test.js"
+  ],
+  "created": [
+    "src/dispatcher-v3/taskTransitions.js",
+    "src/dispatcher-v3/__tests__/taskTransitions.test.js"
+  ],
+  "behavior": {
+    "singleOwnerBoundTaskLifecycle": true,
+    "controls": [
+      "cancel",
+      "correct",
+      "new_topic",
+      "resume"
+    ],
+    "terminalTaskStates": [
+      "completed",
+      "canceled",
+      "expired"
+    ],
+    "suspendsOldTopic": true,
+    "preservesPendingClarification": true,
+    "preservesDisposition": true,
+    "incidentKeyIncludesAuthenticatedScopeAndTask": true,
+    "rewrittenRequestsUseSamePlannerAndCADGates": true,
+    "submittedCadWritesNotUndone": true,
+    "hardwareEmergencyControllerUntouched": true,
+    "newPromptRequiresCompletedOutboundReceipt": true
+  },
+  "ci": {
+    "runId": 40984392644,
+    "jobId": 123831877334,
+    "nodeMajor": 20,
+    "conclusion": "failure",
+    "focus02_04": {
+      "passed": 16,
+      "failed": 0,
+      "total": 16
+    },
+    "audit": {
+      "passed": 26,
+      "failed": 0,
+      "total": 26,
+      "repairedR05": true
+    },
+    "prior02_03": {
+      "passed": 20,
+      "failed": 0,
+      "total": 20
+    },
+    "prior02_02": {
+      "passed": 13,
+      "failed": 0,
+      "total": 13
+    },
+    "manager": {
+      "passed": 7,
+      "failed": 0,
+      "total": 7
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "v3": {
+      "passed": 473,
+      "failed": 1,
+      "total": 474,
+      "files": 43
+    },
+    "syntaxPassed": true,
+    "legacyEngineAbsent": true,
+    "artifact": {
+      "id": 12946785265,
+      "name": "dispatcher-v3-evidence-40984392644-1",
+      "reportedSha256": "0113f8f7a8ac16ee4d864fdccc0eff600d0c64cdc71debfd7de33c44e4c54d0f",
+      "independentlyHashed": false
+    }
+  },
+  "soleKnownFixtureFailure": "Unmodified src/dispatcher-v3/__tests__/phase4Pipeline.test.js CREATE_CALL expects a positive acknowledgment without independent CAD read-back verification; unchanged and red",
+  "repairedAudit": [
+    "R01",
+    "R02",
+    "R03",
+    "R04",
+    "R05",
+    "R06",
+    "R07",
+    "R09",
+    "R10",
+    "R11",
+    "R12"
+  ],
+  "pendingAudit": [
+    "R08",
+    "R13",
+    "R14"
+  ],
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "fullV3SuiteGreen": false,
+    "fullRepositoryVerified": false,
+    "newerMainIntegrated": false,
+    "liveRadioProvidersVerified": false,
+    "productionVerified": false,
+    "releaseAccepted": false,
+    "merged": false,
+    "deployed": false,
+    "paidProviderCalls": false,
+    "productionDataChanged": false
+  },
+  "counts": {
+    "parent01": 8,
+    "parent02": 4,
+    "parent03": 1,
+    "parent04": 0,
+    "completed": 13,
+    "total": 32
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "caveats": [
+    "The local outbound completed receipt is not proof that the operator heard the prompt",
+    "02-05 owns full call/assignment revalidation and the unrelated NO_ACTION field-incident conversion",
+    "Physical button emergency remains separately governed",
+    "PR #163 remains unmergeable against newer main"
+  ],
+  "next": "02-05: Revalidate incident and assignment relationships"
+}
