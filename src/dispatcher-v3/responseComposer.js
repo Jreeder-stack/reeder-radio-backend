@@ -39,6 +39,7 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
   const unit = clean(speakerCallsign) || 'unit';
   if (plan?.action === 'NO_ACTION') return null;
   if (plan?.action === 'CLARIFY') return clean(plan.clarification) || `${unit}, repeat your last.`;
+  if (plan?.action === 'MULTI_ACTION') return compoundV3Response(unit, result, now);
 
   if (!result?.success) {
     const code = result?.error?.code;
@@ -60,7 +61,7 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
     return clean(result?.data?.radioResponse) || `${unit}, copy.`;
   }
 
-  if (plan?.action === 'MULTI_ACTION' || ROUTINE_ACK_ACTIONS.has(plan?.action)) {
+  if (ROUTINE_ACK_ACTIONS.has(plan?.action)) {
     return `Ten-four, ${formatMilitaryTimeForSpeech(now)}.`;
   }
 
@@ -100,6 +101,67 @@ function mutationVerificationSatisfied(plan, result) {
   }
   if (!VERIFIED_MUTATION_ACTIONS.has(plan?.action)) return true;
   return result?.data?.verified === true;
+}
+
+
+// Only verified CAD mutations are announced as completed. Each independent
+// read speaks the data actually returned by CAD, including in partial plans.
+// A submitted/unverified action is NEVER a success or permission to retry all.
+function compoundV3Response(unit, result, now) {
+  const steps = Array.isArray(result?.data?.steps) ? result.data.steps : [];
+  if (!steps.length) return unit + ', unable to confirm the requested operations.';
+  const parts = [];
+  for (const step of steps.slice(0, 10)) {
+    const call = step.result?.data?.call || step.result?.data?.assignment || null;
+    const action = step.action;
+    if (step.status === 'duplicate_skipped') {
+      parts.push('duplicate ' + shortAction(action) + ' not repeated');
+    } else if (step.status === 'verified') {
+      if (action === V3_ACTIONS.CREATE_CALL) {
+        const type = clean(call?.type || call?.nature) || 'requested';
+        const location = clean(call?.location || call?.address);
+        parts.push(type + ' call created' + (location ? ' at ' + location : ''));
+      } else if (action === V3_ACTIONS.SET_UNIT_STATUS) {
+        const status = clean(step.result?.data?.unit?.status);
+        parts.push(status ? 'unit marked ' + statusForSpeech(status) : 'unit status verified');
+      } else {
+        parts.push(shortAction(action) + ' verified in CAD');
+      }
+    } else if (step.status === 'read_success') {
+      const data = step.result?.data || {};
+      let read = null;
+      if ([V3_ACTIONS.GET_CALL, V3_ACTIONS.GET_CURRENT_CALL].includes(action)) {
+        read = currentCallResponse('', data);
+      } else if (action === V3_ACTIONS.LIST_ACTIVE_CALLS) {
+        read = activeCallsResponse('', data);
+      } else if (action === V3_ACTIONS.SEARCH_CALLS) {
+        read = activeCallsResponse('', { calls: data.calls || [] });
+      } else if (action === V3_ACTIONS.STATUS_CHECK) {
+        read = statusCheckResponse('', data);
+      } else if (action === V3_ACTIONS.TIME_CHECK) {
+        read = formatMilitaryTimeForSpeech(data.timestamp || now);
+      } else if (action === V3_ACTIONS.RADIO_CHECK) {
+        read = 'radio check loud and clear';
+      }
+      parts.push(read ? read.replace(/^,\s*/, '') : shortAction(action) + ' returned data');
+    } else if (step.status === 'skipped_dependency') {
+      parts.push(shortAction(action) + ' not attempted because its prerequisite was not verified');
+    } else if (step.status === 'unknown') {
+      parts.push(shortAction(action) + ' submitted or attempted, but outcome unconfirmed in CAD');
+    } else if (step.status === 'partial') {
+      parts.push(shortAction(action) + ' only partially recorded');
+    } else if (step.status === 'completed') {
+      parts.push(shortAction(action) + ' processed; CAD persistence not independently confirmed');
+    } else {
+      parts.push(shortAction(action) + ' not completed');
+    }
+  }
+  const suffix = result?.success ? '' : ' Completed changes were not reversed. Do not repeat the entire request.';
+  return (unit + ', ' + parts.join('; ') + '.' + suffix).slice(0, 800);
+}
+
+function shortAction(value) {
+  return String(value || 'operation').toLowerCase().replace(/_/g, ' ');
 }
 
 function sharedIncidentResponse(unit, shared) {

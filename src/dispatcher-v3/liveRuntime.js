@@ -22,6 +22,7 @@ import { classifyV3TaskTransition, modelV3TaskTransition } from './taskTransitio
 import { createV3PendingTask, resumeV3PendingTask } from './clarificationTasks.js';
 import { normalizeV3CommandText } from './deterministicIntent.js';
 import { materializeV3Plan } from './planMaterializer.js';
+import { executeV3CompoundPlan } from './compoundActions.js';
 import { composeV3Response } from './responseComposer.js';
 import { createV3CorrelationId } from './correlation.js';
 import { V3_ACTIONS } from './actionContracts.js';
@@ -1455,36 +1456,23 @@ export class V3LiveDispatcher {
 
   async _executeMultiActionPlan(plan, { speakerCallsign, operationalContext, correlationId, turnEnvelope }) {
     assertV3TurnEnvelope(turnEnvelope, this.context);
-    assertV3DeadlineActive();
-    const steps = [];
-    let context = operationalContext;
-    for (const actionPlan of plan.actions || []) {
-      assertV3DeadlineActive();
-      const materialized = await materializeV3Plan({ ...actionPlan, confidence: plan.confidence }, {
-        speakerCallsign,
-        unitIdentityService: this.unitIdentityService,
+    return executeV3CompoundPlan({
+      plan, operationalContext, correlationId, turnEnvelope,
+      materialize: (actionPlan, context) => materializeV3Plan(actionPlan, {
+        speakerCallsign, unitIdentityService: this.unitIdentityService,
         operationalContextService: this.operationalContextService,
-        operationalContext: context,
-        correlationId,
-        turnEnvelope,
-      });
-      const stepResult = await this.executor.execute({ action: materialized.action, input: materialized.input }, { correlationId, turnEnvelope });
-      steps.push({ action: materialized.action, input: materialized.input, result: stepResult });
-      if (!stepResult.success) {
-        return {
-          success: false,
-          action: 'MULTI_ACTION',
-          correlationId,
-          turnEnvelope,
-          error: { ...stepResult.error, details: { ...(stepResult.error?.details || {}), completedSteps: steps.slice(0, -1).map((step) => step.action), failedAction: materialized.action } },
-          data: { steps },
-        };
-      }
-      try {
-        context = await this.operationalContextService.snapshot({ speakerCallsign, correlationId });
-      } catch (_) {}
-    }
-    return { success: true, action: 'MULTI_ACTION', correlationId, turnEnvelope, data: { steps } };
+        operationalContext: context, correlationId, turnEnvelope,
+      }),
+      execute: materialized => this.executor.execute({
+        action: materialized.action, input: materialized.input,
+      }, { correlationId, turnEnvelope }),
+      snapshot: () => this.operationalContextService.snapshot({ speakerCallsign, correlationId }),
+      submittedWrites: () => this._lifecycle.get(turnEnvelope.turnId)?.writeCount || 0,
+      onStep: step => this._diag('compound_step_' + step.status, correlationId,
+        ['verified', 'read_success', 'duplicate_skipped', 'completed'].includes(step.status),
+        { stepId: step.id, action: step.action, dependsOn: step.dependsOn,
+          submittedWrites: step.submittedWrites || 0 }, turnEnvelope),
+    });
   }
 
   // A question is correlated to a trusted runtime generation, speaker,

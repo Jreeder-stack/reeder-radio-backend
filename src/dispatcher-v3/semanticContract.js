@@ -24,6 +24,11 @@ const REPORT_ACTIONS = new Set([
   V3_ACTIONS.UPDATE_FIELD_INCIDENT,
 ]);
 const MAX_PLAN_ACTIONS = 10;
+const CALL_TARGET_ACTIONS = new Set([
+  V3_ACTIONS.GET_CALL, V3_ACTIONS.UPDATE_CALL, V3_ACTIONS.ADD_CALL_NOTE,
+  V3_ACTIONS.ASSIGN_UNIT, V3_ACTIONS.UNASSIGN_UNIT, V3_ACTIONS.MAKE_PRIMARY,
+  V3_ACTIONS.UPDATE_ASSIGNMENT_TIMES, V3_ACTIONS.CLEAR_UNIT, V3_ACTIONS.CLOSE_CALL,
+]);
 const MAX_INPUT_FIELDS = 36;
 const MAX_INPUT_CHARS = 1500;
 const MAX_INPUT_ITEMS = 24;
@@ -143,13 +148,33 @@ function interpretType(value, action, source = 'model') {
   return value;
 }
 
-function normalizeStep(raw, source) {
-  if (!plain(raw) || typeof raw.action !== 'string') {
-    throw invalid('Each semantic step needs one supported action', 'invalid_step');
+function normalizeStep(raw, source, index, earlier) {
+  if (!plain(raw) || typeof raw.action !== 'string'
+    || Object.keys(raw).some(key => !['id', 'action', 'input', 'dependsOn', 'callIdFrom'].includes(key))) {
+    throw invalid('Each semantic step needs one supported action and trusted step fields', 'invalid_step');
   }
   const action = normalizedAction(raw.action);
   if (CONTROLS.has(action)) throw invalid('A compound plan cannot contain dialogue controls', 'invalid_step');
-  return Object.freeze({ action, input: safeInput(raw.input, source) });
+  const id = raw.id === undefined ? 'step' + (index + 1) : raw.id;
+  if (typeof id !== 'string' || !/^[a-zA-Z][a-zA-Z0-9_-]{0,31}$/.test(id)
+    || earlier.some(step => step.id === id)) throw invalid('Invalid or duplicate compound step ID', 'invalid_step_id');
+  const dependsOn = raw.dependsOn === undefined
+    ? (earlier.length ? [earlier[earlier.length - 1].id] : []) : raw.dependsOn;
+  if (!Array.isArray(dependsOn) || dependsOn.length > earlier.length
+    || dependsOn.some(dep => typeof dep !== 'string' || !earlier.some(step => step.id === dep))
+    || new Set(dependsOn).size !== dependsOn.length) {
+    throw invalid('A step may depend only on unique, earlier operations', 'invalid_step_dependency');
+  }
+  const input = safeInput(raw.input, source);
+  const callIdFrom = raw.callIdFrom;
+  if (callIdFrom !== undefined && (typeof callIdFrom !== 'string'
+    || !CALL_TARGET_ACTIONS.has(action) || !dependsOn.includes(callIdFrom)
+    || input.callId || input.callRef
+    || !['CREATE_CALL', 'GET_CALL', 'GET_CURRENT_CALL'].includes(earlier.find(step => step.id === callIdFrom)?.action))) {
+    throw invalid('Invalid call binding: use an earlier call-producing dependency, not an invented ID', 'invalid_step_call_binding');
+  }
+  return Object.freeze({ id, action, input, dependsOn: Object.freeze([...dependsOn]),
+    ...(callIdFrom === undefined ? {} : { callIdFrom }) });
 }
 
 // This is the only normalization function used by BOTH planning paths.
@@ -164,7 +189,11 @@ export function normalizeV3SemanticPlan(raw, { source = 'model' } = {}) {
     if (raw.action && String(raw.action).trim().toUpperCase() !== 'MULTI_ACTION') {
       throw invalid('Conflicting single and compound actions', 'conflicting_actions');
     }
-    const actions = Object.freeze(raw.actions.map(item => normalizeStep(item, source)));
+    const ordered = [];
+    for (let index = 0; index < raw.actions.length; index++) {
+      ordered.push(normalizeStep(raw.actions[index], source, index, ordered));
+    }
+    const actions = Object.freeze(ordered);
     const readOnly = actions.every(item => READ_ACTIONS.has(item.action));
     const intentType = interpretType(raw.intentType, readOnly ? V3_ACTIONS.GET_CALL : V3_ACTIONS.SET_UNIT_STATUS, source);
     if (!['question', 'action_request'].includes(intentType)) {

@@ -59,6 +59,8 @@ jobs:
           node --check src/dispatcher-v3/turnScheduler.js
           node --check src/dispatcher-v3/intentPlanner.js
           node --check src/dispatcher-v3/semanticContract.js
+          node --check src/dispatcher-v3/compoundActions.js
+          node --check src/dispatcher-v3/__tests__/compoundActions.test.js
           node --check src/dispatcher-v3/__tests__/semanticInterpretation.test.js
           node --check src/dispatcher-v3/__tests__/auditBaseline.test.js
           node --check src/dispatcher-v3/__tests__/helpers/auditRuntimeHarness.js
