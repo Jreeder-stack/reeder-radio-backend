@@ -1,7 +1,19 @@
+import { opusPacketDurationMs } from './OpusPacketDuration.js';
+
 const SAMPLE_RATE = 16000;
 const CHANNELS = 1;
 const FRAME_SIZE = 320;
 const BITRATE = 32000;
+const FRAME_DURATION_US = 20000;
+const BASE_CONFIG = { codec: 'opus', sampleRate: SAMPLE_RATE, numberOfChannels: CHANNELS, bitrate: BITRATE };
+const VOICE_CONFIG = {
+  ...BASE_CONFIG,
+  opus: {
+    format: 'opus', application: 'voip', signal: 'voice',
+    frameDuration: FRAME_DURATION_US, useinbandfec: true,
+    packetlossperc: 10, usedtx: false,
+  },
+};
 
 export class OpusBrowserEncoder {
   constructor() {
@@ -10,6 +22,7 @@ export class OpusBrowserEncoder {
     this._initPromise = null;
     this._frameTimestamp = 0;
     this._onEncoded = null;
+    this._outputDiagCount = 0;
   }
 
   static isSupported() {
@@ -29,19 +42,26 @@ export class OpusBrowserEncoder {
       return false;
     }
 
-    this._initPromise = this._doInit();
+    this._initPromise = this._doInit().finally(() => {
+      this._initPromise = null;
+    });
     return this._initPromise;
   }
 
   async _doInit() {
     try {
-      const support = await AudioEncoder.isConfigSupported({
-        codec: 'opus',
-        sampleRate: SAMPLE_RATE,
-        numberOfChannels: CHANNELS,
-        bitrate: BITRATE,
-      });
-
+      let config = VOICE_CONFIG;
+      let support;
+      try {
+        support = await AudioEncoder.isConfigSupported(config);
+      } catch (_) {
+        support = { supported: false };
+      }
+      if (!support.supported) {
+        console.warn('[OpusBrowserEncoder] Voice settings unsupported, using base Opus configuration');
+        config = BASE_CONFIG;
+        support = await AudioEncoder.isConfigSupported(config);
+      }
       if (!support.supported) {
         console.error('[OpusBrowserEncoder] Opus encoding not supported by this browser');
         this._ready = false;
@@ -52,6 +72,22 @@ export class OpusBrowserEncoder {
         output: (chunk) => {
           const buf = new Uint8Array(chunk.byteLength);
           chunk.copyTo(buf);
+          const packetDurationMs = opusPacketDurationMs(buf);
+          const chunkDurationUs = chunk.duration;
+          if (packetDurationMs !== FRAME_DURATION_US / 1000 ||
+              (Number.isFinite(chunkDurationUs) && chunkDurationUs !== FRAME_DURATION_US)) {
+            console.error('AUDIO_TX_BAD_OPUS_DURATION', {
+              toc: buf[0], bytes: buf.length, packetDurationMs, chunkDurationUs,
+              expectedDurationMs: 20,
+            });
+            return;
+          }
+          if (this._outputDiagCount++ < 5) {
+            console.log('AUDIO_TX_OPUS_PACKET', {
+              bytes: buf.length, toc: buf[0], durationMs: packetDurationMs,
+              encoderOutputCount: this._outputDiagCount,
+            });
+          }
           if (this._onEncoded) {
             this._onEncoded(buf);
           }
@@ -61,15 +97,16 @@ export class OpusBrowserEncoder {
         },
       });
 
-      this._encoder.configure({
-        codec: 'opus',
-        sampleRate: SAMPLE_RATE,
-        numberOfChannels: CHANNELS,
-        bitrate: BITRATE,
-      });
+      try {
+        this._encoder.configure(config);
+      } catch (err) {
+        if (config === BASE_CONFIG) throw err;
+        console.warn('[OpusBrowserEncoder] Voice configure failed, retrying base Opus:', err.message);
+        this._encoder.configure(BASE_CONFIG);
+      }
 
       this._ready = true;
-      console.log('[OpusBrowserEncoder] WebCodecs AudioEncoder initialized (opus, 16kHz, mono)');
+      console.log('[OpusBrowserEncoder] WebCodecs AudioEncoder initialized (opus, 16kHz, mono, 20ms)');
       return true;
     } catch (err) {
       console.error('[OpusBrowserEncoder] Failed to initialize WebCodecs encoder:', err.message);
@@ -84,6 +121,10 @@ export class OpusBrowserEncoder {
 
   encode(int16Frame) {
     if (!this.isReady()) return;
+    if (!int16Frame || int16Frame.length !== FRAME_SIZE) {
+      console.error('AUDIO_TX_INVALID_PCM_FRAME', { actualSamples: int16Frame?.length, expectedSamples: FRAME_SIZE });
+      return;
+    }
 
     try {
       const float32 = new Float32Array(int16Frame.length);
