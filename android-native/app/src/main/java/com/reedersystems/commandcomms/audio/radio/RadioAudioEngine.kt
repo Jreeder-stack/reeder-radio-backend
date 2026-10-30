@@ -1096,9 +1096,12 @@ class RadioAudioEngine(private val context: Context) {
             }
             while (preBuffer.isNotEmpty()) {
                 val frame = preBuffer.removeFirst()
-                udpTransport.send(frame)
-                flushedFrames++
-                txSessionStats.packetsSent++
+                if (udpTransport.send(frame)) {
+                    flushedFrames++
+                    txSessionStats.packetsSent++
+                } else {
+                    txSessionStats.failures++
+                }
             }
             isTransmitting = true
             preCapturingToBuffer = false
@@ -1383,8 +1386,9 @@ class RadioAudioEngine(private val context: Context) {
                                 val monoFrameByteCount = actualFrameSizeSamples * 2
                                 Log.d(TAG, "LATENCY_FIRST_TX_FRAME_SENT frame=$frameCounter samplesPerFrame=$actualFrameSizeSamples pcmBytesToEncode=$monoFrameByteCount opusFrameSize=${opusCodec.encoderFrameSize} encodedBytes=${encoded.size} latencyMs=$latencyMs ${RadioDiagLog.elapsedTag()}")
                             }
-                            udpTransport.send(encoded)
-                            lastSuccessfulSendMs = System.currentTimeMillis()
+                            if (!udpTransport.send(encoded)) {
+                                txSessionStats.failures++
+                            }
                         } else {
                             txSessionStats.failures++
                         }
@@ -1595,7 +1599,11 @@ class RadioAudioEngine(private val context: Context) {
                 delay(TX_HEARTBEAT_CHECK_INTERVAL_MS)
                 if (!isTransmitting) break
                 val now = System.currentTimeMillis()
-                val gap = now - lastSuccessfulSendMs
+                // Queue acceptance is not proof that UDP actually transmitted.
+                val sentSinceStart = udpTransport.txPacketCount > txSessionStartPacketCount
+                val lastActualSendMs = if (sentSinceStart) udpTransport.lastPacketSentAtMs
+                    else txSessionStats.startTimeMs
+                val gap = now - lastActualSendMs
                 if (gap > TX_STALL_THRESHOLD_MS && !stallReported) {
                     stallReported = true
                     val reason = "tx_heartbeat_stall_gap=${gap}ms"
