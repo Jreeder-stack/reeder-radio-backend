@@ -16,6 +16,7 @@ import { V3SpeechPipeline } from './speechPipeline.js';
 import { V3IntentPlanner } from './intentPlanner.js';
 import { V3ConversationGate, stripV3LeadingAddress } from './conversationGate.js';
 import { V3ConversationRecords } from './conversationRecords.js';
+import { createV3PendingTask, resumeV3PendingTask } from './clarificationTasks.js';
 import { normalizeV3CommandText } from './deterministicIntent.js';
 import { materializeV3Plan } from './planMaterializer.js';
 import { composeV3Response } from './responseComposer.js';
@@ -863,8 +864,12 @@ export class V3LiveDispatcher {
     speakerCallsign = turnEnvelope.speaker.callsign;
     this._diag('transcript_received', correlationId, true, { speakerCallsign, transcript });
     let plan;
+    let originalPlan = null;
     let result = null;
     let operationalContext = null;
+    const ownedPendingTask = pendingContext?.kind === 'task_clarification'
+      ? this.conversations.pendingTask(turnEnvelope, pendingContext.taskId, pendingContext.originalTurnId)
+      : null;
     let dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign);
     try {
       try {
@@ -879,17 +884,45 @@ export class V3LiveDispatcher {
       }
 
       assertV3DeadlineActive();
-      plan = await this.planner.plan({
-        transcript,
-        speakerCallsign,
-        runtimeContext: this.context,
-        correlationId,
-        recentContext: this.conversations.recent(turnEnvelope),
-        operationalContext,
-        pendingContext,
-        dialogueContext,
-        turnEnvelope,
-      });
+      if (pendingContext?.kind === 'task_clarification' && !ownedPendingTask) {
+        plan = { action: 'CLARIFY', input: {}, confidence: 0,
+          clarification: `${speakerCallsign}, that earlier request expired. Repeat your complete request.`,
+          reason: 'clarification_custody_expired' };
+      } else {
+        plan = await this.planner.plan({
+          transcript,
+          speakerCallsign,
+          runtimeContext: this.context,
+          correlationId,
+          recentContext: this.conversations.recent(turnEnvelope),
+          operationalContext,
+          pendingContext,
+          dialogueContext,
+          turnEnvelope,
+        });
+      }
+      originalPlan = plan;
+      if (ownedPendingTask && plan.action === ownedPendingTask.action) {
+        try {
+          plan = await resumeV3PendingTask({
+            pendingTask: ownedPendingTask, answer: plan, operationalContext,
+            operationalContextService: this.operationalContextService,
+            unitIdentityService: this.unitIdentityService, correlationId, turnEnvelope,
+          });
+        } catch (selectionError) {
+          plan = { action: 'CLARIFY', input: {}, confidence: 0,
+            clarification: `${speakerCallsign}, ${selectionError.message}. Which one did you mean?`,
+            reason: 'clarification_selection_rejected', pendingTask: ownedPendingTask };
+        }
+      } else if (ownedPendingTask && ['CLARIFY', 'NO_ACTION'].includes(plan.action)) {
+        plan = { ...plan, action: 'CLARIFY', input: {},
+          clarification: plan.clarification || `${speakerCallsign}, which ${ownedPendingTask.unresolvedField === 'callId' ? 'call' : 'detail'}?`,
+          pendingTask: ownedPendingTask };
+      }
+      if (plan.action === 'CLARIFY' && !plan.pendingTask) {
+        const pendingTask = createV3PendingTask({ plan, operationalContext, turnEnvelope });
+        if (pendingTask) plan = { ...plan, pendingTask };
+      }
       if (plan.action === 'NO_ACTION' && dialogueContext && !ROUTINE_EMERGENCY_CHAT_RX.test(transcript)) {
         plan = {
           action: V3_ACTIONS.UPDATE_FIELD_INCIDENT,
@@ -906,7 +939,9 @@ export class V3LiveDispatcher {
       }, turnEnvelope);
       assertExplicitUnitTargets({ transcript, plan, operationalContext, speakerCallsign });
       if (plan.action !== 'NO_ACTION' && plan.action !== 'CLARIFY' && plan.confidence < MIN_EXECUTION_CONFIDENCE) {
-        plan = { action: 'CLARIFY', input: plan.input || {}, confidence: plan.confidence, clarification: 'Repeat your request.', reason: 'low_confidence' };
+        plan = { action: 'CLARIFY', input: {}, confidence: plan.confidence,
+          clarification: 'Repeat your request.', reason: 'low_confidence',
+          ...(ownedPendingTask ? { pendingTask: ownedPendingTask } : {}) };
       }
       if (plan.action !== 'NO_ACTION' && plan.action !== 'CLARIFY') {
         if (plan.action === 'MULTI_ACTION') {
@@ -925,7 +960,12 @@ export class V3LiveDispatcher {
       }
     } catch (error) {
       result = { success: false, error: { code: error.code || 'CAD_UNAVAILABLE', message: error.message } };
-      plan = { action: 'CLARIFY', input: {}, confidence: 0, clarification: responseForResolutionError(error, speakerCallsign), reason: 'processing_failure' };
+      const pendingTask = ownedPendingTask || createV3PendingTask({
+        plan: originalPlan, error, operationalContext, turnEnvelope,
+      });
+      plan = { action: 'CLARIFY', input: {}, confidence: 0,
+        clarification: responseForResolutionError(error, speakerCallsign),
+        reason: 'processing_failure', ...(pendingTask ? { pendingTask } : {}) };
       this._diag('transcript_processing_failed', correlationId, false, { speakerCallsign, message: error.message, code: error.code || null });
     }
 
@@ -936,7 +976,17 @@ export class V3LiveDispatcher {
     if (life) this._lifecycle.releasePending(life);
     dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign);
     if (plan.action === 'CLARIFY') {
-      this.conversationGate.expectFollowUp(speakerCallsign, { clarification: plan.clarification, input: plan.input || {}, correlationId, sessionKey: this.conversations.scopeKey(turnEnvelope) });
+      const task = plan.pendingTask;
+      const ownedRecord = task ? this.conversations.get(turnEnvelope) : null;
+      this.conversationGate.expectFollowUp(speakerCallsign, {
+        clarification: plan.clarification,
+        ...(task && ownedRecord?.activeTask ? {
+          kind: 'task_clarification',
+          taskId: ownedRecord.activeTask.id, originalTurnId: task.originalTurnId,
+          pendingTask: task,
+        } : { input: plan.input || {} }),
+        correlationId, sessionKey: this.conversations.scopeKey(turnEnvelope),
+      });
     } else if (result?.error?.code === 'DISPOSITION_REQUIRED') {
       this.conversationGate.expectFollowUp(speakerCallsign, {
         kind: 'disposition',

@@ -4,6 +4,7 @@ import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { planDeterministicV3Intent } from './deterministicIntent.js';
 import { sanitizeV3OperationalContext } from './operationalContext.js';
 import { assertV3TurnEnvelope } from './turnEnvelope.js';
+import { normalizeV3PendingTaskProposal, pendingV3TaskForModel } from './clarificationTasks.js';
 import { withV3Stage, assertV3DeadlineActive } from './operationDeadline.js';
 
 const DEFAULT_TIMEOUT_MS = 6500;
@@ -55,7 +56,7 @@ export class V3IntentPlanner {
             dispatchCenterId: runtimeContext?.dispatchCenterId,
             channel: runtimeContext?.roomKey,
             operationalContext: sanitizeV3OperationalContext(operationalContext),
-            pendingContext: sanitizeInput(pendingContext),
+            pendingContext: pendingV3TaskForModel(pendingContext) || sanitizeInput(pendingContext),
             dialogueContext: sanitizeInput(dialogueContext),
             recentContext: sanitizeRecent(recentContext),
           }) },
@@ -103,7 +104,9 @@ function normalizePlan(raw = {}) {
   const input = normalizeInputObject(raw.input);
   const clarification = clean(raw.clarification, 180);
   if (action === 'CLARIFY' && !clarification) throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION_INPUT, 'Planner clarification is missing text');
-  return Object.freeze({ action, input: Object.freeze(input), confidence: normalizeConfidence(raw.confidence), clarification, reason: clean(raw.reason, 200) });
+  const pendingTask = action === 'CLARIFY' && raw.pendingTask != null
+    ? normalizeV3PendingTaskProposal(raw.pendingTask) : null;
+  return Object.freeze({ action, input: Object.freeze(input), confidence: normalizeConfidence(raw.confidence), clarification, reason: clean(raw.reason, 200), ...(pendingTask ? { pendingTask } : {}) });
 }
 
 function normalizeOperationalAction(raw = {}) {
@@ -141,6 +144,9 @@ When an addressed unit with a current call provides a new operational observatio
 If pendingContext.kind is disposition, a concise reply is the disposition for pendingContext.callId. Return CLEAR_UNIT with that callId, the speaker, and the spoken disposition. If the transmission instead contains new operational information or another command, process it and leave disposition as a later goal.
 
 If exactly one active call safely satisfies an implicit reference, use it. If multiple calls are materially plausible, CLARIFY. Use callRef for natural references such as "the fight" or "the Walmart alarm" when no UUID is known.
+
+A clarification is an incomplete TASK, not an empty replacement action. When you already understand the requested operation but need one field, return {"action":"CLARIFY","input":{},"clarification":"specific question","pendingTask":{"action":"ASSIGN_UNIT","input":{"unitRef":"speaker","callRef":"that call"},"unresolvedField":"callId","candidateIds":["candidate-from-operationalContext-only"]},"confidence":0-1}. Include the FULL original intended operation and all known constraints in pendingTask.input; unresolvedField must identify the missing field. Only use candidate IDs that appear in the center-authorized operationalContext. Never propose DECLARE_EMERGENCY or new capabilities. If no intended operation can be identified, CLARIFY without pendingTask is allowed and is not an executable task.
+When pendingContext.kind is task_clarification, it supplies the *retained original operation* and original owner. For a genuine answer, output pendingContext.intendedAction with ONLY the unresolved parameter in input (for a call, callId or callRef), not a reconstructed or changed task. The runtime fills the original parameters and revalidates candidates, identity, CAD state and permissions. If the speech is a new instruction, interpret it independently. If the answer is unclear, ask another targeted CLARIFY; never guess or execute from pendingContext alone.
 
 For one operation return {"action":"...","confidence":0-1,"input":{},"clarification":null,"reason":"short"}. For multiple operations return {"actions":[{"action":"...","input":{}}],"confidence":0-1,"reason":"short"}. Preserve requested order and include every explicitly requested operation, up to ${MAX_PLAN_ACTIONS}.
 

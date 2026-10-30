@@ -100,7 +100,7 @@ export class V3ConversationRecords {
         id: randomUUID(), conversationId: record.id,
         state: 'active', originalTurnId: envelope.turnId,
         latestTurnId: envelope.turnId,
-        action: null, requestedInput: {}, lastOutcome: null,
+        action: null, requestedInput: {}, pendingTask: null, lastOutcome: null,
         startedAt: time, updatedAt: time,
       };
     } else {
@@ -142,14 +142,37 @@ export class V3ConversationRecords {
     const task = record.activeTask?.id === turn.taskId
       ? record.activeTask : record.suspendedTasks.find((item) => item.id === turn.taskId);
     if (task) {
-      task.action = action;
-      task.requestedInput = copy(turn.input);
-      task.lastOutcome = result ? (result.success === true ? 'completed_operation' : 'failed_operation')
-        : action === 'CLARIFY' ? 'clarification_requested' : 'no_cad_effect';
+      if (action === 'CLARIFY' && plan?.pendingTask) {
+        // Preserve the intended operation, its original turn, known fields and
+        // bounded candidate references instead of overwriting it with CLARIFY.
+        task.action = plan.pendingTask.action;
+        task.requestedInput = copy(plan.pendingTask.input);
+        task.pendingTask = copy(plan.pendingTask);
+        task.state = 'awaiting_clarification';
+        task.lastOutcome = 'clarification_requested';
+      } else {
+        task.action = action;
+        task.requestedInput = copy(turn.input);
+        task.pendingTask = null;
+        task.state = 'active';
+        task.lastOutcome = result ? (result.success === true ? 'completed_operation' : 'failed_operation')
+          : action === 'CLARIFY' ? 'clarification_requested' : 'no_cad_effect';
+      }
       task.latestTurnId = turn.turnId;
       task.updatedAt = this.now();
     }
     return { conversationId: record.id, taskId: turn.taskId, action };
+  }
+
+  // Pending answers use the full trusted scope AND the exact task/original
+  // turn, not a callsign or a model-supplied identifier alone.
+  pendingTask(envelope, taskId, originalTurnId) {
+    const record = this.get(envelope);
+    const task = record?.activeTask;
+    if (!task || task.state !== 'awaiting_clarification'
+      || task.id !== taskId || task.originalTurnId !== originalTurnId
+      || task.pendingTask?.originalTurnId !== originalTurnId) return null;
+    return copy(task.pendingTask);
   }
 
   recent(envelope) {
