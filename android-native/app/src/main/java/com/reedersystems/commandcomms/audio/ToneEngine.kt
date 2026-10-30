@@ -28,6 +28,7 @@ class ToneEngine(private val context: Context) {
     private var talkPermitJob: Job? = null
     private var talkPermitPlayer: MediaPlayer? = null
     private val talkPermitLock = Any()
+    private var hd760PermitCompletion: CompletableDeferred<Boolean>? = null
     private var bonkPlayer: MediaPlayer? = null
     private val bonkLock = Any()
 
@@ -98,6 +99,7 @@ class ToneEngine(private val context: Context) {
         talkPermitJob?.cancel()
         talkPermitJob = null
         synchronized(talkPermitLock) {
+            hd760PermitCompletion?.complete(false)
             talkPermitPlayer?.let { mp ->
                 runCatching { if (mp.isPlaying) mp.pause() }
                 runCatching { mp.seekTo(0) }
@@ -148,6 +150,85 @@ class ToneEngine(private val context: Context) {
             }
         }
         playBeeps(800f, count = 3, durationMs = 40, gapMs = 30, volume = 0.5f)
+    }
+
+    /**
+     * HD760 fail-closed TX barrier. Only actual local MediaPlayer completion
+     * through a non-muted communication route may authorize microphone audio.
+     * The generic fallback oscillator must never silently grant a TPT permit.
+     */
+    suspend fun playVerifiedHd760TalkPermitTone(): Boolean = withContext(Dispatchers.Main.immediate) {
+        val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        fun outputReady(): Boolean {
+            val volume = audio.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
+            val muted = audio.isStreamMute(AudioManager.STREAM_VOICE_CALL)
+            val wired = audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any {
+                it.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+                    it.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+                    it.type == android.media.AudioDeviceInfo.TYPE_USB_HEADSET ||
+                    it.type == android.media.AudioDeviceInfo.TYPE_USB_DEVICE
+            }
+            return volume > 0 && !muted && (audio.isSpeakerphoneOn || wired)
+        }
+
+        if (!outputReady()) {
+            Log.e(TAG, "HD760_TPT_BLOCKED output_muted_or_unrouted")
+            return@withContext false
+        }
+        var player = synchronized(talkPermitLock) { talkPermitPlayer }
+        if (player == null) {
+            initTalkPermitPlayer()
+            player = synchronized(talkPermitLock) { talkPermitPlayer }
+        }
+        val mp = player ?: run {
+            Log.e(TAG, "HD760_TPT_BLOCKED player_unavailable")
+            return@withContext false
+        }
+        val completion = CompletableDeferred<Boolean>()
+        synchronized(talkPermitLock) {
+            if (hd760PermitCompletion != null) {
+                Log.e(TAG, "HD760_TPT_BLOCKED overlapping_tone")
+                return@withContext false
+            }
+            hd760PermitCompletion = completion
+        }
+        var succeeded = false
+        try {
+            mp.setOnCompletionListener {
+                synchronized(talkPermitLock) {
+                    if (hd760PermitCompletion === completion) completion.complete(true)
+                }
+            }
+            mp.setOnErrorListener { _, what, extra ->
+                Log.e(TAG, "HD760_TPT_PLAYBACK_ERROR what=$what extra=$extra")
+                synchronized(talkPermitLock) {
+                    if (hd760PermitCompletion === completion) completion.complete(false)
+                }
+                true
+            }
+            mp.setVolume(1.0f, 1.0f)
+            if (mp.isPlaying) mp.pause()
+            mp.seekTo(0)
+            mp.start()
+            succeeded = completion.await() && outputReady()
+            if (!succeeded) Log.e(TAG, "HD760_TPT_BLOCKED incomplete_or_muted")
+            return@withContext succeeded
+        } catch (cancel: CancellationException) {
+            throw cancel
+        } catch (error: Exception) {
+            Log.e(TAG, "HD760_TPT_BLOCKED playback_exception", error)
+            return@withContext false
+        } finally {
+            synchronized(talkPermitLock) {
+                if (hd760PermitCompletion === completion) hd760PermitCompletion = null
+                runCatching { if (mp.isPlaying) mp.pause() }
+                runCatching { mp.seekTo(0) }
+                if (!succeeded) {
+                    if (talkPermitPlayer === mp) talkPermitPlayer = null
+                    runCatching { mp.release() }
+                }
+            }
+        }
     }
 
     fun playEndOfTxTone() {

@@ -14,6 +14,8 @@ import android.os.Build
 import android.util.Log
 import com.reedersystems.commandcomms.BuildConfig
 import com.reedersystems.commandcomms.hd760.Hd760ScanPolicy
+import com.reedersystems.commandcomms.hd760.Hd760TxPermitGate
+import android.os.SystemClock
 import com.reedersystems.commandcomms.data.prefs.SpeakerBoostPrefs
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
@@ -38,6 +40,13 @@ class RadioAudioEngine(private val context: Context) {
     val speakerBoostPrefs = SpeakerBoostPrefs(context)
     val audioPlayback = AudioPlayback(jitterBuffer, opusCodec, speakerBoostPrefs)
     val udpTransport = UdpAudioTransport()
+    val hd760TxPermitGate = Hd760TxPermitGate()
+
+    init {
+        if (BuildConfig.FLAVOR == "hd760") {
+            udpTransport.audioPermitGeneration = { hd760TxPermitGate.authorizedGeneration() }
+        }
+    }
 
     var floorControl: FloorControlManager? = null
         private set
@@ -153,6 +162,7 @@ class RadioAudioEngine(private val context: Context) {
     }
 
     private fun forceResetTransmitState(reason: String) {
+        hd760TxPermitGate.revoke()
         Log.e(TAG, """{"event":"FORCE_RESET_TRANSMIT_STATE","reason":"$reason"}""")
         captureJob?.cancel()
         captureJob = null
@@ -233,6 +243,7 @@ class RadioAudioEngine(private val context: Context) {
     }
 
     fun stop() {
+        hd760TxPermitGate.revoke()
         if (!started) {
             Log.w("[RadioError]", "stop() called but engine not started — ignoring")
             return
@@ -692,6 +703,10 @@ class RadioAudioEngine(private val context: Context) {
     }
 
     suspend fun startPreCapture(): Boolean {
+        if (BuildConfig.FLAVOR == "hd760") {
+            Log.e("CC-HD760", "HD760_PRECAPTURE_BLOCKED tpt_required")
+            return false
+        }
         if (!acquireTransmitMutex("startPreCapture")) {
             Log.e(TAG, """{"event":"START_PRE_CAPTURE_ABORTED","reason":"mutex_acquire_failed"}""")
             return false
@@ -1054,6 +1069,10 @@ class RadioAudioEngine(private val context: Context) {
     }
 
     suspend fun promoteToLiveTransmit(): Boolean {
+        if (BuildConfig.FLAVOR == "hd760") {
+            Log.e("CC-HD760", "HD760_PREBUFFER_PROMOTION_BLOCKED tpt_required")
+            return false
+        }
         if (!acquireTransmitMutex("promoteToLiveTransmit")) {
             Log.e(TAG, """{"event":"PROMOTE_TO_LIVE_ABORTED","reason":"mutex_acquire_failed"}""")
             return false
@@ -1187,11 +1206,19 @@ class RadioAudioEngine(private val context: Context) {
     }
 
     suspend fun startTransmit(): Boolean {
+        if (BuildConfig.FLAVOR == "hd760" && !hd760TxPermitGate.isPermitted()) {
+            Log.e("CC-HD760", "HD760_TX_BLOCKED no_completed_tpt")
+            return false
+        }
         if (!acquireTransmitMutex("startTransmit")) {
             Log.e(TAG, """{"event":"START_TRANSMIT_ABORTED","reason":"mutex_acquire_failed"}""")
             return false
         }
         try {
+        if (BuildConfig.FLAVOR == "hd760" && !hd760TxPermitGate.isPermitted()) {
+            Log.e("CC-HD760", "HD760_TX_BLOCKED permit_revoked_during_mutex")
+            return false
+        }
         if (!started) {
             Log.w("[RadioError]", "startTransmit: engine not started method=startTransmit")
             return false
@@ -1293,8 +1320,20 @@ class RadioAudioEngine(private val context: Context) {
             computeDspCoefficients(actualSampleRate)
 
             applyPreferredCaptureDeviceTo(record)
+            if (BuildConfig.FLAVOR == "hd760" && !hd760TxPermitGate.isPermitted()) {
+                Log.e("CC-HD760", "HD760_TX_BLOCKED permit_revoked_before_mic")
+                record.release()
+                return false
+            }
             record.startRecording()
             audioRecord = record
+            if (BuildConfig.FLAVOR == "hd760" && !hd760TxPermitGate.isPermitted()) {
+                Log.e("CC-HD760", "HD760_TX_BLOCKED permit_revoked_during_mic_start")
+                record.stop()
+                record.release()
+                audioRecord = null
+                return false
+            }
 
             val postStartRate = record.sampleRate
             if (postStartRate != actualSampleRate) {
@@ -1364,6 +1403,10 @@ class RadioAudioEngine(private val context: Context) {
                             continue
                         }
                         if (monoFrame.isEmpty()) break
+                        if (BuildConfig.FLAVOR == "hd760" && !hd760TxPermitGate.isPermitted()) {
+                            Log.w("CC-HD760", "HD760_TX_FRAME_DROPPED permit_revoked")
+                            break
+                        }
 
                         val encoded = opusCodec.encode(monoFrame)
                         if (opusCodec.encoderReinitialized) {
@@ -1383,8 +1426,13 @@ class RadioAudioEngine(private val context: Context) {
                                 val monoFrameByteCount = actualFrameSizeSamples * 2
                                 Log.d(TAG, "LATENCY_FIRST_TX_FRAME_SENT frame=$frameCounter samplesPerFrame=$actualFrameSizeSamples pcmBytesToEncode=$monoFrameByteCount opusFrameSize=${opusCodec.encoderFrameSize} encodedBytes=${encoded.size} latencyMs=$latencyMs ${RadioDiagLog.elapsedTag()}")
                             }
-                            udpTransport.send(encoded)
-                            lastSuccessfulSendMs = System.currentTimeMillis()
+                            if (BuildConfig.FLAVOR != "hd760" || hd760TxPermitGate.isPermitted()) {
+                                udpTransport.send(encoded)
+                                lastSuccessfulSendMs = System.currentTimeMillis()
+                            } else {
+                                Log.w("CC-HD760", "HD760_ENCODED_FRAME_DROPPED permit_revoked")
+                                break
+                            }
                         } else {
                             txSessionStats.failures++
                         }
@@ -1400,7 +1448,8 @@ class RadioAudioEngine(private val context: Context) {
                 val pendingFrame = ByteArray(actualFrameSizeBytes)
                 var pendingBytes = 0
                 try {
-                    while (isActive && isTransmitting) {
+                    while (isActive && isTransmitting &&
+                        (BuildConfig.FLAVOR != "hd760" || hd760TxPermitGate.isPermitted())) {
                         try {
                             val read = record.read(readBuffer, 0, readBuffer.size)
                             if (read > 0) {
@@ -1838,6 +1887,8 @@ class RadioAudioEngine(private val context: Context) {
     @Volatile private var hd760ScanPaused = false
     @Volatile private var hd760ScanChannels: Set<Int> = emptySet()
     var onHd760ScanReception: ((Int?) -> Unit)? = null
+    // Only accepted UDP audio reaches the HD760 visual RX identity display.
+    var onHd760RxPacketAccepted: ((Int, String, Long) -> Unit)? = null
 
     fun configureHd760Scan(enabled: Boolean, channels: Set<Int>) {
         if (BuildConfig.FLAVOR != "hd760") return
@@ -1903,6 +1954,11 @@ class RadioAudioEngine(private val context: Context) {
             val cnt = rxPacketRateLimiter.resetSummaryAccumulator()
             Log.d(TAG, "RX_PACKET_SUMMARY frames=$cnt totalReceived=${rxSessionStats.packetsReceived} dropped=$rxSummaryDropped jbSize=${jitterBuffer.size} ${RadioDiagLog.elapsedTag()}")
             rxSummaryDropped = 0
+        }
+        if (BuildConfig.FLAVOR == "hd760") {
+            onHd760RxPacketAccepted?.invoke(
+                packet.channelIndex, packet.senderUnitId, SystemClock.elapsedRealtime()
+            )
         }
         rxSessionStats.totalJitterDepth += jitterBuffer.size
         rxSessionStats.jitterSamples++

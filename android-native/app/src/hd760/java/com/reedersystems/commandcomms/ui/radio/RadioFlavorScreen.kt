@@ -193,7 +193,8 @@ fun RadioFlavorScreen(
         }
     }
     val tx = state.pttState == PttState.TRANSMITTING
-    val rx = !tx && state.radioState == RadioState.RECEIVING
+    val scanDisplay = !tx && state.isScanning && state.scanActiveChannel != null
+    val rx = !tx && (state.radioState == RadioState.RECEIVING || (scanDisplay && state.scanRxActive))
     val emergency = state.myEmergencyActive
     val accent = if (emergency) Color(0xFFB71C1C) else Color(0xFF17618F)
 
@@ -280,7 +281,8 @@ fun RadioFlavorScreen(
                         Text("ZN", fontSize = 14.sp, color = Muted,
                             fontWeight = FontWeight.Medium)
                         Spacer(Modifier.height(5.dp))
-                        Text(state.currentZone?.name?.uppercase() ?: "NO ZONE",
+                        Text((if (scanDisplay) state.scanActiveZone
+                            else state.currentZone?.name)?.uppercase() ?: "NO ZONE",
                             color = Ink, fontWeight = FontWeight.Bold,
                             fontSize = if (compact) 24.sp else 30.sp,
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -289,8 +291,9 @@ fun RadioFlavorScreen(
                         Text("CH", fontSize = 14.sp, color = Muted,
                             fontWeight = FontWeight.Medium)
                         Spacer(Modifier.height(5.dp))
-                        Text(if (state.hd760SlotEmpty) "UNPROGRAMMED" else
-                            state.currentChannel?.name ?: "NO CHANNEL",
+                        Text(if (scanDisplay) state.scanActiveChannel ?: "NO CHANNEL"
+                            else if (state.hd760SlotEmpty) "UNPROGRAMMED"
+                            else state.currentChannel?.name ?: "NO CHANNEL",
                             fontSize = channelSize, color = Ink,
                             fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
                             maxLines = 2, overflow = TextOverflow.Ellipsis,
@@ -303,7 +306,8 @@ fun RadioFlavorScreen(
                         val label = when {
                             emergency -> "EMERGENCY"
                             state.hd760LockFeedback != null -> state.hd760LockFeedback
-                            rx -> state.scanActiveUnit ?: state.activeTransmittingUnit
+                            scanDisplay -> state.scanActiveUnit
+                            rx -> state.activeTransmittingUnit
                             else -> null
                         }
                         if (!label.isNullOrBlank()) {

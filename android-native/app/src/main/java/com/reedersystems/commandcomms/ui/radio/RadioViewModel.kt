@@ -24,6 +24,8 @@ import com.reedersystems.commandcomms.BuildConfig
 import com.reedersystems.commandcomms.hd760.Hd760Preferences
 import com.reedersystems.commandcomms.hd760.Hd760SideAction
 import com.reedersystems.commandcomms.hd760.Hd760KnobMapping
+import com.reedersystems.commandcomms.hd760.Hd760RxPacket
+import com.reedersystems.commandcomms.hd760.Hd760RxDisplayTracker
 import com.reedersystems.commandcomms.audio.radio.RadioState
 import com.reedersystems.commandcomms.audio.radio.SignalQuality
 import com.reedersystems.commandcomms.data.model.Channel
@@ -88,7 +90,9 @@ data class RadioUiState(
     val isRadioUnassigned: Boolean = false,
     val reassignedUnitId: String? = null,
     val scanActiveChannel: String? = null,
+    val scanActiveZone: String? = null,
     val scanActiveUnit: String? = null,
+    val scanRxActive: Boolean = false,
     val showPageAlert: Boolean = false,
     val pageAlertMessage: String = "",
     val pageAlertSender: String = "DISPATCH",
@@ -167,6 +171,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private var pttStartJob: Job? = null
     private var activeTransmittingUnitStaleJob: Job? = null
     private var scanClearJob: Job? = null
+    private val hd760RxDisplayTracker = Hd760RxDisplayTracker()
 
     companion object {
         private const val ACTIVE_TX_UNIT_STALE_MS = 45_000L
@@ -251,6 +256,15 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         observeSignaling()
         collectKeyEvents()
         if (isHd760) {
+            viewModelScope.launch {
+                app.hd760RxPacket.collect { packet -> onHd760RxPacket(packet) }
+            }
+            viewModelScope.launch {
+                while (isActive) {
+                    delay(100L)
+                    refreshHd760RxDisplay()
+                }
+            }
             viewModelScope.launch {
                 app.hd760KeyLocked.collect { locked ->
                     val old = _uiState.value.isKeyLocked
@@ -485,7 +499,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                                         _uiState.update { it.copy(activeTransmittingUnit = null) }
                                     }
                                 }
-                            } else {
+                            } else if (!isHd760) {
+                                // Non-HD760 legacy scan preview from signaling only.
                                 // Non-priority scanned channel — update scan display when:
                                 // - no scanned channel is actively transmitting (scanActiveUnit == null), OR
                                 // - we are in the 2s hold window after previous scanned RX ended (scanClearJob != null),
@@ -511,6 +526,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                     is SignalingEvent.PttEnd -> {
+                        if (isHd760) endHd760RxDisplay(event.channelId, event.unitId)
                         val state = _uiState.value
                         val currentRoomKey = state.currentChannel?.roomKey
                         if (event.unitId == state.activeTransmittingUnit) {
@@ -520,7 +536,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                             }
                         }
                         // Check if the ended transmission was on the active scanned channel
-                        if (state.isScanning && event.unitId == state.scanActiveUnit
+                        if (!isHd760 && state.isScanning && event.unitId == state.scanActiveUnit
                             && event.channelId != currentRoomKey) {
                             Log.d(TAG, """{"event":"SCAN_DISPLAY_HOLD_START","unit":"${event.unitId}"}""")
                             scanClearJob?.cancel()
@@ -531,6 +547,9 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                                 scanClearJob = null
                             }
                         }
+                    }
+                    is SignalingEvent.RadioTxStop -> {
+                        if (isHd760) endHd760RxDisplay(event.channelId, event.senderUnitId)
                     }
                     is SignalingEvent.RadioFloorTaken -> {
                         val state = _uiState.value
@@ -706,7 +725,65 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private fun clearScanDisplay() {
         scanClearJob?.cancel()
         scanClearJob = null
-        _uiState.update { it.copy(scanActiveChannel = null, scanActiveUnit = null) }
+        if (isHd760) hd760RxDisplayTracker.reset()
+        _uiState.update {
+            it.copy(scanActiveChannel = null, scanActiveZone = null,
+                scanActiveUnit = null, scanRxActive = false)
+        }
+    }
+
+    private fun onHd760RxPacket(packet: Hd760RxPacket?) {
+        if (!isHd760) return
+        if (packet == null) {
+            clearScanDisplay()
+            return
+        }
+        val state = _uiState.value
+        if (!state.isScanning || state.pttState != PttState.IDLE ||
+            state.hd760SlotEmpty) return
+        val channel = state.zones.flatMap { it.channels }
+            .firstOrNull { it.id == packet.channelId } ?: return
+        if (channel.id != state.currentChannel?.id &&
+            state.scanChannels.none { it.id == channel.id && it.enabled }) return
+        hd760RxDisplayTracker.onPacket(packet.channelId, packet.senderUnitId, packet.atMs)
+        refreshHd760RxDisplay()
+    }
+
+    private fun endHd760RxDisplay(roomKey: String, unitId: String) {
+        if (!isHd760) return
+        val channelId = _uiState.value.zones.asSequence().flatMap { it.channels.asSequence() }
+            .firstOrNull { it.roomKey == roomKey }?.id ?: return
+        hd760RxDisplayTracker.onEnd(channelId, unitId, SystemClock.elapsedRealtime())
+        refreshHd760RxDisplay()
+    }
+
+    private fun refreshHd760RxDisplay() {
+        if (!isHd760) return
+        val current = _uiState.value
+        val receiving = if (current.isScanning && current.pttState == PttState.IDLE &&
+            !current.hd760SlotEmpty) {
+            hd760RxDisplayTracker.snapshot(SystemClock.elapsedRealtime())
+        } else null
+        val found = receiving?.let { item ->
+            current.zones.firstNotNullOfOrNull { zone ->
+                zone.channels.firstOrNull { it.id == item.channelId }?.let { channel ->
+                    zone.name to channel.name
+                }
+            }
+        }
+        val zoneName = found?.first
+        val channelName = found?.second
+        val unit = if (found != null) receiving?.unitId?.takeIf { it.isNotBlank() } else null
+        val active = found != null && receiving?.receiving == true
+        if (current.scanActiveChannel != channelName ||
+            current.scanActiveZone != zoneName ||
+            current.scanActiveUnit != unit ||
+            current.scanRxActive != active) {
+            _uiState.update {
+                it.copy(scanActiveChannel = channelName, scanActiveZone = zoneName,
+                    scanActiveUnit = unit, scanRxActive = active)
+            }
+        }
     }
 
     fun onPttDown() {
@@ -735,7 +812,9 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         Log.d(TAG, "onPttDown roomKey=${channel.roomKey}")
-        if (com.reedersystems.commandcomms.BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+        if (BuildConfig.FLAVOR == "hd760" ||
+            com.reedersystems.commandcomms.BuildConfig.RADIO_DEVICE_TYPE == "android_phone") {
+            // HD760 TPT is owned exclusively by the floor-granted service path.
             _uiState.update { it.copy(pttState = PttState.CONNECTING) }
         } else {
             // Preserve existing handheld behavior for T320/other radio flavors.
@@ -1040,6 +1119,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             } else ch
         }
         _uiState.update { it.copy(scanChannels = updated) }
+        if (isHd760) clearScanDisplay()
         syncHd760ScanConfig()
     }
 
@@ -1248,6 +1328,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun onChannelChanged(oldRoomKey: String? = null) {
+        if (isHd760) clearScanDisplay()
         val newRoomKey = _uiState.value.currentChannel?.roomKey
         if (oldRoomKey != null && oldRoomKey != newRoomKey) {
             activeTransmittingUnitStaleJob?.cancel()

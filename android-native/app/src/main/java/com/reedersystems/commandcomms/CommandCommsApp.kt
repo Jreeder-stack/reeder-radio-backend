@@ -17,6 +17,7 @@ import java.util.UUID
 import com.reedersystems.commandcomms.audio.ToneEngine
 import com.reedersystems.commandcomms.audio.led.RadioFlavorLed
 import com.reedersystems.commandcomms.audio.radio.RadioStateManager
+import com.reedersystems.commandcomms.hd760.Hd760RxPacket
 import com.reedersystems.commandcomms.data.api.ApiClient
 import com.reedersystems.commandcomms.data.prefs.KioskPrefs
 import com.reedersystems.commandcomms.data.prefs.PttKeyPrefs
@@ -99,6 +100,8 @@ class CommandCommsApp : Application() {
     val hd760KeyLocked = MutableStateFlow(false)
     // Do not transmit on empty/unprogrammed slots.
     val hd760SlotActive = MutableStateFlow(true)
+    // Accepted live UDP RX identity. Display-only, never changes the TX channel.
+    val hd760RxPacket = MutableStateFlow<Hd760RxPacket?>(null)
     @Volatile var hd760RadioScreenActive: Boolean = false
     val keyCapturingFlow = MutableStateFlow(false)
 
