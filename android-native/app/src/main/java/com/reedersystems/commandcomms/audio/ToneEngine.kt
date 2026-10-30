@@ -29,6 +29,7 @@ class ToneEngine(private val context: Context) {
     private var talkPermitPlayer: MediaPlayer? = null
     private val talkPermitLock = Any()
     private var hd760PermitCompletion: CompletableDeferred<Boolean>? = null
+    private var hd760StrictPlayer: MediaPlayer? = null
     private var bonkPlayer: MediaPlayer? = null
     private val bonkLock = Any()
 
@@ -100,6 +101,9 @@ class ToneEngine(private val context: Context) {
         talkPermitJob = null
         synchronized(talkPermitLock) {
             hd760PermitCompletion?.complete(false)
+            hd760StrictPlayer?.let { player ->
+                runCatching { if (player.isPlaying) player.pause() }
+            }
             talkPermitPlayer?.let { mp ->
                 runCatching { if (mp.isPlaying) mp.pause() }
                 runCatching { mp.seekTo(0) }
@@ -153,9 +157,9 @@ class ToneEngine(private val context: Context) {
     }
 
     /**
-     * HD760 fail-closed TX barrier. Only actual local MediaPlayer completion
-     * through a non-muted communication route may authorize microphone audio.
-     * The generic fallback oscillator must never silently grant a TPT permit.
+     * HD760 fail-closed TX barrier. A fresh prepared player is used for each
+     * press so asynchronous seek from a previous PTT cannot fabricate an
+     * instant completion. No oscillator or swallowed-error fallback is allowed.
      */
     suspend fun playVerifiedHd760TalkPermitTone(): Boolean = withContext(Dispatchers.Main.immediate) {
         val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -175,24 +179,23 @@ class ToneEngine(private val context: Context) {
             Log.e(TAG, "HD760_TPT_BLOCKED output_muted_or_unrouted")
             return@withContext false
         }
-        var player = synchronized(talkPermitLock) { talkPermitPlayer }
-        if (player == null) {
-            initTalkPermitPlayer()
-            player = synchronized(talkPermitLock) { talkPermitPlayer }
-        }
-        val mp = player ?: run {
-            Log.e(TAG, "HD760_TPT_BLOCKED player_unavailable")
-            return@withContext false
-        }
+        val mp = try {
+            MediaPlayer.create(context, R.raw.talk_permit, audioAttribs(),
+                AudioManager.AUDIO_SESSION_ID_GENERATE)
+        } catch (error: Exception) {
+            Log.e(TAG, "HD760_TPT_BLOCKED player_create_failed", error)
+            null
+        } ?: return@withContext false
         val completion = CompletableDeferred<Boolean>()
         synchronized(talkPermitLock) {
             if (hd760PermitCompletion != null) {
                 Log.e(TAG, "HD760_TPT_BLOCKED overlapping_tone")
+                runCatching { mp.release() }
                 return@withContext false
             }
             hd760PermitCompletion = completion
+            hd760StrictPlayer = mp
         }
-        var succeeded = false
         try {
             mp.setOnCompletionListener {
                 synchronized(talkPermitLock) {
@@ -207,10 +210,8 @@ class ToneEngine(private val context: Context) {
                 true
             }
             mp.setVolume(1.0f, 1.0f)
-            if (mp.isPlaying) mp.pause()
-            mp.seekTo(0)
             mp.start()
-            succeeded = completion.await() && outputReady()
+            val succeeded = completion.await() && outputReady()
             if (!succeeded) Log.e(TAG, "HD760_TPT_BLOCKED incomplete_or_muted")
             return@withContext succeeded
         } catch (cancel: CancellationException) {
@@ -221,13 +222,11 @@ class ToneEngine(private val context: Context) {
         } finally {
             synchronized(talkPermitLock) {
                 if (hd760PermitCompletion === completion) hd760PermitCompletion = null
-                runCatching { if (mp.isPlaying) mp.pause() }
-                runCatching { mp.seekTo(0) }
-                if (!succeeded) {
-                    if (talkPermitPlayer === mp) talkPermitPlayer = null
-                    runCatching { mp.release() }
-                }
+                if (hd760StrictPlayer === mp) hd760StrictPlayer = null
             }
+            runCatching { mp.setOnCompletionListener(null) }
+            runCatching { mp.setOnErrorListener(null) }
+            runCatching { mp.release() }
         }
     }
 
