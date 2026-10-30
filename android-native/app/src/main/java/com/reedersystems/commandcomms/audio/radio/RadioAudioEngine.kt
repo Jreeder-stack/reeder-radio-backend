@@ -1773,6 +1773,13 @@ class RadioAudioEngine(private val context: Context) {
             while (isActive) {
                 delay(RX_DIAG_INTERVAL_MS)
                 val currentRxCount = udpTransport.rxPacketCount
+                if (currentRxCount < lastDiagRxCount) {
+                    // Transport restart resets counters; never interpret rollover as packet loss.
+                    Log.d(TAG, "RX_COUNTER_RESET old=$lastDiagRxCount new=$currentRxCount")
+                    lastDiagRxCount = currentRxCount
+                    noRxDataStartMs = 0L
+                    noRxSocketRecreated = false
+                }
                 val newPackets = currentRxCount - lastDiagRxCount
                 lastDiagRxCount = currentRxCount
                 val bufSize = jitterBuffer.size
@@ -1814,23 +1821,27 @@ class RadioAudioEngine(private val context: Context) {
                     }
                 }
 
-                if (newPackets == 0L && currentRxCount > 0 && udpTransport.connectionHealth.value == TransportHealth.CONNECTED) {
+                // Silence is normal when nobody is transmitting. Recover the RX socket
+                // only when signaling says another unit currently holds this channel.
+                val expectedRemoteAudio = stateManager.currentState == RadioState.RECEIVING &&
+                    !isTransmitting && !isPreCapturing
+                if (expectedRemoteAudio && newPackets == 0L &&
+                    udpTransport.connectionHealth.value == TransportHealth.CONNECTED) {
                     if (noRxDataStartMs == 0L) {
                         noRxDataStartMs = System.currentTimeMillis()
                     }
                     val noRxDurationMs = System.currentTimeMillis() - noRxDataStartMs
-                    if (noRxDurationMs >= 60_000L && !noRxSocketRecreated) {
-                        Log.w(TAG, "RX_WATCHDOG_SOCKET_RECREATE noRxMs=$noRxDurationMs rxTotal=$currentRxCount — forcing UDP socket recreate and re-register ${RadioDiagLog.elapsedTag()}")
+                    if (noRxDurationMs >= 15_000L && !noRxSocketRecreated) {
+                        Log.w(TAG, "RX_WATCHDOG_EXPECTED_AUDIO_SOCKET_RECREATE noRxMs=$noRxDurationMs — active remote TX but no UDP frames")
                         noRxSocketRecreated = true
                         udpTransport.forceSocketRecreate()
-                    } else if (noRxDurationMs >= 30_000L) {
-                        Log.w(TAG, "RX_WATCHDOG_NO_DATA noRxMs=$noRxDurationMs rxTotal=$currentRxCount — triggering fast keepalive burst ${RadioDiagLog.elapsedTag()}")
+                    } else if (noRxDurationMs >= 5_000L) {
+                        Log.w(TAG, "RX_WATCHDOG_EXPECTED_AUDIO_MISSING noRxMs=$noRxDurationMs — fast keepalive")
                         udpTransport.activateFastKeepaliveExternal()
                     }
-                } else if (newPackets > 0L) {
-                    if (noRxDataStartMs > 0L) {
-                        val recoveredAfterMs = System.currentTimeMillis() - noRxDataStartMs
-                        Log.d(TAG, "RX_WATCHDOG_RECOVERED rxNew=$newPackets afterMs=$recoveredAfterMs ${RadioDiagLog.elapsedTag()}")
+                } else {
+                    if (newPackets > 0L && noRxDataStartMs > 0L) {
+                        Log.d(TAG, "RX_WATCHDOG_RECOVERED rxNew=$newPackets afterMs=${System.currentTimeMillis() - noRxDataStartMs} ${RadioDiagLog.elapsedTag()}")
                     }
                     noRxDataStartMs = 0L
                     noRxSocketRecreated = false
