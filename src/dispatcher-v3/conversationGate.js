@@ -9,12 +9,27 @@ const NUMBER_WORDS = Object.freeze({
   ten: '10', eleven: '11', twelve: '12', thirteen: '13', fourteen: '14', fifteen: '15', sixteen: '16', seventeen: '17', eighteen: '18', nineteen: '19', twenty: '20',
 });
 
+// Receipts prove delivery only. Operation, call and clarification details
+// are held exclusively in V3ConversationRecords, not duplicated here.
+const MAX_PROMPT_RECEIPTS = 256;
+const promptKey = (unit, sessionKey) => JSON.stringify([unit, sessionKey]);
+
 export class V3ConversationGate {
   constructor({ wakeWords = null, pendingMs = DEFAULT_PENDING_MS, now = () => Date.now() } = {}) {
     this.pendingMs = pendingMs;
     this.now = now;
     this.pending = new Map();
     this.wakeWords = normalizeWakeWords(wakeWords);
+  }
+
+  // Explicit session-scoped lookup. A unit-only lookup is for diagnostics
+  // and returns nothing if multiple authorized devices own questions.
+  pendingFor(unitId, sessionKey = null) {
+    const unit = clean(unitId);
+    if (!unit) return undefined;
+    if (sessionKey != null) return this.pending.get(promptKey(unit, sessionKey));
+    const matches = [...this.pending.values()].filter((item) => item.unitId === unit);
+    return matches.length === 1 ? matches[0] : undefined;
   }
 
   shouldProcess({ unitId, transcript, sessionKey = null, conversationId = null,
@@ -52,14 +67,14 @@ export class V3ConversationGate {
       return { allowed: true, reason: 'wake_word', transcript: remainder || text, freshRequest: true };
     }
 
-    const pending = this.pending.get(unit);
+    const pending = this.pendingFor(unit, sessionKey);
     if (!pending) return { allowed: false, reason: 'not_addressed' };
 
     // A callsign is not custody. Only the exact authenticated conversation,
     // active task, generation and channel of the transmitted question may reply.
     if (pending.sessionKey !== sessionKey) return { allowed: false, reason: 'not_addressed' };
     if (!matchesScope(pending, { sessionKey, conversationId, taskId, runtimeGeneration, channelId })) {
-      this.pending.delete(unit);
+      this.clear(unit, sessionKey);
       return { allowed: false, reason: 'pending_task_changed' };
     }
     if (pending.promptState !== 'delivered') {
@@ -67,7 +82,7 @@ export class V3ConversationGate {
       return { allowed: false, reason: 'prompt_not_delivered' };
     }
     if (pending.expiresAt < this.now()) {
-      this.pending.delete(unit);
+      this.clear(unit, sessionKey);
       return { allowed: false, reason: 'prompt_expired' };
     }
     if (looksLikeUnitToUnitTraffic(text, unit, pending)) {
@@ -83,11 +98,19 @@ export class V3ConversationGate {
     const unit = clean(unitId);
     const required = ['sessionKey', 'conversationId', 'taskId', 'promptTurnId', 'runtimeGeneration', 'channelId'];
     if (!unit || required.some((key) => !clean(context[key]))) return null;
+    const key = promptKey(unit, context.sessionKey);
+    if (!this.pending.has(key) && this.pending.size >= MAX_PROMPT_RECEIPTS) return null;
+    // The only retained fields are trusted routing/receipt identity and a
+    // non-actionable kind label for radio-to-radio traffic classification.
     const pending = {
-      ...context, promptState: 'awaiting_delivery', createdAt: this.now(),
+      unitId: unit, sessionKey: context.sessionKey,
+      conversationId: context.conversationId, taskId: context.taskId,
+      promptTurnId: context.promptTurnId, runtimeGeneration: context.runtimeGeneration,
+      channelId: context.channelId, kind: clean(context.kind) || 'clarification',
+      promptState: 'awaiting_delivery', createdAt: this.now(),
       deliveredAt: null, expiresAt: null,
     };
-    this.pending.set(unit, pending);
+    this.pending.set(key, pending);
     return pending;
   }
 
@@ -97,7 +120,7 @@ export class V3ConversationGate {
   settlePromptDelivery({ unitId, promptTurnId, sessionKey, conversationId, taskId,
     runtimeGeneration, channelId, status } = {}) {
     if (!TERMINAL_DELIVERY.has(status)) return false;
-    const unit = clean(unitId), pending = this.pending.get(unit);
+    const unit = clean(unitId), pending = this.pendingFor(unit, sessionKey);
     if (!pending || pending.promptState !== 'awaiting_delivery' || pending.promptTurnId !== promptTurnId
       || !matchesScope(pending, { sessionKey, conversationId, taskId, runtimeGeneration, channelId })) return false;
     if (status === 'completed') {
@@ -105,14 +128,14 @@ export class V3ConversationGate {
       pending.deliveredAt = this.now();
       pending.expiresAt = pending.deliveredAt + this.pendingMs;
     } else {
-      this.pending.delete(unit);
+      this.clear(unit, sessionKey);
     }
     return true;
   }
 
   isCurrentPending(unitId, pending) {
     const unit = clean(unitId);
-    return !!unit && !!pending && this.pending.get(unit) === pending
+    return !!unit && !!pending && this.pendingFor(unit, pending.sessionKey) === pending
       && pending.promptState === 'delivered'
       && Number.isFinite(pending.expiresAt) && pending.expiresAt >= this.now();
   }
@@ -120,9 +143,13 @@ export class V3ConversationGate {
   clear(unitId, sessionKey = null) {
     const unit = clean(unitId);
     if (!unit) return;
-    const pending = this.pending.get(unit);
-    if (!pending || (sessionKey != null && pending.sessionKey !== sessionKey)) return;
-    this.pending.delete(unit);
+    if (sessionKey != null) {
+      this.pending.delete(promptKey(unit, sessionKey));
+      return;
+    }
+    for (const [key, pending] of this.pending) {
+      if (pending.unitId === unit) this.pending.delete(key);
+    }
   }
 
   clearAll() {

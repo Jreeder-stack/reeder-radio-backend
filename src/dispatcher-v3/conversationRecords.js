@@ -223,6 +223,25 @@ export class V3ConversationRecords {
     return copy(task);
   }
 
+  // A delivered question is merely a receipt: look up the actual old action
+  // in the ONE authenticated unit/session conversation ledger.
+  followUpForPrompt(envelope, prompt) {
+    if (!prompt) return null;
+    const record = this.get(envelope);
+    const task = record?.activeTask;
+    if (!record || !task || !task.pendingFollowUp || record.scopeKey !== prompt.sessionKey
+      || record.id !== prompt.conversationId || task.id !== prompt.taskId
+      || task.latestTurnId !== prompt.promptTurnId || task.kind !== prompt.kind
+      || task.finishedAt || !['awaiting_clarification', 'awaiting_follow_up'].includes(task.state)) return null;
+    return {
+      ...copy(task.pendingFollowUp), kind: task.kind,
+      taskId: task.id, conversationId: record.id,
+      ...(task.pendingTask ? {
+        pendingTask: copy(task.pendingTask), originalTurnId: task.pendingTask.originalTurnId,
+      } : {}),
+    };
+  }
+
   // Control utterances are committed without overwriting the task they
   // cancel, suspend or resume; they never represent a CAD operation.
   completeControlTurn(envelope, action, success = true) {

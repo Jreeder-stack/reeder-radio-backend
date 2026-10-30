@@ -293,8 +293,7 @@ export class V3LiveDispatcher {
       }
     }
     this._outbound.cancelByConnection(identity, previousConnectionId);
-    const pending = this.conversationGate.pending.get(identity.speakerRef);
-    if (pending?.sessionKey) {
+    for (const pending of this.conversationGate.pending.values()) {
       try {
         const parts = JSON.parse(pending.sessionKey);
         if (parts[0] === identity.runtimeId && parts[1] === identity.runtimeGeneration
@@ -535,14 +534,18 @@ export class V3LiveDispatcher {
       this._diag('transmission_ignored', transmission.correlationId, true, { unitId, reason: gate.reason, transcript: transmission.transcript });
       return false;
     }
-    // An evicted or expired conversation cannot resume an orphaned prompt.
-    if (gate.reason === 'follow_up' && !this.conversations.get(turnEnvelope)) {
+    // The gate contains only a delivered-question receipt. Actual task,
+    // call, speaker and intended CAD operation are retrieved from the ledger.
+    const ownedFollowUp = gate.reason === 'follow_up'
+      ? this.conversations.followUpForPrompt(turnEnvelope, gate.pending) : null;
+    if (gate.reason === 'follow_up' && !ownedFollowUp) {
       this.conversationGate.clear(unitId, sessionKey);
-      this._diag('transmission_ignored', transmission.correlationId, true, { unitId, reason: 'conversation_expired' }, turnEnvelope);
+      this._diag('transmission_ignored', transmission.correlationId, true,
+        { unitId, reason: 'owned_follow_up_missing_or_expired' }, turnEnvelope);
       return false;
     }
     transmission.transcript = gate.transcript || transmission.transcript;
-    transmission.pendingContext = gate.pending || null;
+    transmission.pendingContext = ownedFollowUp;
     const taskTransition = classifyV3TaskTransition(transmission.transcript);
     transmission.sessionKey = sessionKey;
     const conversation = this.conversations.recordTurn(turnEnvelope, {
@@ -1482,7 +1485,7 @@ export class V3LiveDispatcher {
     const task = conversation?.activeTask;
     if (!task || task.latestTurnId !== envelope.turnId) return null;
     return this.conversationGate.expectFollowUp(unitId, {
-      ...details, sessionKey: this.conversations.scopeKey(envelope),
+      kind: task.kind, sessionKey: this.conversations.scopeKey(envelope),
       conversationId: conversation.id, taskId: task.id,
       promptTurnId: envelope.turnId,
       runtimeGeneration: envelope.runtimeGeneration, channelId: this.context.roomKey,
