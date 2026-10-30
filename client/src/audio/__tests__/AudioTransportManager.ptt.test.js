@@ -207,4 +207,28 @@ describe('AudioTransportManager — fast PTT start regression tests', () => {
 
     expect(mockEncoder.init).not.toHaveBeenCalled();
   });
+  it('changes the selected microphone without reusing a stale capture stream', async () => {
+    const { manager } = await buildManager();
+    manager._playback.updateDspSettings = vi.fn();
+    manager.applyAudioSettings({ inputDeviceId: 'mic-A', micVolume: 100 });
+    await flushMicrotasks();
+    expect(manager._capture.inputDeviceId).toBe('mic-A');
+    expect(manager._capture.shutdown).toHaveBeenCalledTimes(1);
+    expect(manager._capture.warmup).toHaveBeenCalledTimes(1);
+  });
+
+  it('defers microphone hot-switching until the current radio PTT is idle', async () => {
+    const { manager } = await buildManager();
+    const { PTT_STATES } = await import('../../constants/pttStates.js');
+    manager._playback.updateDspSettings = vi.fn();
+    manager.pttState = PTT_STATES.TRANSMITTING;
+    manager.applyAudioSettings({ inputDeviceId: 'mic-B', micVolume: 100 });
+    await flushMicrotasks();
+    expect(manager._capture.shutdown).not.toHaveBeenCalled();
+    manager.pttState = PTT_STATES.IDLE;
+    await manager._refreshInputDeviceIfNeeded();
+    expect(manager._capture.shutdown).toHaveBeenCalledTimes(1);
+    expect(manager._capture.inputDeviceId).toBe('mic-B');
+  });
+
 });
