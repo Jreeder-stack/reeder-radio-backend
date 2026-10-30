@@ -198,7 +198,7 @@ describe('AI-DISP-V3-001 02-03 actual V3 transmission and CAD path', () => {
     const h = await make({ llmPlans: [assign()] });
     h.floor.requestFloor.mockReturnValue({ granted: false, heldBy: 'other-unit' });
     const q = await h.begin('Central, put me on that call');
-    expect(speaker(h)?.promptState).toBe('awaiting_delivery');
+    await until(() => speaker(h)?.promptState === 'awaiting_delivery', 'floor-blocked question registration');
     await vi.advanceTimersByTimeAsync(3_100);
     await finish(q); await h.flushOutput();
     expect(speaker(h)).toBeUndefined();
@@ -209,13 +209,17 @@ describe('AI-DISP-V3-001 02-03 actual V3 transmission and CAD path', () => {
 
   it('a queued question expiring without being transmitted cannot arm a follow-up', async () => {
     const h = await make({ llmPlans: [assign()] });
-    const tts = h.hold(Buffer.alloc(640)); h.synthesisReplies.push(tts.promise);
+    // Keep B2's output lane occupied with many frames, not an illegal 20s
+    // stalled TTS. The existing 12s synthesis bound must remain effective.
+    h.codec.encodePcmToOpus.mockReturnValueOnce(
+      Array.from({ length: 1_100 }, () => Buffer.from([1])),
+    );
     await finish(await h.begin('Central, mark me available', 'B2'));
-    await until(() => h.synthesize.mock.calls.length === 1, 'busy speech');
+    await until(() => h.relay.injectAudio.mock.calls.length > 0, 'long B2 transmission');
     await finish(await h.begin('Central, put me on that call'));
     expect(speaker(h)?.promptState).toBe('awaiting_delivery');
     await vi.advanceTimersByTimeAsync(20_100);
-    tts.resolve(Buffer.alloc(640)); await h.flushOutput();
+    await h.flushOutput();
     expect(speaker(h)).toBeUndefined();
     expect(await h.send('OLD-CALL')).toBe(false);
     expect(h.writes('/api/radio/assign')).toEqual([]);
