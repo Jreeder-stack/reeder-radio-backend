@@ -82,7 +82,7 @@ export async function materializeV3Plan(plan, {
     // A cached pre-model snapshot can be stale after an async model response.
     // Resolve the actual target from fresh center-scoped CAD immediately
     // before action materialization, then recheck at the write boundary.
-    const freshContext = typeof operationalContextService.snapshot === 'function'
+    const freshContext = turnEnvelope && typeof operationalContextService.snapshot === 'function'
       ? await operationalContextService.snapshot({ speakerCallsign, correlationId })
       : operationalContext;
     const requestedCallRef = input.callRef || null;

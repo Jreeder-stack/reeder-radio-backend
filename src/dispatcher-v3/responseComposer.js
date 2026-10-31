@@ -41,7 +41,7 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
   if (plan?.action === 'CLARIFY') return clean(plan.clarification) || `${unit}, repeat your last.`;
   if (plan?.action === 'MULTI_ACTION') return compoundV3Response(unit, result, now);
   if (result?.outcome === 'unknown') {
-    return unit + ', CAD submission is unconfirmed. Do not repeat the change until a dispatcher verifies it.';
+    return unit + ', unable to verify the CAD submission; its outcome is unconfirmed. Do not repeat the change until a dispatcher verifies it.';
   }
   if (result?.outcome === 'partial') return partialV3Response(unit, plan, result);
 

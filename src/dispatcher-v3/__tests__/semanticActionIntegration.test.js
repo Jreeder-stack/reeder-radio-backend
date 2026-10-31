@@ -87,7 +87,7 @@ describe('AI-DISP-V3 03-08 real V3 PTT to semantic planner, resolver, executor a
   it('a read-only role cannot gain write capability from a model hint',async()=>{
     const h=await make({scopes:['call.read','unit.read'],llmPlans:[
       plan('SET_UNIT_STATUS',{unitRef:'A1',status:'available'})]});
-    await h.send('Central, please change my unit to available');
+    await h.send('Central, would you update my duty status to available?');
     expect(h.writes()).toEqual([]);
     expect(await h.lastResult()).toMatchObject({success:false,outcome:'failed'});
   });

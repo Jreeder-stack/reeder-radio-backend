@@ -192,7 +192,6 @@ function scoreCallEvidence(call, words, normalizedRef) {
     normalize(call?.location || call?.address || call?.location_name),
     normalize(call?.municipality || call?.city),
     normalize(call?.caller_name || call?.callerName || call?.caller),
-    number,
   ].filter(Boolean).map(field => new Set(field.split(' ').filter(Boolean)));
   if (!categories.length || !words.every(word => categories.some(tokens => tokens.has(word)))) return 0;
   // Prefer multiple independently corroborating structured facts. Ties are
