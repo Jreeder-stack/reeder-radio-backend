@@ -39,6 +39,8 @@ jobs:
           node --check src/services/radioChannelProgramming.js
           node --check src/routes/radiosRouter.js
           node --check src/controllers/channelsController.js
+          node --check src/services/wsAudioBridge.js
+          node --check src/services/signalingFloorIdentityHardening.js
           node --check src/services/signalingService.js
           node --check src/services/pagingRosterService.js
           node --check src/routes/dispatchRouter.js

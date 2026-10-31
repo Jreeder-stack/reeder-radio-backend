@@ -173,8 +173,9 @@ class WsAudioBridge {
   async _authenticate(request) {
     const url = new URL(request.url, `http://${request.headers.host}`);
 
+    const radioCredentialPresented = !!(request.headers['x-radio-token'] || url.searchParams.get('radioToken'));
     // --- Method 1: session cookie (web/Electron dispatch) ---
-    try {
+    if (!radioCredentialPresented) try {
       const rawCookies = request.headers.cookie || '';
       const cookies = cookie.parse(rawCookies);
       let sid = cookies['connect.sid'];
@@ -223,7 +224,7 @@ class WsAudioBridge {
               is_dispatcher: false,
             };
           }
-          return { user, authType: 'radioToken' };
+          return { user, authType: 'radioToken', radioId: radio.radio_id };
         }
       }
     } catch (err) {

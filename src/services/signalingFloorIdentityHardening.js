@@ -140,6 +140,10 @@ function installAudioWsChannelAccessHardening(bridge) {
     const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
     const rawChannelId = url.searchParams.get('channelId');
     const unitId = user.unit_id || user.username || null;
+    const credentialPresented = !!(request.headers['x-radio-token'] ||
+      url.searchParams.get('radioToken'));
+    if (credentialPresented && (authResult.authType !== 'radioToken' ||
+        !authResult.radioId)) return null;
 
     // A bare CAD integration key is a service credential, not a user identity.
     // Accepting ?unitId= with only that key lets a client claim another unit.
@@ -158,11 +162,14 @@ function installAudioWsChannelAccessHardening(bridge) {
       user.role === 'dispatcher' ||
       user.role === 'admin';
 
-    if (isDispatcher) {
+    if (isDispatcher && authResult.authType !== 'radioToken') {
       return authResult;
     }
 
-    const authorizedChannel = await resolveAuthorizedChannel(unitId, rawChannelId);
+    const authorizedChannel = await resolveAuthorizedChannel(
+      unitId, rawChannelId,
+      authResult.authType === 'radioToken' ? authResult.radioId : null
+    );
     if (!authorizedChannel) {
       console.warn(
         `[ChannelAccess] AUDIO_WS_REJECTED reason=channel_access_denied authType=${authResult.authType} unitId=${unitId || 'unknown'} channel=${rawChannelId || 'unknown'}`
