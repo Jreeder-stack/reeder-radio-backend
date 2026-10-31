@@ -265,6 +265,17 @@ function sanitizeRecent(items) {
   }));
 }
 
+function sanitizeCadFactsForModel(view) {
+  const safe = sanitizeV3OperationalContext(view);
+  if (!safe) return null;
+  const sanitiseCall = call => call ? { ...call, description: null } : null;
+  return Object.freeze({
+    ...safe,
+    currentCall: sanitiseCall(safe.currentCall),
+    activeCalls: safe.activeCalls.map(sanitiseCall),
+  });
+}
+
 function sanitizeSharedIncident(view) {
   if (!view || view.verifiedCadFacts !== true
     || view.provenance !== 'fresh_center_authorized_cad') return null;
@@ -300,7 +311,10 @@ export function buildV3SemanticModelContext({
     channel: runtimeContext?.roomKey || null,
     availableActions: capabilities.map(item => item.action),
     toolCapabilities: capabilities,
-    operationalContext: sanitizeV3OperationalContext(operationalContext),
+    // CAD descriptions and operator-entered notes are untrusted prose, not
+    // instructions to the model. Keep structured call facts for semantic
+    // selection; avoid making a note an executable prompt injection surface.
+    operationalContext: sanitizeCadFactsForModel(operationalContext),
     sharedIncident: sanitizeSharedIncident(sharedIncident),
     pendingContext: pendingV3TaskForModel(pendingContext) || sanitizeInputForModel(pendingContext),
     dialogueContext: sanitizeInputForModel(dialogueContext),

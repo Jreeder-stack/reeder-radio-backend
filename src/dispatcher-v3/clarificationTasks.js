@@ -12,6 +12,11 @@ const CLARIFIABLE_FIELDS = new Set([
 const CALL_ERRORS = new Set([V3_ERROR_CODES.CALL_AMBIGUOUS, V3_ERROR_CODES.CALL_NOT_FOUND]);
 const UNIT_ERRORS = new Set([V3_ERROR_CODES.UNIT_AMBIGUOUS, V3_ERROR_CODES.UNIT_NOT_FOUND]);
 const MAX_CANDIDATES = 12;
+const FORBIDDEN_MODEL_FIELDS = new Set([
+  'unitId', 'unitIds', 'accountId', 'dispatchCenterId', 'runtimeGeneration',
+  'scopes', 'verified', 'authorized', 'permissionGrants', 'beforeCadWrite',
+  'speakerUnitId', 'profileId', 'runtimeId', 'connectionId',
+]);
 
 const clean = (value, limit = 180) =>
   typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, limit) : '';
@@ -31,7 +36,11 @@ function boundedInput(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   const input = {};
   for (const [key, value] of Object.entries(raw).slice(0, 32)) {
-    if (!/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(key) || value == null) continue;
+    if (!/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(key)
+      || FORBIDDEN_MODEL_FIELDS.has(key)) {
+      throw invalid('Untrusted task input contains a forbidden identity or permission field');
+    }
+    if (value == null) continue;
     if (typeof value === 'string') input[key] = clean(value, 250);
     else if (typeof value === 'boolean') input[key] = value;
     else if (typeof value === 'number' && Number.isFinite(value)) input[key] = value;
