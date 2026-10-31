@@ -15,6 +15,7 @@ const GENERIC_CALL_REFS = new Set([
 const CALL_REFERENCE_STOPWORDS = new Set([
   'the', 'a', 'an', 'call', 'calls', 'incident', 'incidents', 'job', 'jobs',
   'event', 'events', 'that', 'this', 'one', 'at', 'on', 'for', 'from', 'of',
+  'near', 'in', 'by', 'about', 'reported', 'report', 'please', 'number', 'no',
 ]);
 
 export class V3OperationalContextService {
@@ -51,9 +52,18 @@ export class V3OperationalContextService {
 
     const ref = normalize(callRef);
     const currentCallId = clean(operationalContext?.currentCall?.id);
+    const currentIsActive = currentCallId && Array.isArray(operationalContext?.activeCalls)
+      && operationalContext.activeCalls.some(call => clean(call?.id) === currentCallId
+        && !TERMINAL_CALL_STATUSES.has(normalize(call.status)));
 
-    if (ref && isCurrentCallReference(ref) && currentCallId) return currentCallId;
-    if (!ref && preferCurrentCall && currentCallId) return currentCallId;
+    // Explicit "my call" cannot quietly fall back to a different call
+    // when the assignment has expired, changed or was not loaded.
+    if (ref && isCurrentCallReference(ref)) {
+      if (currentIsActive) return currentCallId;
+      throw new DispatcherV3Error(V3_ERROR_CODES.CALL_NOT_FOUND,
+        'No verified active current call is assigned to the transmitting unit', { statusCode: 404 });
+    }
+    if (!ref && preferCurrentCall && currentIsActive) return currentCallId;
 
     const calls = Array.isArray(operationalContext?.activeCalls)
       ? operationalContext.activeCalls
@@ -72,26 +82,22 @@ export class V3OperationalContextService {
       );
     }
 
-    const searchableRef = simplifyCallReference(ref);
-    const ranked = calls
-      .map((call) => ({ call, score: scoreCallReference(call, ref, searchableRef) }))
-      .filter((entry) => entry.score > 0)
+    // Resolve only against complete, non-conflicting authoritative fields.
+    // A partially overlapping location never overrides a contradictory nature:
+    // "Walmart robbery" must not select "ALARM at Walmart".
+    const words = referenceWords(simplifyCallReference(ref));
+    if (!words.length) throw new DispatcherV3Error(V3_ERROR_CODES.CALL_AMBIGUOUS,
+      'The incident reference needs a call number, nature or location', { statusCode: 409 });
+    const ranked = calls.map(call => ({ call, score: scoreCallEvidence(call, words, ref) }))
+      .filter(candidate => candidate.score > 0)
       .sort((a, b) => b.score - a.score);
-
-    if (ranked.length === 0) {
-      throw new DispatcherV3Error(V3_ERROR_CODES.CALL_NOT_FOUND, `No active call matched ${callRef}`, { statusCode: 404 });
-    }
-
-    const bestScore = ranked[0].score;
-    const best = ranked.filter((entry) => entry.score === bestScore);
-    if (best.length !== 1) {
-      throw new DispatcherV3Error(
-        V3_ERROR_CODES.CALL_AMBIGUOUS,
-        `More than one active call matched ${callRef}`,
-        { statusCode: 409, details: { candidates: best.map((entry) => sanitizeCall(entry.call)) } },
-      );
-    }
-
+    if (!ranked.length) throw new DispatcherV3Error(V3_ERROR_CODES.CALL_NOT_FOUND,
+      `No active call matches all details of ${callRef}`, { statusCode: 404, details: { callRef: clean(callRef), candidates: [] } });
+    const best = ranked.filter(candidate => candidate.score === ranked[0].score);
+    if (best.length !== 1) throw new DispatcherV3Error(V3_ERROR_CODES.CALL_AMBIGUOUS,
+      `More than one active call matches ${callRef}`, {
+        statusCode: 409, details: { callRef: clean(callRef), candidates: best.map(entry => sanitizeCall(entry.call)) },
+      });
     return getCallId(best[0].call);
   }
 
@@ -174,35 +180,25 @@ export function sanitizeV3OperationalContext(context) {
   };
 }
 
-function scoreCallReference(call, rawRef, simplifiedRef = rawRef) {
-  const ref = normalize(rawRef);
-  const simple = normalize(simplifiedRef) || ref;
+// Every meaningful supplied word must match an authoritative field as a WHOLE
+// word. Matching merely one word, substring or a free-text description is not
+// enough evidence for a public-safety incident selection.
+function scoreCallEvidence(call, words, normalizedRef) {
   const id = normalize(getCallId(call));
   const number = normalize(call?.call_number || call?.callNumber || call?.number);
-  const nature = normalize(call?.nature || call?.type || call?.call_type);
-  const location = normalize(call?.location || call?.address || call?.location_name);
-  const municipality = normalize(call?.municipality || call?.city);
-  const caller = normalize(call?.caller_name || call?.callerName || call?.caller);
-  const description = normalize(call?.description || call?.details || call?.notes_summary);
-  const combined = [number, nature, location, municipality, caller, description].filter(Boolean).join(' ');
-
-  if (ref === id || ref === number || simple === id || simple === number) return 100;
-  if (number && (number.includes(simple) || simple.includes(number))) return 92;
-  if (nature && nature === simple) return 86;
-  if (location && location === simple) return 86;
-  if (caller && caller === simple) return 86;
-  if (nature && (nature.includes(simple) || simple.includes(nature))) return 76;
-  if (location && (location.includes(simple) || simple.includes(location))) return 76;
-  if (caller && (caller.includes(simple) || simple.includes(caller))) return 76;
-  if (combined.includes(simple)) return 66;
-
-  const words = referenceWords(simple);
-  if (words.length > 0) {
-    const matched = words.filter((word) => combined.includes(word)).length;
-    if (matched === words.length) return 55 + Math.min(10, matched);
-    if (matched > 0) return 20 + matched;
-  }
-  return 0;
+  if (normalizedRef === id || normalizedRef === number) return 1000;
+  const categories = [
+    normalize(call?.nature || call?.type || call?.call_type),
+    normalize(call?.location || call?.address || call?.location_name),
+    normalize(call?.municipality || call?.city),
+    normalize(call?.caller_name || call?.callerName || call?.caller),
+    number,
+  ].filter(Boolean).map(field => new Set(field.split(' ').filter(Boolean)));
+  if (!categories.length || !words.every(word => categories.some(tokens => tokens.has(word)))) return 0;
+  // Prefer multiple independently corroborating structured facts. Ties are
+  // ambiguous rather than guesses; the model cannot raise the score.
+  const matchingFields = categories.filter(tokens => words.some(word => tokens.has(word))).length;
+  return words.length * 10 + matchingFields;
 }
 
 function sanitizeCall(call) {
@@ -215,6 +211,8 @@ function sanitizeCall(call) {
     status: clean(call?.status),
     priority: clean(call?.priority),
     callerName: clean(call?.caller_name || call?.callerName || call?.caller),
+    // Description may contain unverified free text. It is context for a
+    // human, not evidence that can override structured call nature/location.
     description: clean(call?.description || call?.details || call?.notes_summary),
   };
 }

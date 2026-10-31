@@ -63,6 +63,8 @@ export async function materializeV3Plan(plan, {
   }
 
   const input = { ...(plan.input || {}) };
+  const originalUnitRef = input.unitRef || null;
+  let referenceProof = null;
   if (SINGLE_UNIT_ACTIONS.has(plan.action)) {
     const identity = await resolveUnitRef(input.unitRef, speakerCallsign, unitIdentityService, correlationId);
     input.unitId = identity.unitId;
@@ -77,11 +79,22 @@ export async function materializeV3Plan(plan, {
 
   if (CONTEXTUAL_CALL_ACTIONS.has(plan.action) && !input.callId) {
     if (!operationalContextService) throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION_INPUT, 'Operational context service is required to resolve an implicit call');
+    // A cached pre-model snapshot can be stale after an async model response.
+    // Resolve the actual target from fresh center-scoped CAD immediately
+    // before action materialization, then recheck at the write boundary.
+    const freshContext = typeof operationalContextService.snapshot === 'function'
+      ? await operationalContextService.snapshot({ speakerCallsign, correlationId })
+      : operationalContext;
+    const requestedCallRef = input.callRef || null;
     input.callId = await operationalContextService.resolveCallId({
-      callRef: input.callRef || null,
-      operationalContext,
+      callRef: requestedCallRef,
+      operationalContext: freshContext,
       preferCurrentCall: CURRENT_CALL_FIRST_ACTIONS.has(plan.action),
       correlationId,
+    });
+    referenceProof = Object.freeze({
+      callId: input.callId, callRef: requestedCallRef,
+      implicit: true, preferCurrentCall: CURRENT_CALL_FIRST_ACTIONS.has(plan.action),
     });
     delete input.callRef;
   }
@@ -110,7 +123,13 @@ export async function materializeV3Plan(plan, {
   }
 
   delete input.callRef;
-  return Object.freeze({ ...plan, input: Object.freeze(input), ...(turnEnvelope ? { turnEnvelope } : {}) });
+  return Object.freeze({ ...plan, input: Object.freeze(input),
+    referenceProof: Object.freeze({
+      ...(referenceProof || (CONTEXTUAL_CALL_ACTIONS.has(plan.action) && input.callId
+        ? { callId: input.callId, callRef: null, implicit: false } : {})),
+      ...(originalUnitRef ? { unitRef: originalUnitRef } : {}),
+    }),
+    ...(turnEnvelope ? { turnEnvelope } : {}) });
 }
 
 async function resolveRefs(refs, speakerCallsign, service, correlationId) {

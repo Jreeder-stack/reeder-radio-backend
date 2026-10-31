@@ -55,16 +55,18 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
     [V3_ACTIONS.RADIO_CHECK]: async ({ input }) => ({ unitId: input.unitId || null, acknowledged: true }),
     [V3_ACTIONS.TIME_CHECK]: async ({ input }) => ({ unitId: input.unitId || null, timestamp: now().toISOString() }),
 
-    [V3_ACTIONS.SET_UNIT_STATUS]: async ({ input, correlationId }) => {
+    [V3_ACTIONS.SET_UNIT_STATUS]: async ({ input, correlationId, beforeCadWrite = null }) => {
       const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      if (beforeCadWrite) await beforeCadWrite();
       await gateway.post('/api/radio/status', { unit_id: identity.callsign, status: input.status, note: input.note || undefined }, { correlationId });
       const unit = await readUnitForVerification(gateway, identity.callsign, correlationId);
       verifyUnitStatus(unit, input.status, { correlationId, unitId: identity.unitId, callsign: identity.callsign });
       return { success: true, verified: true, unit };
     },
 
-    [V3_ACTIONS.CHANGE_UNIT_ZONE]: async ({ input, correlationId }) => {
+    [V3_ACTIONS.CHANGE_UNIT_ZONE]: async ({ input, correlationId, beforeCadWrite = null }) => {
       const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      if (beforeCadWrite) await beforeCadWrite();
       await gateway.post('/api/radio/zone', { unit_id: identity.callsign, zone: input.zone }, { correlationId });
       const unit = await readUnitForVerification(gateway, identity.callsign, correlationId);
       verifyUnitZone(unit, input.zone, { correlationId, unitId: identity.unitId, callsign: identity.callsign });
@@ -121,32 +123,36 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
       return { success: true, verified: true, call };
     },
 
-    [V3_ACTIONS.ASSIGN_UNIT]: async ({ input, correlationId }) => {
+    [V3_ACTIONS.ASSIGN_UNIT]: async ({ input, correlationId, beforeCadWrite = null }) => {
       const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      if (beforeCadWrite) await beforeCadWrite();
       await gateway.post('/api/radio/assign', { call_id: input.callId, unit_id: identity.callsign }, { correlationId });
       const call = await readCallForVerification(gateway, input.callId, correlationId);
       verifyUnitAssigned(call, identity, true, { correlationId, callId: input.callId });
       return { success: true, verified: true, call };
     },
 
-    [V3_ACTIONS.UNASSIGN_UNIT]: async ({ input, correlationId }) => {
+    [V3_ACTIONS.UNASSIGN_UNIT]: async ({ input, correlationId, beforeCadWrite = null }) => {
       const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      if (beforeCadWrite) await beforeCadWrite();
       await gateway.post(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}/unassign-unit`, { unit_id: identity.callsign }, { correlationId });
       const call = await readCallForVerification(gateway, input.callId, correlationId);
       verifyUnitAssigned(call, identity, false, { correlationId, callId: input.callId });
       return { success: true, verified: true, call };
     },
 
-    [V3_ACTIONS.MAKE_PRIMARY]: async ({ input, correlationId }) => {
+    [V3_ACTIONS.MAKE_PRIMARY]: async ({ input, correlationId, beforeCadWrite = null }) => {
       const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      if (beforeCadWrite) await beforeCadWrite();
       await gateway.post(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}/primary-unit`, { unit_id: identity.callsign }, { correlationId });
       const call = await readCallForVerification(gateway, input.callId, correlationId);
       verifyPrimaryUnit(call, identity, { correlationId, callId: input.callId });
       return { success: true, verified: true, call };
     },
 
-    [V3_ACTIONS.UPDATE_ASSIGNMENT_TIMES]: async ({ input, correlationId }) => {
+    [V3_ACTIONS.UPDATE_ASSIGNMENT_TIMES]: async ({ input, correlationId, beforeCadWrite = null }) => {
       const identity = await resolveSafeIdentity(input.unitId, correlationId);
+      if (beforeCadWrite) await beforeCadWrite();
       await gateway.patch(`${CAD_PARITY_PREFIX}/calls/${encodeURIComponent(input.callId)}/assignment-times`, {
         unit_id: identity.callsign,
         assigned_at: input.assignedAt || undefined,
@@ -185,7 +191,8 @@ export function createDefaultV3ActionHandlers({ gateway, unitIdentityService, op
       return { success: true, verified: true, call };
     },
 
-    [V3_ACTIONS.CLOSE_CALL]: async ({ input, correlationId }) => {
+    [V3_ACTIONS.CLOSE_CALL]: async ({ input, correlationId, beforeCadWrite = null }) => {
+      if (beforeCadWrite) await beforeCadWrite();
       await gateway.post('/api/radio/dispose', { call_id: input.callId, disposition: input.disposition, unit_ids: input.unitIds, note: input.note || undefined }, { correlationId });
       const call = await readCallForVerification(gateway, input.callId, correlationId);
       verifyCallClosed(call, input.disposition, { correlationId, callId: input.callId });

@@ -22,6 +22,7 @@ import { classifyV3TaskTransition, modelV3TaskTransition } from './taskTransitio
 import { createV3PendingTask, resumeV3PendingTask } from './clarificationTasks.js';
 import { normalizeV3CommandText } from './deterministicIntent.js';
 import { materializeV3Plan } from './planMaterializer.js';
+import { assertV3ActionReferencesFresh } from './actionReferenceGuard.js';
 import { executeV3CompoundPlan } from './compoundActions.js';
 import { composeV3Response } from './responseComposer.js';
 import { createV3CorrelationId } from './correlation.js';
@@ -1359,10 +1360,16 @@ export class V3LiveDispatcher {
           }
           result = await this.executor.execute({ action: plan.action, input: plan.input }, {
             correlationId, turnEnvelope,
-            beforeCadWrite: continuingDisposition
-              ? () => this._assertFollowUpAssignment({
+            beforeCadWrite: async () => {
+              await assertV3ActionReferencesFresh({
+                plan, speakerCallsign, unitIdentityService: this.unitIdentityService,
+                operationalContextService: this.operationalContextService,
+                correlationId, turnEnvelope,
+              });
+              if (continuingDisposition) await this._assertFollowUpAssignment({
                 turnEnvelope, callId: pendingContext.callId, correlationId,
-              }) : null,
+              });
+            },
           });
         }
       }
@@ -1465,7 +1472,12 @@ export class V3LiveDispatcher {
       }),
       execute: materialized => this.executor.execute({
         action: materialized.action, input: materialized.input,
-      }, { correlationId, turnEnvelope }),
+      }, { correlationId, turnEnvelope,
+        beforeCadWrite: () => assertV3ActionReferencesFresh({
+          plan: materialized, speakerCallsign, unitIdentityService: this.unitIdentityService,
+          operationalContextService: this.operationalContextService, correlationId, turnEnvelope,
+        }),
+      }),
       snapshot: () => this.operationalContextService.snapshot({ speakerCallsign, correlationId }),
       submittedWrites: () => this._lifecycle.get(turnEnvelope.turnId)?.writeCount || 0,
       onStep: step => this._diag('compound_step_' + step.status, correlationId,
