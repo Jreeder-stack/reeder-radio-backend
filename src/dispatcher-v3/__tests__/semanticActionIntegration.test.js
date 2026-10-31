@@ -55,6 +55,15 @@ describe('AI-DISP-V3 03-08 real V3 PTT to semantic planner, resolver, executor a
     expect(h.spoken().every(reply=>reply.includes('Walmart'))).toBe(true);
     expect(h.writes()).toEqual([]);
   });
+  it('forbids a first-person field incident from being filed as another authenticated unit',async()=>{
+    const h=await make({llmPlans:[{intentType:'observation',action:'REPORT_FIELD_INCIDENT',
+      confidence:1,input:{unitRef:'B2',eventType:'officer_assist',note:'Subject heading north'}}]});
+    await h.send('Central, I have a subject heading north');
+    expect(h.writes('/api/radio/note')).toEqual([]);
+    expect(h.writes('/api/radio/v3/cad/calls')).toEqual([]);
+    expect(await h.lastResult()).toMatchObject({success:false,error:{code:'UNAUTHORIZED'}});
+  });
+
   it('R13: incident note failure remains partially recorded and is disclosed',async()=>{
     const h=await make({llmPlans:[plan('REPORT_FIELD_INCIDENT',{
       unitRef:'A1',eventType:'officer_assist',note:'Subject in a red jacket'})]});

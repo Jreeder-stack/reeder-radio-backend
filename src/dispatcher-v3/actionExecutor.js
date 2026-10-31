@@ -63,6 +63,16 @@ export class V3ActionExecutor {
     try {
       if (this.requireTurnIdentity || turnEnvelope) assertV3TurnEnvelope(turnEnvelope, this.runtimeContext);
       const validated = validateV3ActionRequest(request, this.runtimeContext);
+      // A voice-originated first-person incident report belongs to the
+      // authenticated transmitting unit, not to a unit name supplied by a
+      // model. Cross-unit CAD reads and authorized dispatch assignments
+      // retain their separate existing permission semantics.
+      if (turnEnvelope?.speaker && [V3_ACTIONS.REPORT_FIELD_INCIDENT,
+        V3_ACTIONS.UPDATE_FIELD_INCIDENT].includes(validated.action)
+        && validated.input.unitId !== turnEnvelope.speaker.unitId) {
+        throw new DispatcherV3Error(V3_ERROR_CODES.UNAUTHORIZED,
+          'A field report cannot impersonate another transmitting unit', { statusCode: 403 });
+      }
       recordV3Diagnostic(this.diagnostics, {
         ...baseDiagnostic,
         action: validated.action,
