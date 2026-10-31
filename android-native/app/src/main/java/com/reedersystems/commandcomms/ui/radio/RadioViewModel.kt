@@ -24,6 +24,7 @@ import com.reedersystems.commandcomms.BuildConfig
 import com.reedersystems.commandcomms.hd760.Hd760Preferences
 import com.reedersystems.commandcomms.hd760.Hd760SideAction
 import com.reedersystems.commandcomms.hd760.Hd760KnobMapping
+import com.reedersystems.commandcomms.hd760.Hd760ChannelRecovery
 import com.reedersystems.commandcomms.audio.radio.RadioState
 import com.reedersystems.commandcomms.audio.radio.SignalQuality
 import com.reedersystems.commandcomms.data.model.Channel
@@ -64,6 +65,7 @@ data class RadioUiState(
     val currentChannelIndex: Int = 0,
     val isLoading: Boolean = true,
     val error: String? = null,
+    val channelRetryPending: Boolean = false,
     val signalingState: ConnectionState = ConnectionState.DISCONNECTED,
     val pttState: PttState = PttState.IDLE,
     val activeTransmittingUnit: String? = null,
@@ -124,6 +126,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private val hd760Prefs = if (isHd760) Hd760Preferences(application) else null
     private var hd760AnnouncementJob: Job? = null
     private var hd760LockFeedbackJob: Job? = null
+    private var channelLoadJob: Job? = null
 
     private fun syncHd760ScanConfig() {
         if (!isHd760) return
@@ -407,30 +410,105 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun loadChannels() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-            Log.d(STARTUP_TAG, "CHANNEL_FETCH_START")
-            val result = app.channelRepository.getZones()
-            if (result.isSuccess) {
-                val zones = result.getOrThrow()
-                Log.d(STARTUP_TAG, "CHANNEL_FETCH_SUCCESS zones=${zones.size}")
-                val allChannels = zones.flatMap { it.channels }
-                val scanChannels = allChannels.map { ch ->
-                    ScanChannelItem(ch.id, ch.name, loadScanEnabled(ch.id))
+        // Single owner for the channel catalog fetch: HD760 retries transient errors
+        // without launching parallel requests or recreating the PTT/audio service.
+        if (channelLoadJob?.isActive == true) return
+        channelLoadJob = viewModelScope.launch {
+            var failedAttempts = 0
+            _uiState.update { it.copy(isLoading = true, error = null, channelRetryPending = false) }
+            while (isActive) {
+                Log.d(STARTUP_TAG, "CHANNEL_FETCH_START attempt=${failedAttempts + 1}")
+                val result = app.channelRepository.getZones()
+                if (!isActive) return@launch
+                if (result.isSuccess) {
+                    val zones = result.getOrThrow()
+                    Log.d(STARTUP_TAG, "CHANNEL_FETCH_SUCCESS zones=${zones.size} attempts=${failedAttempts + 1}")
+                    val allChannels = zones.flatMap { it.channels }
+                    val scanChannels = allChannels.map { ch ->
+                        ScanChannelItem(ch.id, ch.name, loadScanEnabled(ch.id))
+                    }
+                    val savedScanning = scanPrefs.getBoolean(KEY_SCAN_ACTIVE, false)
+                    if (isHd760) zones.forEach { hd760Prefs?.initializeZone(it) }
+
+                    // Hardware PTT is owned by BackgroundAudioService, which can
+                    // continue using a previously authorized saved channel while
+                    // this screen has no zones due to an earlier DNS failure.
+                    // Match BOTH unit identity and server-provided ID/room key.
+                    // Do not switch its live TX to the first catalog channel.
+                    val restored = if (isHd760) Hd760ChannelRecovery.findSavedChannel(
+                        zones = zones,
+                        currentUnitId = _uiState.value.unitId,
+                        savedUnitId = app.serviceConnectionPrefs.unitId,
+                        savedChannelId = app.serviceConnectionPrefs.channelId,
+                        savedRoomKey = app.serviceConnectionPrefs.channelRoomKey
+                    ) else null
+                    _uiState.update {
+                        it.copy(
+                            zones = zones,
+                            currentZoneIndex = restored?.zoneIndex ?: 0,
+                            currentChannelIndex = restored?.channelIndex ?: 0,
+                            isLoading = false,
+                            error = null,
+                            channelRetryPending = false,
+                            scanChannels = scanChannels,
+                            isScanning = savedScanning
+                        )
+                    }
+                    if (isHd760) {
+                        val position = hd760Prefs?.lastPosition()
+                        if (restored != null) {
+                            _uiState.update {
+                                it.copy(hd760KnobPosition = position, hd760SlotEmpty = false)
+                            }
+                            app.hd760SlotActive.value = true
+                            Log.i(STARTUP_TAG,
+                                "HD760_CHANNEL_DISPLAY_RESTORED room=${app.serviceConnectionPrefs.channelRoomKey}")
+                            // If the physical knob moved during an outage, honor
+                            // it only while idle. Never abort an active transmission
+                            // solely because the channel catalog recovered.
+                            if (position != null) {
+                                val mappedId = hd760Prefs?.channelIdForSlot(
+                                    zones[restored.zoneIndex], position)
+                                if (mappedId != app.serviceConnectionPrefs.channelId) {
+                                    val txActive = _uiState.value.pttState != PttState.IDLE ||
+                                        _uiState.value.txMediaActive
+                                    if (!txActive) {
+                                        selectHd760Position(
+                                            position, app.serviceConnectionPrefs.channelRoomKey)
+                                    } else {
+                                        Log.w(STARTUP_TAG,
+                                            "HD760_KNOB_RESYNC_DEFERRED reason=active_ptt")
+                                    }
+                                }
+                            }
+                        } else {
+                            // Normal initial assignment flow; no validated saved
+                            // service channel exists in this authorized response.
+                            if (position != null) selectHd760Position(position)
+                        }
+                        syncHd760ScanConfig()
+                    }
+                    connectSignaling()
+                    return@launch
                 }
-                val savedScanning = scanPrefs.getBoolean(KEY_SCAN_ACTIVE, false)
-                if (isHd760) zones.forEach { hd760Prefs?.initializeZone(it) }
-                _uiState.update { it.copy(zones = zones, isLoading = false, scanChannels = scanChannels, isScanning = savedScanning) }
-                if (isHd760) {
-                    hd760Prefs?.lastPosition()?.let { selectHd760Position(it) }
-                    syncHd760ScanConfig()
-                }
-                connectSignaling()
-            } else {
-                Log.e(STARTUP_TAG, "CHANNEL_FETCH_FAILED reason=${result.exceptionOrNull()?.message}")
+                failedAttempts++
+                val failure = result.exceptionOrNull()
+                    ?: IllegalStateException("Channel request failed")
+                val retry = isHd760 && Hd760ChannelRecovery.shouldRetry(failure)
+                Log.e(STARTUP_TAG,
+                    "CHANNEL_FETCH_FAILED attempt=$failedAttempts retry=$retry reason=${failure.message}")
                 _uiState.update {
-                    it.copy(isLoading = false, error = result.exceptionOrNull()?.message ?: "Failed to load channels")
+                    it.copy(
+                        isLoading = false,
+                        error = failure.message ?: "Failed to load channels",
+                        channelRetryPending = retry
+                    )
                 }
+                if (!retry) return@launch
+                val backoffMs = Hd760ChannelRecovery.delayAfterFailureMs(failedAttempts)
+                Log.w(STARTUP_TAG,
+                    "CHANNEL_FETCH_RETRY_SCHEDULED attempt=$failedAttempts delayMs=$backoffMs")
+                delay(backoffMs)
             }
         }
     }

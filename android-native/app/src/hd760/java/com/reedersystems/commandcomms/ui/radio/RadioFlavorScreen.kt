@@ -324,8 +324,19 @@ fun RadioFlavorScreen(
             ) {
                 Text(state.unitId.ifBlank { "UNASSIGNED" }, color = Color.White,
                     fontSize = 10.sp, maxLines = 1)
-                Text(if (state.isConnected) "ONLINE" else "OFFLINE",
-                    color = if (state.isConnected) Color(0xFF7DE3A7) else Color(0xFFFFB4B4),
+                Text(
+                    when {
+                        state.channelRetryPending -> "RETRYING"
+                        state.isConnected && state.currentChannel == null -> "NO CHANNEL"
+                        state.isConnected -> "ONLINE"
+                        else -> "OFFLINE"
+                    },
+                    color = when {
+                        state.channelRetryPending -> Color(0xFFFFD166)
+                        state.isConnected && state.currentChannel == null -> Color(0xFFFFD166)
+                        state.isConnected -> Color(0xFF7DE3A7)
+                        else -> Color(0xFFFFB4B4)
+                    },
                     fontSize = 10.sp, maxLines = 1)
             }
         }
