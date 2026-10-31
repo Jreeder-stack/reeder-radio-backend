@@ -40,6 +40,10 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
   if (plan?.action === 'NO_ACTION') return null;
   if (plan?.action === 'CLARIFY') return clean(plan.clarification) || `${unit}, repeat your last.`;
   if (plan?.action === 'MULTI_ACTION') return compoundV3Response(unit, result, now);
+  if (result?.outcome === 'unknown') {
+    return unit + ', CAD submission is unconfirmed. Do not repeat the change until a dispatcher verifies it.';
+  }
+  if (result?.outcome === 'partial') return partialV3Response(unit, plan, result);
 
   if (!result?.success) {
     const code = result?.error?.code;
@@ -48,7 +52,9 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
     if (code === 'CALL_AMBIGUOUS') return `${unit}, which call?`;
     if (code === 'UNAUTHORIZED') return `${unit}, unable. That action isn't authorized.`;
     if (code === 'CAD_UNAVAILABLE') return `${unit}, CAD is unavailable. Try again.`;
-    if (code === 'CALL_NOT_FOUND') return `${unit}, I couldn't locate that call.`;
+    if (code === 'CALL_NOT_FOUND') return unit + ", I couldn't locate a call matching those details.";
+    if (code === 'CALL_RELATIONSHIP_CHANGED') return unit + ', the call or assignment changed; no new action was confirmed.';
+    if (code === 'INVALID_ACTION' || code === 'INVALID_ACTION_INPUT') return unit + ', that request needs a valid CAD operation or detail.';
     if (code === 'DISPOSITION_REQUIRED') return `${unit}, what's your disposition?`;
     return `${unit}, unable to complete that request.`;
   }
@@ -58,11 +64,15 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
   }
 
   if (plan?.action === V3_ACTIONS.REPORT_FIELD_INCIDENT || plan?.action === V3_ACTIONS.UPDATE_FIELD_INCIDENT) {
-    return clean(result?.data?.radioResponse) || `${unit}, copy.`;
+    const data = result?.data || {};
+    const state = Array.isArray(data.recordedReports) && data.recordedReports.length
+      ? 'Operational report verified in CAD.' : 'Report heard, but CAD persistence is not confirmed.';
+    return (unit + ', ' + state + ' ' + (clean(data.radioResponse) || '')).trim().slice(0, 500);
   }
 
   if (ROUTINE_ACK_ACTIONS.has(plan?.action)) {
-    return `Ten-four, ${formatMilitaryTimeForSpeech(now)}.`;
+    return verifiedMutationResponse(unit, plan, result)
+      || `Ten-four, ${formatMilitaryTimeForSpeech(now)}.`;
   }
 
   const data = result.data || {};
@@ -78,11 +88,19 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
     case V3_ACTIONS.TIME_CHECK:
       return `${unit}, ${formatMilitaryTimeForSpeech(data.timestamp || now)}.`;
     case V3_ACTIONS.GET_CURRENT_CALL:
+    case V3_ACTIONS.GET_CALL:
       return currentCallResponse(unit, data);
+    case V3_ACTIONS.SEARCH_CALLS:
+      return searchCallsResponse(unit, data);
     case V3_ACTIONS.LIST_ACTIVE_CALLS:
       return activeCallsResponse(unit, data);
     case V3_ACTIONS.STATUS_CHECK:
       return statusCheckResponse(unit, data);
+    case V3_ACTIONS.UPDATE_CALL:
+    case V3_ACTIONS.UNASSIGN_UNIT:
+    case V3_ACTIONS.MAKE_PRIMARY:
+    case V3_ACTIONS.UPDATE_ASSIGNMENT_TIMES:
+      return verifiedMutationResponse(unit, plan, result) || unit + ', CAD verified that update.';
     case V3_ACTIONS.DECLARE_EMERGENCY:
       return `${unit}, unable. The emergency system requires the physical emergency button.`;
     default:
@@ -145,7 +163,7 @@ function compoundV3Response(unit, result, now) {
       } else if (action === V3_ACTIONS.LIST_ACTIVE_CALLS) {
         read = activeCallsResponse('', data);
       } else if (action === V3_ACTIONS.SEARCH_CALLS) {
-        read = activeCallsResponse('', { calls: data.calls || [] });
+        read = searchCallsResponse('', { calls: data.calls || [] });
       } else if (action === V3_ACTIONS.STATUS_CHECK) {
         read = statusCheckResponse('', data);
       } else if (action === V3_ACTIONS.TIME_CHECK) {
@@ -168,6 +186,61 @@ function compoundV3Response(unit, result, now) {
   }
   const suffix = result?.success ? '' : ' Completed changes were not reversed. Do not repeat the entire request.';
   return (unit + ', ' + parts.join('; ') + '.' + suffix).slice(0, 800);
+}
+
+
+function partialV3Response(unit, plan, result) {
+  const data = result?.data || {};
+  const issues = Array.isArray(data.partialErrors) ? data.partialErrors : [];
+  const uncertain = issues.some(item => item?.outcome === 'unknown') || data.unknownCount > 0;
+  const deferred = Number(data.deferredCount || 0) > 0;
+  const parts = [];
+  if (Array.isArray(data.recordedReports) && data.recordedReports.length) parts.push('some report details verified in CAD');
+  if (plan?.action === V3_ACTIONS.REQUEST_BACKUP && data?.requested === true) parts.push('backup requested');
+  if (uncertain) parts.push('another CAD submission is unconfirmed; do not repeat until verified');
+  else if (deferred) parts.push('additional notes not sent because the incident has no confirmed call');
+  else parts.push('some CAD information was not recorded');
+  return (unit + ', ' + parts.join('; ') + '.').slice(0, 500);
+}
+
+function verifiedMutationResponse(unit, plan, result) {
+  if (result?.data?.verified !== true) return null;
+  const data = result.data || {};
+  const call = data.call || null;
+  const input = plan?.input || {};
+  if (plan.action === V3_ACTIONS.CREATE_CALL && call) {
+    const type = clean(call.type || call.nature) || 'requested';
+    const location = clean(call.location || call.address);
+    return unit + ', ' + type + ' call created in CAD' + (location ? ' at ' + location : '') + '.';
+  }
+  if (plan.action === V3_ACTIONS.SET_UNIT_STATUS && data.unit?.status) return unit + ', CAD confirms unit status ' + statusForSpeech(data.unit.status) + '.';
+  if (plan.action === V3_ACTIONS.CHANGE_UNIT_ZONE && data.unit?.zone) return unit + ', CAD confirms zone ' + clean(data.unit.zone) + '.';
+  const labels = {
+    ADD_CALL_NOTE: 'call note', ASSIGN_UNIT: 'unit assignment', UNASSIGN_UNIT: 'unit removal',
+    CLEAR_UNIT: 'unit clearance', CLOSE_CALL: 'call closure', MAKE_PRIMARY: 'primary unit change',
+    UPDATE_ASSIGNMENT_TIMES: 'assignment times',
+  };
+  if (call && labels[plan.action]) return unit + ', ' + labels[plan.action] + ' verified in CAD.';
+  if (plan.action === V3_ACTIONS.UPDATE_CALL && call) {
+    const fields = Object.keys(input).filter(k => !['callId', 'callRef'].includes(k));
+    return unit + ', call update verified in CAD' + (fields.length ? ': ' + fields.slice(0, 5).join(', ') : '') + '.';
+  }
+  return null;
+}
+
+function searchCallsResponse(unit, data) {
+  const calls = Array.isArray(data?.calls) ? data.calls : [];
+  if (!calls.length) return unit + ', no CAD calls matched that search.';
+  const summaries = calls.slice(0, 5).map(call => {
+    const id = callNumber(call);
+    const nature = clean(call?.nature || call?.type || call?.call_type) || 'nature unavailable';
+    const location = clean(call?.location || call?.address);
+    const status = clean(call?.status);
+    return (id ? 'call ' + id + ', ' : '') + nature + (location ? ' at ' + location : '') + (status ? ', ' + status : '');
+  });
+  const rest = calls.length > summaries.length ? '; plus ' + (calls.length - summaries.length) + ' more' : '';
+  return (unit + ', ' + calls.length + ' CAD call' + (calls.length === 1 ? '' : 's') +
+    ' matched: ' + summaries.join('; ') + rest + '.').slice(0, 700);
 }
 
 function shortAction(value) {
@@ -204,8 +277,10 @@ function currentCallResponse(unit, data) {
   const number = callNumber(call);
   const nature = clean(call?.nature || call?.type || call?.call_type);
   const location = clean(call?.location || call?.address);
+  const status = clean(call?.status);
+  const priority = clean(call?.priority);
   if (!number && !nature && !location) return `${unit}, no current call found.`;
-  return `${unit}, ${number ? `call ${number}` : 'your current call'}${nature ? `, ${nature}` : ''}${location ? ` at ${location}` : ''}.`;
+  return (`${unit}, ${number ? `call ${number}` : 'your current call'}${nature ? `, ${nature}` : ''}${location ? ` at ${location}` : ''}${status ? `, status ${status}` : ''}${priority ? `, priority ${priority}` : ''}.`).slice(0, 600);
 }
 
 function statusCheckResponse(unit, data) {
