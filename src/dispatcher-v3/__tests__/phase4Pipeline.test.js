@@ -97,7 +97,10 @@ describe('Dispatcher V3 phase 4 pipeline', () => {
       speakerCallsign: 'INDIANA-1',
       now: new Date('2026-08-07T15:59:00Z'),
     });
-    expect(text).toBe('Ten-four, eleven fifty-nine hours.');
+    // A synthetic success response with no independent CAD read-back is not
+    // permission to claim that a call was created. Preserve the actual
+    // verifier boundary instead of asking the composer to lie on air.
+    expect(text).toBe('INDIANA-1, unable to verify that change in CAD.');
     expect(text).not.toContain('26-000123');
   });
 

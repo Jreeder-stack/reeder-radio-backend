@@ -24,7 +24,7 @@ if (!['baseline', 'acceptance'].includes(mode)) throw new Error(`Unknown DISPATC
 const ledger = [];
 // Repaired cases must assert the fixed behavior in EVERY mode. Unrepaired
 // cases retain their pinned baseline until their owning work item is finished.
-const repairedCases = new Set(['R01', 'R02', 'R03', 'R04', 'R05', 'R06', 'R07', 'R09', 'R10', 'R11', 'R12']);
+const repairedCases = new Set(['R01', 'R02', 'R03', 'R04', 'R05', 'R06', 'R07', 'R08', 'R09', 'R10', 'R11', 'R12', 'R13', 'R14']);
 let harnesses = [];
 let networkGuard;
 

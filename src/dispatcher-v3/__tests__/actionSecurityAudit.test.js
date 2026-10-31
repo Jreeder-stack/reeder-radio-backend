@@ -23,7 +23,7 @@ describe('AI-DISP-V3 03-05 tool authorization, schemas and untrusted input', () 
   });
   it('rejects prototype fields, nested instruction objects and unsafe control characters', () => {
     for (const input of [JSON.parse('{"__proto__":"pwn"}'),{unitId:{injected:'A1'}},
-      {unitId:'A1\\u0000evil'}, {unitId:'A1',unitIds:[{id:'other-center'}]}]) {
+      {unitId:'A1' + String.fromCharCode(0) + 'evil'}, {unitId:'A1',unitIds:[{id:'other-center'}]}]) {
       expect(() => validateV3InputShape(input)).toThrow();
     }
   });

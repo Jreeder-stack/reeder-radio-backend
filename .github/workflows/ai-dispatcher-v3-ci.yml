@@ -59,6 +59,13 @@ jobs:
           node --check src/dispatcher-v3/turnScheduler.js
           node --check src/dispatcher-v3/intentPlanner.js
           node --check src/dispatcher-v3/semanticContract.js
+          node --check src/dispatcher-v3/actionReferenceGuard.js
+          node --check src/dispatcher-v3/cadOutcomeReconciliation.js
+          node --check src/dispatcher-v3/__tests__/referenceEvidence.test.js
+          node --check src/dispatcher-v3/__tests__/actionSecurityAudit.test.js
+          node --check src/dispatcher-v3/__tests__/outcomeReconciliation.test.js
+          node --check src/dispatcher-v3/__tests__/factualResponseContract.test.js
+          node --check src/dispatcher-v3/__tests__/semanticActionIntegration.test.js
           node --check src/dispatcher-v3/compoundActions.js
           node --check src/dispatcher-v3/__tests__/compoundActions.test.js
           node --check src/dispatcher-v3/__tests__/semanticInterpretation.test.js
