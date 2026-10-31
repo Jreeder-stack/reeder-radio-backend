@@ -34,7 +34,7 @@ function resolveFloorIdentity(service, channelId, rawFloorKey) {
   };
 }
 
-async function resolveAuthorizedChannel(unitId, rawChannelId) {
+async function resolveAuthorizedChannel(unitId, rawChannelId, radioId = null) {
   const requestedChannel = canonicalChannelKey(rawChannelId);
   if (!unitId || !requestedChannel) return null;
 
@@ -48,8 +48,10 @@ async function resolveAuthorizedChannel(unitId, rawChannelId) {
        WHERE (u.unit_id = $1 OR u.username = $1)
          AND (c.id::text = $2 OR COALESCE(c.zone, 'Default') || '__' || c.name = $2)
          AND c.enabled = true
+         AND ($3::varchar IS NULL OR NOT EXISTS (SELECT 1 FROM radios r WHERE r.radio_id = $3 AND r.custom_channel_programming = true)
+              OR EXISTS (SELECT 1 FROM radio_channel_programming rc WHERE rc.radio_id = $3 AND rc.channel_id = c.id))
        LIMIT 1`,
-      [unitId, requestedChannel]
+      [unitId, requestedChannel, radioId]
     );
 
     if (accessResult.rows.length === 0) return null;
@@ -91,7 +93,7 @@ function installCadChannelAccessHardening(service) {
       return originalChannelJoin(socket, data);
     }
 
-    const authorizedChannel = await resolveAuthorizedChannel(socket.unitId, data?.channelId);
+    const authorizedChannel = await resolveAuthorizedChannel(socket.unitId, data?.channelId, socket.isRadioDevice ? socket.radioId : null);
     if (!authorizedChannel) {
       emitChannelAccessDenied(socket, data?.channelId, 'channel:join');
       return;

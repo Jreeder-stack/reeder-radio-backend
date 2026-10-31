@@ -46,6 +46,25 @@ class Hd760Preferences(context: Context) {
         editor.apply()
     }
 
+    /**
+     * Radio Management is the programming authority. When its authorized lineup
+     * changes, replace old per-zone defaults so new channels actually occupy
+     * the rotary slots in the order supplied by the server. This is never run
+     * merely because a cached lineup is opened while offline.
+     */
+    fun applyServerLineup(zones: List<Zone>): Boolean {
+        val editor = prefs.edit()
+        prefs.all.keys.filter { it.startsWith("zone:") && it.contains(":slot:") }
+            .forEach { editor.remove(it) }
+        zones.forEach { zone ->
+            zone.channels.take(Hd760KnobMapping.SLOT_COUNT)
+                .forEachIndexed { index, channel ->
+                    editor.putInt(slotKey(zone, index), channel.id)
+                }
+        }
+        return editor.commit()
+    }
+
     fun channelIdForSlot(zone: Zone, position: Int): Int? {
         if (position !in 0 until Hd760KnobMapping.SLOT_COUNT) return null
         val key = slotKey(zone, position)

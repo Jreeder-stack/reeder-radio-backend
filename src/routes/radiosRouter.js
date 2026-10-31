@@ -11,6 +11,7 @@ import {
   assignRadioUnit,
   setRadioLocked,
   getAllUsers,
+  getUserById,
   updateRadioFcmToken,
   setRadioKioskUnlockExpiresAt,
   clearRadioKioskUnlockExpiresAt,
@@ -19,6 +20,11 @@ import {
 import pool from '../db/index.js';
 import { signalingService } from '../services/signalingService.js';
 import { sendDataToRadioToken } from '../services/fcmService.js';
+import { getAccessibleChannels } from '../services/channelsService.js';
+import {
+  readRadioProgramming, replaceRadioProgramming, filterRadioChannels,
+  validateRadioChannelIds
+} from '../services/radioChannelProgramming.js';
 
 const DEFAULT_KIOSK_UNLOCK_MINUTES = 15;
 const MAX_KIOSK_UNLOCK_MINUTES = 240;
@@ -143,6 +149,75 @@ router.get('/users', requireDispatcher, async (req, res) => {
   } catch (err) {
     console.error('[Radios] Users list error:', err);
     return res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Program an individual radio. A device's selection cannot exceed the
+// server-authorized channel permissions of its assigned unit.
+router.get('/:radioId/channels', requireDispatcher, async (req, res) => {
+  try {
+    const radio = await getRadioById(req.params.radioId);
+    if (!radio) return res.status(404).json({ error: 'Radio not found' });
+    const user = radio.assigned_unit_id ? await getUserById(radio.assigned_unit_id) : null;
+    const authorized = user ? await getAccessibleChannels(user.id, user.role) : [];
+    const program = await readRadioProgramming(radio.radio_id, radio.custom_channel_programming);
+    return res.json({
+      radioId: radio.radio_id,
+      assignedUnitId: user?.id ?? null,
+      unitIdentity: user?.unit_id || user?.username || null,
+      custom: program.custom,
+      channelIds: filterRadioChannels(authorized, program).map(ch => Number(ch.id)),
+      authorizedChannels: authorized.map(ch => ({
+        id: Number(ch.id), name: ch.name, zone: ch.zone, room_key: ch.room_key
+      })),
+    });
+  } catch (err) {
+    console.error('[Radios] Channel programming read error:', err);
+    return res.status(500).json({ error: 'Unable to load radio channels' });
+  }
+});
+
+router.put('/:radioId/channels', requireDispatcher, async (req, res) => {
+  try {
+    const radio = await getRadioById(req.params.radioId);
+    if (!radio) return res.status(404).json({ error: 'Radio not found' });
+    if (!radio.assigned_unit_id) {
+      return res.status(409).json({ error: 'Assign a unit before programming channels' });
+    }
+    const user = await getUserById(radio.assigned_unit_id);
+    if (!user) return res.status(409).json({ error: 'Assigned unit no longer exists' });
+    if (!Object.prototype.hasOwnProperty.call(req.body || {}, 'channelIds')) {
+      return res.status(400).json({ error: 'channelIds is required; use null to inherit' });
+    }
+    const authorized = await getAccessibleChannels(user.id, user.role);
+    let ids;
+    try {
+      ids = validateRadioChannelIds(req.body.channelIds, authorized);
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
+    }
+    await replaceRadioProgramming(radio.radio_id, radio.assigned_unit_id, ids);
+    const socket = _findRadioSocket(radio.radio_id);
+    if (socket) {
+      // A changed lineup must not retain old room membership or a TX floor.
+      signalingService.removeSocketFromChannels(socket, 'radio-programming-changed');
+      socket.emit('radio:channels_updated', { radioId: radio.radio_id });
+    }
+    try {
+      await logActivity(req.user?.id || null, req.user?.username || 'dispatcher',
+        'radio_channels_programmed',
+        { radioId: radio.radio_id, custom: ids !== null,
+          channelIds: ids || [], assignedUnitId: radio.assigned_unit_id }, null);
+    } catch (auditErr) {
+      console.warn('[Radios] Channel programming audit failed:', auditErr.message);
+    }
+    return res.json({ success: true, custom: ids !== null });
+  } catch (err) {
+    if (err.code === 'RADIO_ASSIGNMENT_CHANGED') {
+      return res.status(409).json({ error: err.message });
+    }
+    console.error('[Radios] Radio programming save error:', err);
+    return res.status(500).json({ error: 'Unable to save radio channels' });
   }
 });
 

@@ -300,6 +300,19 @@ export async function initializeDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_serial_number ON radios (serial_number)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_token ON radios (token)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_radios_assigned_unit_id ON radios (assigned_unit_id)`);
+    // Unconfigured radios inherit their assigned user's channel list. Custom
+    // programming allows an explicit subset, including an empty list.
+    await client.query(`ALTER TABLE radios ADD COLUMN IF NOT EXISTS custom_channel_programming BOOLEAN NOT NULL DEFAULT false`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS radio_channel_programming (
+        radio_id VARCHAR(6) NOT NULL REFERENCES radios(radio_id) ON DELETE CASCADE,
+        channel_id INTEGER NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+        sort_order INTEGER NOT NULL,
+        PRIMARY KEY (radio_id, channel_id),
+        UNIQUE (radio_id, sort_order)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_radio_channel_programming_channel ON radio_channel_programming (channel_id)`);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS devices (
@@ -1117,11 +1130,35 @@ export async function getAllRadios() {
 }
 
 export async function assignRadioUnit(radioId, unitId) {
-  const result = await pool.query(
-    `UPDATE radios SET assigned_unit_id = $1 WHERE radio_id = $2 RETURNING *`,
-    [unitId, radioId]
-  );
-  return result.rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const current = await client.query(
+      'SELECT assigned_unit_id FROM radios WHERE radio_id = $1 FOR UPDATE', [radioId]
+    );
+    if (current.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return undefined;
+    }
+    const changed = String(current.rows[0].assigned_unit_id ?? '') !== String(unitId ?? '');
+    if (changed) {
+      await client.query('DELETE FROM radio_channel_programming WHERE radio_id = $1', [radioId]);
+    }
+    const updated = await client.query(
+      `UPDATE radios
+       SET assigned_unit_id = $1,
+           custom_channel_programming = CASE WHEN $3 THEN false ELSE custom_channel_programming END
+       WHERE radio_id = $2 RETURNING *`,
+      [unitId, radioId, changed]
+    );
+    await client.query('COMMIT');
+    return updated.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function setRadioLocked(radioId, isLocked) {

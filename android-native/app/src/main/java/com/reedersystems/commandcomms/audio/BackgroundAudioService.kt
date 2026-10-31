@@ -394,7 +394,9 @@ class BackgroundAudioService : Service() {
                     hd760Press.down()
                     radioEngine?.udpTransport?.suppressSameUnitDuringLocalTx = true
                 }
-                handleRadioPttDown(intent.getBooleanExtra(EXTRA_NEEDS_SIGNALING, false))
+                // A saved HD760 lineup is display-only without a live authenticated channel.
+                handleRadioPttDown(intent.getBooleanExtra(EXTRA_NEEDS_SIGNALING, false) ||
+                    BuildConfig.FLAVOR == "hd760")
                 if (BuildConfig.FLAVOR == "hd760" && pttState == PttState.IDLE) {
                     // Blocked/unprogrammed PTT must not leave scan RX suspended.
                     radioEngine?.udpTransport?.suppressSameUnitDuringLocalTx = false
@@ -1199,6 +1201,25 @@ class BackgroundAudioService : Service() {
                 val engine = radioEngine ?: return@collectLatest
                 val currentRoomKey = servicePrefs.channelRoomKey
                 when (event) {
+                    SignalingEvent.RadioChannelsUpdated -> {
+                        if (BuildConfig.FLAVOR == "hd760") {
+                            // Server programming changes invalidate existing joins
+                            // and floors. Stop an active physical TX immediately.
+                            hd760Press.up()
+                            hd760PermitJob?.cancel()
+                            hd760PermitJob = null
+                            if (pttState == PttState.CONNECTING ||
+                                pttState == PttState.TRANSMITTING) {
+                                handleRadioPttUp(bypassDebounce = true)
+                            }
+                            joinedSignalingChannelId = null
+                            pendingSignalingChannelId = null
+                            scope.launch {
+                                delay(350L)
+                                syncBackgroundSignalingChannel()
+                            }
+                        }
+                    }
                     is SignalingEvent.RadioChannelJoined -> {
                         if (BuildConfig.FLAVOR == "hd760" &&
                             event.channelId != currentRoomKey &&

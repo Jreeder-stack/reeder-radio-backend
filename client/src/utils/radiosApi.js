@@ -55,6 +55,17 @@ export async function kioskRelockRadio(radioId) {
   });
 }
 
+export async function getRadioChannels(radioId) {
+  return fetchRadios(`/${encodeURIComponent(radioId)}/channels`);
+}
+
+export async function saveRadioChannels(radioId, channelIds) {
+  return fetchRadios(`/${encodeURIComponent(radioId)}/channels`, {
+    method: 'PUT',
+    body: JSON.stringify({ channelIds }),
+  });
+}
+
 export async function getRadioUsers() {
   return fetchRadios('/users');
 }

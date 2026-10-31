@@ -25,11 +25,14 @@ import com.reedersystems.commandcomms.hd760.Hd760Preferences
 import com.reedersystems.commandcomms.hd760.Hd760SideAction
 import com.reedersystems.commandcomms.hd760.Hd760KnobMapping
 import com.reedersystems.commandcomms.hd760.Hd760ChannelRecovery
+import com.reedersystems.commandcomms.hd760.Hd760ChannelLocation
 import com.reedersystems.commandcomms.audio.radio.RadioState
 import com.reedersystems.commandcomms.audio.radio.SignalQuality
 import com.reedersystems.commandcomms.data.model.Channel
 import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.data.model.Zone
+import com.reedersystems.commandcomms.data.model.toZones
+import com.reedersystems.commandcomms.data.repository.HttpException
 import com.reedersystems.commandcomms.messaging.CommandCommsFirebaseService
 import com.reedersystems.commandcomms.signaling.ConnectionState
 import com.reedersystems.commandcomms.signaling.SignalingEvent
@@ -41,6 +44,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.tasks.await
 
 private const val TAG = "[PTT-DIAG]"
@@ -66,6 +71,7 @@ data class RadioUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val channelRetryPending: Boolean = false,
+    val channelSourceCached: Boolean = false,
     val signalingState: ConnectionState = ConnectionState.DISCONNECTED,
     val pttState: PttState = PttState.IDLE,
     val activeTransmittingUnit: String? = null,
@@ -216,6 +222,11 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 BackgroundAudioService.ACTION_PTT_TX_ENDED -> {
                     Log.d(TAG, "PTT_TX_ENDED received — setting pttState = IDLE")
                     _uiState.update { it.copy(pttState = PttState.IDLE) }
+                    // A new authorized lineup may have arrived during TX.
+                    // Apply the physical knob after the floor is released.
+                    if (isHd760 && _uiState.value.currentChannel != null) {
+                        hd760Prefs?.lastPosition()?.let { selectHd760Position(it) }
+                    }
                 }
 
                 // Emergency broadcasts — service owns signaling, ViewModel owns UI only
@@ -254,6 +265,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 updateBattery()
             }
         }
+        if (isHd760) restoreHd760OfflineLineup()
         loadChannels()
         observeSignaling()
         collectKeyEvents()
@@ -409,105 +421,205 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(batteryLevel = pct) }
     }
 
+    /**
+     * Offline programming is local radio data, not a network auth grant.
+     * Load it immediately so zone/knob selection survives airplane mode,
+     * power cycling, DNS failure, and ordinary app updates.
+     */
+    private fun restoreHd760OfflineLineup() {
+        val radioId = app.radioTokenStore.getRadioId()
+        val assignedUnit = app.radioTokenStore.getAssignedUnitId()
+        val cached = app.hd760ChannelCache.load(radioId, assignedUnit)
+        if (cached == null || assignedUnit != _uiState.value.unitId) {
+            app.hd760SlotActive.value = false
+            return
+        }
+        Log.i(STARTUP_TAG, "HD760_OFFLINE_LINEUP_LOADED channels=${cached.size}")
+        applyHd760Lineup(cached.toZones(), fromCache = true)
+    }
+
+    /**
+     * Align UI, knob and the background service to the same known channel.
+     * Never silently change a currently held TX to a different channel.
+     * A fresh server response removing the active channel revokes it.
+     */
+    private fun applyHd760Lineup(zones: List<Zone>, fromCache: Boolean) {
+        val before = _uiState.value
+        val currentUnit = before.unitId
+        val oldChannel = before.currentChannel
+        val liveRoomKey = app.serviceConnectionPrefs.channelRoomKey
+        val liveChannelId = app.serviceConnectionPrefs.channelId
+        val saved = Hd760ChannelRecovery.findSavedChannel(
+            zones = zones,
+            currentUnitId = currentUnit,
+            savedUnitId = app.serviceConnectionPrefs.unitId,
+            savedChannelId = liveChannelId,
+            savedRoomKey = liveRoomKey
+        )
+        var previous: Hd760ChannelLocation? = null
+        if (oldChannel != null) {
+            zones.forEachIndexed { zoneIndex, zone ->
+                zone.channels.forEachIndexed { channelIndex, channel ->
+                    if (channel.id == oldChannel.id && channel.roomKey == oldChannel.roomKey) {
+                        previous = Hd760ChannelLocation(zoneIndex, channelIndex)
+                    }
+                }
+            }
+        }
+        val selection = saved ?: previous
+        val available = zones.flatMap { it.channels }
+        val activePtt = before.pttState != PttState.IDLE || before.txMediaActive
+
+        // A server-confirmed removal must stop a stale background floor. Offline
+        // snapshots cannot be interpreted as fresh revocations.
+        val revokedLiveRoom = !fromCache && liveRoomKey != null &&
+            available.none { it.id == liveChannelId && it.roomKey == liveRoomKey }
+        if (revokedLiveRoom || available.isEmpty()) {
+            if (liveRoomKey != null) {
+                sendServiceIntent(BackgroundAudioService.ACTION_STOP)
+            }
+            app.serviceConnectionPrefs.channelId = -1
+            app.serviceConnectionPrefs.channelRoomKey = null
+            app.serviceConnectionPrefs.channelName = null
+        }
+
+        val scanChannels = available.map { ScanChannelItem(it.id, it.name, loadScanEnabled(it.id)) }
+        zones.forEach { hd760Prefs?.initializeZone(it) }
+        _uiState.update {
+            it.copy(
+                zones = zones,
+                currentZoneIndex = selection?.zoneIndex ?: 0,
+                currentChannelIndex = selection?.channelIndex ?: 0,
+                isLoading = false,
+                error = null,
+                channelRetryPending = false,
+                channelSourceCached = fromCache,
+                scanChannels = scanChannels,
+                isScanning = scanPrefs.getBoolean(KEY_SCAN_ACTIVE, false),
+                hd760SlotEmpty = available.isEmpty()
+            )
+        }
+
+        if (available.isEmpty()) {
+            app.hd760SlotActive.value = false
+            syncHd760ScanConfig()
+            return
+        }
+
+        app.hd760SlotActive.value = true
+        val position = hd760Prefs?.lastPosition()
+        _uiState.update { it.copy(hd760KnobPosition = position) }
+
+        // Authorization revocation overrides an ongoing PTT; otherwise leave
+        // the service's live channel in place until the current PTT is released.
+        if (!activePtt || revokedLiveRoom) {
+            val zone = _uiState.value.currentZone
+            val mapped = if (zone != null && position != null)
+                hd760Prefs?.channelIdForSlot(zone, position) else null
+            if (position != null && mapped != _uiState.value.currentChannel?.id) {
+                selectHd760Position(position, if (revokedLiveRoom) null else liveRoomKey)
+            } else if (_uiState.value.currentChannel != null &&
+                app.serviceConnectionPrefs.channelRoomKey != _uiState.value.currentChannel?.roomKey
+            ) {
+                updateServiceChannel()
+            }
+        } else {
+            Log.i(STARTUP_TAG, "HD760_LINEUP_SYNC_DEFERRED_ACTIVE_PTT")
+        }
+        syncHd760ScanConfig()
+    }
+
+    private fun revokeHd760LocalProgramming(reason: String) {
+        if (!isHd760) return
+        Log.w(STARTUP_TAG, "HD760_PROGRAMMING_INVALIDATED reason=$reason")
+        hd760AnnouncementJob?.cancel()
+        app.hd760ChannelCache.clear()
+        app.hd760SlotActive.value = false
+        app.serviceConnectionPrefs.channelId = -1
+        app.serviceConnectionPrefs.channelRoomKey = null
+        app.serviceConnectionPrefs.channelName = null
+        sendServiceIntent(BackgroundAudioService.ACTION_STOP)
+        _uiState.update {
+            it.copy(zones = emptyList(), currentZoneIndex = 0, currentChannelIndex = 0,
+                scanChannels = emptyList(), channelSourceCached = false,
+                hd760SlotEmpty = true, channelRetryPending = false)
+        }
+    }
+
+    private fun reloadHd760Channels() {
+        if (!isHd760) return
+        channelLoadJob?.cancel()
+        channelLoadJob = null
+        loadChannels()
+    }
+
     private fun loadChannels() {
-        // Single owner for the channel catalog fetch: HD760 retries transient errors
-        // without launching parallel requests or recreating the PTT/audio service.
         if (channelLoadJob?.isActive == true) return
         channelLoadJob = viewModelScope.launch {
             var failedAttempts = 0
-            _uiState.update { it.copy(isLoading = true, error = null, channelRetryPending = false) }
+            _uiState.update { it.copy(isLoading = it.zones.isEmpty(),
+                error = null, channelRetryPending = false) }
             while (isActive) {
                 Log.d(STARTUP_TAG, "CHANNEL_FETCH_START attempt=${failedAttempts + 1}")
                 val result = app.channelRepository.getZones()
                 if (!isActive) return@launch
                 if (result.isSuccess) {
                     val zones = result.getOrThrow()
-                    Log.d(STARTUP_TAG, "CHANNEL_FETCH_SUCCESS zones=${zones.size} attempts=${failedAttempts + 1}")
-                    val allChannels = zones.flatMap { it.channels }
-                    val scanChannels = allChannels.map { ch ->
-                        ScanChannelItem(ch.id, ch.name, loadScanEnabled(ch.id))
-                    }
-                    val savedScanning = scanPrefs.getBoolean(KEY_SCAN_ACTIVE, false)
-                    if (isHd760) zones.forEach { hd760Prefs?.initializeZone(it) }
-
-                    // Hardware PTT is owned by BackgroundAudioService, which can
-                    // continue using a previously authorized saved channel while
-                    // this screen has no zones due to an earlier DNS failure.
-                    // Match BOTH unit identity and server-provided ID/room key.
-                    // Do not switch its live TX to the first catalog channel.
-                    val restored = if (isHd760) Hd760ChannelRecovery.findSavedChannel(
-                        zones = zones,
-                        currentUnitId = _uiState.value.unitId,
-                        savedUnitId = app.serviceConnectionPrefs.unitId,
-                        savedChannelId = app.serviceConnectionPrefs.channelId,
-                        savedRoomKey = app.serviceConnectionPrefs.channelRoomKey
-                    ) else null
-                    _uiState.update {
-                        it.copy(
-                            zones = zones,
-                            currentZoneIndex = restored?.zoneIndex ?: 0,
-                            currentChannelIndex = restored?.channelIndex ?: 0,
-                            isLoading = false,
-                            error = null,
-                            channelRetryPending = false,
-                            scanChannels = scanChannels,
-                            isScanning = savedScanning
-                        )
-                    }
+                    Log.d(STARTUP_TAG, "CHANNEL_FETCH_SUCCESS zones=${zones.size}")
                     if (isHd760) {
-                        val position = hd760Prefs?.lastPosition()
-                        if (restored != null) {
-                            _uiState.update {
-                                it.copy(hd760KnobPosition = position, hd760SlotEmpty = false)
-                            }
-                            app.hd760SlotActive.value = true
-                            Log.i(STARTUP_TAG,
-                                "HD760_CHANNEL_DISPLAY_RESTORED room=${app.serviceConnectionPrefs.channelRoomKey}")
-                            // If the physical knob moved during an outage, honor
-                            // it only while idle. Never abort an active transmission
-                            // solely because the channel catalog recovered.
-                            if (position != null) {
-                                val mappedId = hd760Prefs?.channelIdForSlot(
-                                    zones[restored.zoneIndex], position)
-                                if (mappedId != app.serviceConnectionPrefs.channelId) {
-                                    val txActive = _uiState.value.pttState != PttState.IDLE ||
-                                        _uiState.value.txMediaActive
-                                    if (!txActive) {
-                                        selectHd760Position(
-                                            position, app.serviceConnectionPrefs.channelRoomKey)
-                                    } else {
-                                        Log.w(STARTUP_TAG,
-                                            "HD760_KNOB_RESYNC_DEFERRED reason=active_ptt")
-                                    }
-                                }
-                            }
-                        } else {
-                            // Normal initial assignment flow; no validated saved
-                            // service channel exists in this authorized response.
-                            if (position != null) selectHd760Position(position)
+                        val radioId = app.radioTokenStore.getRadioId()
+                        val unitId = app.radioTokenStore.getAssignedUnitId()
+                        if (radioId.isNullOrBlank() || unitId.isNullOrBlank() ||
+                            _uiState.value.unitId != unitId) {
+                            Log.w(STARTUP_TAG, "HD760_CHANNEL_FETCH_DISCARDED assignment_changed")
+                            return@launch
                         }
-                        syncHd760ScanConfig()
+                        val freshChannels = zones.flatMap { it.channels }
+                        val saved = withContext(Dispatchers.IO) {
+                            val previousLineup = app.hd760ChannelCache.load(radioId, unitId)
+                            if (previousLineup != freshChannels &&
+                                hd760Prefs?.applyServerLineup(zones) != true) {
+                                Log.e(STARTUP_TAG, "HD760_KNOB_PROGRAM_SAVE_FAILED")
+                                false
+                            } else {
+                                app.hd760ChannelCache.save(radioId, unitId, freshChannels)
+                            }
+                        }
+                        if (!isActive) return@launch
+                        if (!saved) Log.e(STARTUP_TAG, "HD760_CHANNEL_CACHE_SAVE_FAILED")
+                        applyHd760Lineup(zones, fromCache = false)
+                    } else {
+                        val all = zones.flatMap { it.channels }
+                        _uiState.update { it.copy(zones = zones, isLoading = false,
+                            error = null, channelRetryPending = false,
+                            scanChannels = all.map { c ->
+                                ScanChannelItem(c.id, c.name, loadScanEnabled(c.id)) },
+                            isScanning = scanPrefs.getBoolean(KEY_SCAN_ACTIVE, false)) }
                     }
                     connectSignaling()
                     return@launch
                 }
+
                 failedAttempts++
                 val failure = result.exceptionOrNull()
                     ?: IllegalStateException("Channel request failed")
+                val denied = failure is HttpException &&
+                    (failure.code == 401 || failure.code == 403)
+                if (isHd760 && denied) {
+                    revokeHd760LocalProgramming("server_denied")
+                }
                 val retry = isHd760 && Hd760ChannelRecovery.shouldRetry(failure)
-                Log.e(STARTUP_TAG,
-                    "CHANNEL_FETCH_FAILED attempt=$failedAttempts retry=$retry reason=${failure.message}")
+                Log.e(STARTUP_TAG, "CHANNEL_FETCH_FAILED attempt=$failedAttempts retry=$retry reason=${failure.message}")
                 _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = failure.message ?: "Failed to load channels",
-                        channelRetryPending = retry
-                    )
+                    it.copy(isLoading = false,
+                        // Never replace the offline channel display with a giant DNS error.
+                        error = if (it.zones.isEmpty()) failure.message
+                            ?: "Failed to load channels" else null,
+                        channelRetryPending = retry)
                 }
                 if (!retry) return@launch
                 val backoffMs = Hd760ChannelRecovery.delayAfterFailureMs(failedAttempts)
-                Log.w(STARTUP_TAG,
-                    "CHANNEL_FETCH_RETRY_SCHEDULED attempt=$failedAttempts delayMs=$backoffMs")
+                Log.w(STARTUP_TAG, "CHANNEL_FETCH_RETRY_SCHEDULED attempt=$failedAttempts delayMs=$backoffMs")
                 delay(backoffMs)
             }
         }
@@ -530,6 +642,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     val wasReconnect = hadPriorAuth
                     val hadEmergency = _uiState.value.myEmergencyActive
                     hadPriorAuth = true
+                    if (wasReconnect && isHd760) reloadHd760Channels()
                     val roomKey = _uiState.value.currentChannel?.roomKey
                     if (roomKey != null) {
                         Log.d(STARTUP_TAG, "CHANNEL_JOIN_ATTEMPT channel=$roomKey")
@@ -689,8 +802,13 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                             Log.d(STARTUP_TAG, "CHANNEL_JOIN_SUCCESS channel=${event.channelId}")
                         }
                     }
+                    SignalingEvent.RadioChannelsUpdated -> {
+                        // The dispatcher reprogrammed this specific radio.
+                        reloadHd760Channels()
+                    }
                     is SignalingEvent.RadioLocked -> {
                         Log.d(TAG, "radio:locked — suspending radio functionality")
+                        revokeHd760LocalProgramming("radio_locked")
                         _uiState.update { it.copy(isRadioLocked = true) }
                     }
                     is SignalingEvent.RadioUnlocked -> {
@@ -699,6 +817,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is SignalingEvent.RadioUnassigned -> {
                         Log.d(TAG, "radio:unassigned — navigating to unassigned screen")
+                        revokeHd760LocalProgramming("radio_unassigned")
                         _uiState.update { it.copy(isRadioUnassigned = true) }
                     }
                     is SignalingEvent.RadioAssigned -> {
@@ -706,6 +825,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         val currentUnitId = _uiState.value.unitId
                         Log.d(TAG, "radio:assigned — newUnitId=$newUnitId currentUnitId=$currentUnitId")
                         if (newUnitId != currentUnitId && newUnitId.isNotBlank()) {
+                            revokeHd760LocalProgramming("radio_reassigned")
                             app.radioTokenStore.saveAssignedUnit(newUnitId)
                             app.sessionPrefs.unitId = newUnitId
                             app.sessionPrefs.username = newUnitId

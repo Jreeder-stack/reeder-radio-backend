@@ -16,6 +16,8 @@ import pool, {
   getOrSetRadioDeviceUUID 
 } from '../db/index.js';
 import { randomUUID } from 'crypto';
+import { getAccessibleChannels } from './channelsService.js';
+import { filterRadioChannels, readRadioProgramming } from './radioChannelProgramming.js';
 import { config } from '../config/env.js';
 import { replayNativePages, recordNativePageReceipt } from './nativePageDeliveryService.js';
 
@@ -282,16 +284,21 @@ class SignalingService {
           if (radio.assigned_unit_id) {
             let channelConfig = null;
             try {
-              const cfgRow = await pool.query(
-                `SELECT u.unit_id, uca.channel_id, ch.name AS channel_name, ch.zone,
-                        COALESCE(ch.zone, 'Default') || '__' || ch.name AS room_key
-                 FROM users u
-                 LEFT JOIN user_channel_access uca ON uca.user_id = u.id
-                 LEFT JOIN channels ch ON ch.id = uca.channel_id
-                 WHERE u.id = $1`,
+              const userResult = await pool.query(
+                'SELECT id, username, unit_id, role FROM users WHERE id = $1',
                 [radio.assigned_unit_id]
               );
-              channelConfig = cfgRow.rows;
+              const assignedUser = userResult.rows[0];
+              if (assignedUser) {
+                const authorized = await getAccessibleChannels(assignedUser.id, assignedUser.role);
+                const programming = await readRadioProgramming(
+                  radio.radio_id, radio.custom_channel_programming
+                );
+                channelConfig = filterRadioChannels(authorized, programming).map(ch => ({
+                  unit_id: unitIdentity, channel_id: ch.id,
+                  channel_name: ch.name, zone: ch.zone, room_key: ch.room_key,
+                }));
+              }
             } catch (e) {
               console.warn('[Signaling] Could not fetch channel config for radio:assigned on connect:', e.message);
             }
@@ -1901,8 +1908,10 @@ _findSocketByUnitId(unitId) {
          WHERE (u.unit_id = $1 OR u.username = $1)
            AND (c.id::text = $2 OR COALESCE(c.zone, 'Default') || '__' || c.name = $2)
            AND c.enabled = true
+           AND ($3::varchar IS NULL OR NOT EXISTS (SELECT 1 FROM radios r WHERE r.radio_id = $3 AND r.custom_channel_programming = true)
+                OR EXISTS (SELECT 1 FROM radio_channel_programming rc WHERE rc.radio_id = $3 AND rc.channel_id = c.id))
          LIMIT 1`,
-        [socket.unitId, rawChannelStr]
+        [socket.unitId, rawChannelStr, socket.isRadioDevice ? socket.radioId : null]
       );
 
       if (accessResult.rows.length === 0) {

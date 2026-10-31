@@ -71,6 +71,7 @@ fun AppNavigation() {
 
             if (needsRegistration && radioToken != null) {
                 Log.w(TAG, "Token present but radioId missing/blank — clearing stale prefs")
+                app.hd760ChannelCache.clear()
                 app.radioTokenStore.clear()
                 app.apiClient.radioToken = null
             }
@@ -91,6 +92,7 @@ fun AppNavigation() {
             val isValid = validateTokenWithServer(app)
             if (!isValid) {
                 Log.w(TAG, "Stored token failed server validation — clearing prefs")
+                app.hd760ChannelCache.clear()
                 app.radioTokenStore.clear()
                 app.apiClient.radioToken = null
                 navController.navigate(Routes.DEVICE_REGISTRATION) {
@@ -151,6 +153,7 @@ fun AppNavigation() {
             RadioFlavorScreen(
                 onLocked = if (isRadioDevice) {
                     {
+                        app.hd760ChannelCache.clear()
                         app.radioTokenStore.clearAssignedUnit()
                         navController.navigate(Routes.locked(currentRadioId)) {
                             popUpTo(Routes.RADIO) { inclusive = true }
@@ -163,6 +166,7 @@ fun AppNavigation() {
                             action = BackgroundAudioService.ACTION_STOP
                         }
                         ContextCompat.startForegroundService(context, stopIntent)
+                        app.hd760ChannelCache.clear()
                         app.radioTokenStore.clearAssignedUnit()
                         app.sessionPrefs.unitId = null
                         app.sessionPrefs.username = null
@@ -289,16 +293,19 @@ private suspend fun validateTokenWithServer(app: CommandCommsApp): Boolean =
                         val localUnitId = app.radioTokenStore.getAssignedUnitId()
                         if (serverAssignedId != null && serverUnitId != null && serverUnitId != localUnitId) {
                             Log.d(TAG, "Ping reports assignment unitId=$serverUnitId (local=$localUnitId) — syncing")
+                            app.hd760ChannelCache.clear()
                             app.radioTokenStore.saveAssignedUnit(serverUnitId)
                             app.sessionPrefs.unitId = serverUnitId
                             app.sessionPrefs.username = serverUnitId
                         } else if (serverAssignedId != null && serverUnitId == null) {
                             Log.w(TAG, "Ping reports assignedUnitId=$serverAssignedId but unitId unresolved — clearing local assignment")
+                            app.hd760ChannelCache.clear()
                             app.radioTokenStore.clearAssignedUnit()
                             app.sessionPrefs.unitId = null
                             app.sessionPrefs.username = null
                         } else if (serverAssignedId == null && localUnitId != null) {
                             Log.d(TAG, "Ping reports no assignment but local has $localUnitId — clearing")
+                            app.hd760ChannelCache.clear()
                             app.radioTokenStore.clearAssignedUnit()
                             app.sessionPrefs.unitId = null
                             app.sessionPrefs.username = null
@@ -310,9 +317,11 @@ private suspend fun validateTokenWithServer(app: CommandCommsApp): Boolean =
                 }
                 (code == 401 || code == 403) && body.contains("RADIO_LOCKED") -> {
                     Log.d(TAG, "Token valid but radio is locked — keeping prefs")
+                    app.hd760ChannelCache.clear()
                     true
                 }
                 code == 401 || code == 403 -> {
+                    app.hd760ChannelCache.clear()
                     Log.w(TAG, "Token validation failed with $code — invalid token")
                     false
                 }

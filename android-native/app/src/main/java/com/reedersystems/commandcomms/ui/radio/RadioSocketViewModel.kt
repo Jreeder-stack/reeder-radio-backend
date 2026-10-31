@@ -78,6 +78,7 @@ class RadioSocketViewModel(application: Application) : AndroidViewModel(applicat
                         Log.w(TAG, "radio:assigned received with blank unitId — ignoring")
                         return@on
                     }
+                    if (app.radioTokenStore.getAssignedUnitId() != unitId) app.hd760ChannelCache.clear()
                     app.radioTokenStore.saveAssignedUnit(unitId)
                     app.sessionPrefs.unitId = unitId
                     app.sessionPrefs.username = unitId
@@ -115,6 +116,7 @@ class RadioSocketViewModel(application: Application) : AndroidViewModel(applicat
 
             s.on("radio:unassigned") { _ ->
                 Log.d(TAG, "radio:unassigned event — clearing assigned unit")
+                app.hd760ChannelCache.clear()
                 app.radioTokenStore.clearAssignedUnit()
                 app.sessionPrefs.unitId = null
                 app.sessionPrefs.username = null

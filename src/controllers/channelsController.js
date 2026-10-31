@@ -1,15 +1,29 @@
 import * as channelsService from '../services/channelsService.js';
 import { success, error } from '../utils/response.js';
-import { getChannelAnnouncementAudio, getZoneAnnouncementAudio } from '../db/index.js';
+import { getChannelAnnouncementAudio, getZoneAnnouncementAudio, getUserById } from '../db/index.js';
+import { filterRadioChannels, readRadioProgramming } from '../services/radioChannelProgramming.js';
 
 export async function getAccessibleChannels(req, res) {
   try {
-    const userId = req.user?.id ?? req.session?.user?.id;
-    const userRole = req.user?.role ?? req.session?.user?.role ?? 'user';
-    const username = req.user?.username ?? req.session?.user?.username ?? (req.radio ? `radio:${req.radio.radio_id}` : 'unknown');
+    // A radio's principal and current unit assignment come from its validated
+    // token, never from a saved device label or an incidental session cookie.
+    const assignedUser = req.radio?.assigned_unit_id
+      ? await getUserById(req.radio.assigned_unit_id)
+      : null;
+    const userId = req.radio ? (assignedUser?.id ?? null)
+      : (req.user?.id ?? req.session?.user?.id);
+    const userRole = req.radio ? (assignedUser?.role ?? 'user')
+      : (req.user?.role ?? req.session?.user?.role ?? 'user');
+    const username = req.radio ? `radio:${req.radio.radio_id}`
+      : (req.user?.username ?? req.session?.user?.username ?? 'unknown');
     console.log(`[API /channels] Request from user="${username}" id=${userId} role=${userRole} sessionID=${req.sessionID?.substring(0, 8)}...`);
     
-    const channels = await channelsService.getAccessibleChannels(userId, userRole);
+    const allowed = userId == null ? [] :
+      await channelsService.getAccessibleChannels(userId, userRole);
+    const program = req.radio
+      ? await readRadioProgramming(req.radio.radio_id, req.radio.custom_channel_programming)
+      : null;
+    const channels = req.radio ? filterRadioChannels(allowed, program) : allowed;
     
     console.log(`[API /channels] Returning ${channels.length} channels to "${username}" — names: [${channels.map(c => c.room_key || c.name).join(', ')}]`);
     

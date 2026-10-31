@@ -299,7 +299,10 @@ fun RadioFlavorScreen(
                                 textAlign = TextAlign.Center)
                         }
                     }
-                    if (state.error != null) {
+                    if (state.channelSourceCached && !state.isConnected) {
+                        Text("SAVED CHANNELS", color = Muted,
+                            fontSize = 9.sp, maxLines = 1)
+                    } else if (state.error != null) {
                         Text(state.error ?: "", color = Color.Red,
                             fontSize = 9.sp, maxLines = 1)
                     }
@@ -326,16 +329,15 @@ fun RadioFlavorScreen(
                     fontSize = 10.sp, maxLines = 1)
                 Text(
                     when {
-                        state.channelRetryPending -> "RETRYING"
-                        state.isConnected && state.currentChannel == null -> "NO CHANNEL"
-                        state.isConnected -> "ONLINE"
-                        else -> "OFFLINE"
+                        !state.isConnected -> "OFFLINE"
+                        state.channelRetryPending -> "SYNCING"
+                        state.currentChannel == null -> "NO CHANNEL"
+                        else -> "ONLINE"
                     },
                     color = when {
-                        state.channelRetryPending -> Color(0xFFFFD166)
-                        state.isConnected && state.currentChannel == null -> Color(0xFFFFD166)
-                        state.isConnected -> Color(0xFF7DE3A7)
-                        else -> Color(0xFFFFB4B4)
+                        !state.isConnected -> Color(0xFFFFB4B4)
+                        state.channelRetryPending || state.currentChannel == null -> Color(0xFFFFD166)
+                        else -> Color(0xFF7DE3A7)
                     },
                     fontSize = 10.sp, maxLines = 1)
             }

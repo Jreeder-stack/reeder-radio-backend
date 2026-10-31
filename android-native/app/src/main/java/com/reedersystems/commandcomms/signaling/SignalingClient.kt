@@ -361,6 +361,10 @@ class SignalingClient(var serverUrl: String, private var radioToken: String? = n
             _events.tryEmit(SignalingEvent.RadioUnlocked)
         }
 
+        s.on("radio:channels_updated") { _ ->
+            _events.tryEmit(SignalingEvent.RadioChannelsUpdated)
+        }
+
         s.on("radio:unassigned") { _ ->
             Log.d(TAG, "radio:unassigned received on main signaling socket")
             _events.tryEmit(SignalingEvent.RadioUnassigned)

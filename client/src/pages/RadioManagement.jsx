@@ -10,6 +10,7 @@ import {
   getRadioUsers,
 } from '../utils/radiosApi.js';
 import { useTheme } from '../context/ThemeContext.jsx';
+import RadioChannelProgrammingDialog from '../components/RadioChannelProgrammingDialog.jsx';
 
 const DEFAULT_KIOSK_UNLOCK_MINUTES = 15;
 
@@ -123,6 +124,7 @@ export default function RadioManagement({ user }) {
   const [kioskDurations, setKioskDurations] = useState({});
   const [nowMs, setNowMs] = useState(Date.now());
   const [addOpen, setAddOpen] = useState(false);
+  const [programmingRadio, setProgrammingRadio] = useState(null);
   const [adding, setAdding] = useState(false);
 
   useEffect(() => { const id=setInterval(()=>setNowMs(Date.now()),5000); return()=>clearInterval(id); }, []);
@@ -209,7 +211,7 @@ export default function RadioManagement({ user }) {
         {loading ? <div style={{padding:60,textAlign:'center'}}>Loading radios…</div> : (
           <div style={{overflowX:'auto'}}>
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:14}}>
-              <thead><tr style={{borderBottom:'1px solid var(--dispatch-border)'}}>{['Radio ID','IMEI','Serial #','Status','Assigned Unit','Last Seen','Kiosk','Lock'].map(c=><th key={c} style={th}>{c}</th>)}</tr></thead>
+              <thead><tr style={{borderBottom:'1px solid var(--dispatch-border)'}}>{['Radio ID','IMEI','Serial #','Status','Assigned Unit','Channels','Last Seen','Kiosk','Lock'].map(c=><th key={c} style={th}>{c}</th>)}</tr></thead>
               <tbody>
                 {filtered.map(radio=>{
                   const current=String(radio.assigned_unit_id||'');
@@ -228,6 +230,13 @@ export default function RadioManagement({ user }) {
                       </select>
                       <button disabled={!changed||saving} onClick={()=>handleSubmitAssign(radio.radio_id)} style={{...btn,background:'#4f46e5',opacity:(!changed||saving)?.4:1}}>{saving?'Saving…':'Submit'}</button>
                     </div></td>
+                    <td style={td}>
+                      <button disabled={saving || !radio.assigned_unit_id}
+                        onClick={()=>setProgrammingRadio(radio)}
+                        style={{...btn,background:'#1d4ed8',opacity:(!radio.assigned_unit_id||saving)?0.45:1}}>
+                        {radio.custom_channel_programming ? 'Custom lineup' : 'Program channels'}
+                      </button>
+                    </td>
                     <td style={{...td,color:'var(--dispatch-text-tertiary)',fontSize:13}}>{formatLastSeen(radio.last_seen)}</td>
                     <td style={td}>{remaining ? <div style={{display:'flex',gap:6,alignItems:'center'}}><span style={{fontSize:12,color:'#15803d',fontWeight:700}}>Unlocked · {remaining}</span><button disabled={saving} onClick={()=>handleKioskRelock(radio.radio_id)} style={{...btn,background:'#b45309'}}>Re-lock</button></div> : <div style={{display:'flex',gap:5,alignItems:'center'}}><input type="number" min="1" max="240" placeholder="15" value={kioskDurations[radio.radio_id]??''} onChange={e=>setKioskDurations(p=>({...p,[radio.radio_id]:e.target.value}))} style={{width:50,padding:'5px 7px',borderRadius:6,border:'1px solid var(--dispatch-border)',background:'var(--dispatch-panel)',color:'var(--dispatch-text)'}}/><span style={{fontSize:11}}>min</span><button disabled={saving} onClick={()=>handleKioskUnlock(radio.radio_id)} style={{...btn,background:'#0369a1'}}>Unlock kiosk</button></div>}</td>
                     <td style={td}><button disabled={!isAdmin||saving} onClick={()=>radio.is_locked?doLock(radio.radio_id,false):setConfirmDialog({open:true,radioId:radio.radio_id,radioDisplayId:radio.radio_id})} style={{...btn,background:radio.is_locked?'#15803d':'#991b1b',opacity:(!isAdmin||saving)?.4:1}}>{radio.is_locked?'Unlock':'Lock'}</button></td>
@@ -241,6 +250,15 @@ export default function RadioManagement({ user }) {
       </div>
 
       <Toast message={toastMsg} visible={toastVisible}/>
+      <RadioChannelProgrammingDialog
+        radio={programmingRadio}
+        onClose={()=>setProgrammingRadio(null)}
+        onSaved={async ()=>{
+          setProgrammingRadio(null);
+          await loadData();
+          showToast('Radio channel programming saved');
+        }}
+      />
       <AddRadioDialog open={addOpen} users={users} saving={adding} onCancel={()=>setAddOpen(false)} onSubmit={handleAddRadio}/>
       <ConfirmDialog open={confirmDialog.open} title={`Lock radio ${confirmDialog.radioDisplayId}?`} message="This will immediately disconnect it from the network." onConfirm={()=>{const id=confirmDialog.radioId;setConfirmDialog({open:false,radioId:null,radioDisplayId:''});doLock(id,true);}} onCancel={()=>setConfirmDialog({open:false,radioId:null,radioDisplayId:''})}/>
     </div>

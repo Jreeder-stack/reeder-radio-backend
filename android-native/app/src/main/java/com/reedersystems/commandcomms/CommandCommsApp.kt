@@ -23,6 +23,7 @@ import com.reedersystems.commandcomms.data.prefs.PttKeyPrefs
 import com.reedersystems.commandcomms.data.prefs.RadioTokenStore
 import com.reedersystems.commandcomms.data.prefs.SpeakerBoostPrefs
 import com.reedersystems.commandcomms.data.prefs.ServiceConnectionPrefs
+import com.reedersystems.commandcomms.hd760.Hd760ChannelCacheStore
 import com.reedersystems.commandcomms.data.prefs.SessionPrefs
 import com.reedersystems.commandcomms.device.KioskPolicyManager
 import com.reedersystems.commandcomms.data.model.RadioTransportConfig
@@ -83,6 +84,9 @@ class CommandCommsApp : Application() {
     lateinit var radioTokenStore: RadioTokenStore
         private set
 
+    lateinit var hd760ChannelCache: Hd760ChannelCacheStore
+        private set
+
     lateinit var toneEngine: ToneEngine
         private set
 
@@ -128,6 +132,7 @@ class CommandCommsApp : Application() {
         }
 
         radioTokenStore = RadioTokenStore(this)
+        hd760ChannelCache = Hd760ChannelCacheStore(this)
         val storedRadioToken = radioTokenStore.getToken()
         if (storedRadioToken != null) {
             apiClient.radioToken = storedRadioToken

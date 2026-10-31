@@ -64,6 +64,7 @@ class DeviceRegistrationViewModel(application: Application) : AndroidViewModel(a
             val result = doRegister(serialTrimmed, imeiTrimmed)
             if (result.isSuccess) {
                 val (radioId, token) = result.getOrThrow()
+                app.hd760ChannelCache.clear()
                 app.radioTokenStore.saveToken(radioId, token)
                 app.signalingClient.setRadioToken(token)
                 app.apiClient.radioToken = token
