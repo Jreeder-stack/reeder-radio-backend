@@ -164,7 +164,8 @@ export async function executeV3CompoundPlan({
           status = 'completed';
         }
       } else {
-        status = submittedWrites() > before ? 'unknown' : 'failed';
+        status = result?.outcome === 'partial' ? 'partial'
+          : result?.outcome === 'unknown' || submittedWrites() > before ? 'unknown' : 'failed';
         failure = result?.error || { code: V3_ERROR_CODES.CAD_UNAVAILABLE, message: 'CAD action did not complete' };
       }
       const entry = Object.freeze({

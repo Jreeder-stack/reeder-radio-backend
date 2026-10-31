@@ -83,6 +83,13 @@ export class V3TurnLifecycle {
     if (token) state.inFlightWrites.delete(token);
     // A transport acknowledgment is not independent CAD read-back verification.
   }
+  settleVerified(state, count = 1) {
+    this.assert(state);
+    if (!Number.isInteger(count) || count < 0 || count > state.pendingVerification) {
+      throw fail('Invalid CAD verification count');
+    }
+    state.pendingVerification -= count;
+  }
   cancel(state, reason = 'superseded') {
     if (!state || state.canceled || state.terminal) return null;
     state.canceled = true;

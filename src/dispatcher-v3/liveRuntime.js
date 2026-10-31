@@ -23,6 +23,7 @@ import { createV3PendingTask, resumeV3PendingTask } from './clarificationTasks.j
 import { normalizeV3CommandText } from './deterministicIntent.js';
 import { materializeV3Plan } from './planMaterializer.js';
 import { assertV3ActionReferencesFresh } from './actionReferenceGuard.js';
+import { reconcileV3SubmittedWrite } from './cadOutcomeReconciliation.js';
 import { executeV3CompoundPlan } from './compoundActions.js';
 import { composeV3Response } from './responseComposer.js';
 import { createV3CorrelationId } from './correlation.js';
@@ -1360,6 +1361,9 @@ export class V3LiveDispatcher {
           }
           result = await this.executor.execute({ action: plan.action, input: plan.input }, {
             correlationId, turnEnvelope,
+            reconcileUnknown: candidate => reconcileV3SubmittedWrite({
+              ...candidate, gateway: this.gateway, unitIdentityService: this.unitIdentityService,
+            }),
             beforeCadWrite: async () => {
               await assertV3ActionReferencesFresh({
                 plan, speakerCallsign, unitIdentityService: this.unitIdentityService,
@@ -1473,6 +1477,9 @@ export class V3LiveDispatcher {
       execute: materialized => this.executor.execute({
         action: materialized.action, input: materialized.input,
       }, { correlationId, turnEnvelope,
+        reconcileUnknown: candidate => reconcileV3SubmittedWrite({
+          ...candidate, gateway: this.gateway, unitIdentityService: this.unitIdentityService,
+        }),
         beforeCadWrite: () => assertV3ActionReferencesFresh({
           plan: materialized, speakerCallsign, unitIdentityService: this.unitIdentityService,
           operationalContextService: this.operationalContextService, correlationId, turnEnvelope,

@@ -1,5 +1,6 @@
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { assertV3CurrentTaskCall } from './operationalContext.js';
+import { currentV3Life } from './turnLifecycle.js';
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 
@@ -102,7 +103,7 @@ export class V3FieldIncidentCoordinator {
       noteRecorded: false,
       recordedReports: [],
       pendingGoals: initialGoals(input),
-      deferredNotes: [],
+      deferredNotes: [], uncertainNotes: [],
       partialErrors: [],
       expiresAt: this.now() + this.ttlMs,
     };
@@ -131,6 +132,10 @@ export class V3FieldIncidentCoordinator {
       eventType: state.eventType,
       pendingGoals: [...state.pendingGoals],
       partialErrors: state.partialErrors,
+      deferredCount: state.deferredNotes.length,
+      unknownCount: state.uncertainNotes.length,
+      verified: state.partialErrors.length === 0 && state.deferredNotes.length === 0
+        && state.uncertainNotes.length === 0 && (state.noteRecorded || state.recordedReports.length > 0),
       recordedReports: [...state.recordedReports],
       keepListening: state.pendingGoals.length > 0,
       radioResponse: initialRadioResponse(state),
@@ -156,7 +161,7 @@ export class V3FieldIncidentCoordinator {
         key, callsign: identity.callsign, unitId: identity.unitId,
         eventType: 'operational_update', originalNote: input.note || input.value,
         callId: context.currentCall?.id || null, call: context.currentCall || null,
-        noteRecorded: false, recordedReports: [], pendingGoals: [], deferredNotes: [], partialErrors: [],
+        noteRecorded: false, recordedReports: [], pendingGoals: [], deferredNotes: [], uncertainNotes: [], partialErrors: [],
         expiresAt: this.now() + this.ttlMs,
       };
     }
@@ -184,6 +189,10 @@ export class V3FieldIncidentCoordinator {
       eventType: state.eventType,
       pendingGoals: [...state.pendingGoals],
       partialErrors: state.partialErrors,
+      deferredCount: state.deferredNotes.length,
+      unknownCount: state.uncertainNotes.length,
+      verified: state.partialErrors.length === 0 && state.deferredNotes.length === 0
+        && state.uncertainNotes.length === 0 && (state.noteRecorded || state.recordedReports.length > 0),
       recordedReports: [...state.recordedReports],
       keepListening: state.pendingGoals.length > 0,
       radioResponse: askForDescription ? `10-4. What's the subject's description?` : '10-4.',
@@ -234,6 +243,7 @@ export class V3FieldIncidentCoordinator {
   }
 
   async _tryCreateCall(state, query, correlationId, resolved = null, { followUp = false } = {}) {
+    const before = currentV3Life()?.writeCount || 0;
     try {
       const created = await this.createCall({
         beforeCadWrite: followUp ? () => this._assertCurrentRelationship(state, correlationId) : null,
@@ -259,7 +269,8 @@ export class V3FieldIncidentCoordinator {
       state.callId = callId(state.call) || callId(created);
     } catch (error) {
       if (followUp && [V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED, V3_ERROR_CODES.CAD_UNAVAILABLE].includes(error?.code)) throw error;
-      state.partialErrors.push(errorResult(error, 'create_call'));
+      state.partialErrors.push(errorResult(error, 'create_call',
+        (currentV3Life()?.writeCount || 0) > before));
     }
     // A newly created call is a real CAD mutation. A later assignment check
     // may still fail; do not silently flush deferred notes to a changed call.
@@ -276,6 +287,7 @@ export class V3FieldIncidentCoordinator {
     // A changed/closed call is not a transient note-write error. Do not
     // swallow it into deferredNotes or retry later against the wrong call.
     if (followUp) await this._assertCurrentRelationship(state, correlationId);
+    const before = currentV3Life()?.writeCount || 0;
     try {
       const result = await this.addCallNote({
         input: { callId: state.callId, note: text, unitId: state.unitId }, correlationId,
@@ -288,8 +300,11 @@ export class V3FieldIncidentCoordinator {
       }
     } catch (error) {
       if (followUp && [V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED, V3_ERROR_CODES.CAD_UNAVAILABLE].includes(error?.code)) throw error;
-      state.partialErrors.push(errorResult(error, 'add_note'));
-      state.deferredNotes.push(text);
+      const submitted = (currentV3Life()?.writeCount || 0) > before;
+      state.partialErrors.push(errorResult(error, 'add_note', submitted));
+      // Never replay a note with an uncertain receipt. Only notes that have
+      // NOT been attempted may be deferred until an incident has a call ID.
+      if (submitted) state.uncertainNotes = [...state.uncertainNotes, text].slice(-8);
     }
   }
 
@@ -311,7 +326,8 @@ export class V3FieldIncidentCoordinator {
   }
 
   _save(state) {
-    if (state.pendingGoals.length === 0 && state.deferredNotes.length === 0) {
+    if (state.pendingGoals.length === 0 && state.deferredNotes.length === 0
+      && state.uncertainNotes.length === 0) {
       this.incidents.delete(state.key);
       return;
     }
@@ -384,8 +400,10 @@ function callId(value) {
   return clean(value?.id || value?.call_id || value?.callId || value?.call?.id || value?.call?.call_id || value?.call?.callId);
 }
 
-function errorResult(error, phase) {
-  return { phase, code: error?.code || V3_ERROR_CODES.CAD_REJECTED, message: error?.message || 'CAD operation failed' };
+function errorResult(error, phase, submitted = false) {
+  return { phase, outcome: submitted ? 'unknown' : 'failed', retrySafe: false,
+    code: error?.code || V3_ERROR_CODES.CAD_REJECTED,
+    message: error?.message || 'CAD operation failed' };
 }
 
 function normalizeUnit(value) {
