@@ -49,6 +49,7 @@ export class AIDispatcherRuntimeManager {
     this._schemaPromise = null;
     this._configuredPttProfiles = Object.freeze([]);
     this._pttConfigurationLoaded = false;
+    this._lastOperatorHandoffs = new Map();
   }
 
   log(action, details = {}) {
@@ -508,9 +509,22 @@ export class AIDispatcherRuntimeManager {
     return [...this.runtimes.values()][0] || null;
   }
 
+  getOperatorHandoff(id) {
+    // The profiles API is requireAdmin; this is a bounded, redacted status
+    // snapshot, not another public event bus or a CAD reconciliation ledger.
+    return this._lastOperatorHandoffs.get(id) || null;
+  }
+
   async stopProfile(id, { persist = true } = {}) {
     const runtime = this.runtimes.get(id);
     if (runtime) {
+      const snapshot = runtime.dispatcher.operatorHandoffSnapshot?.();
+      if (snapshot) {
+        this._lastOperatorHandoffs.set(id, snapshot);
+        while (this._lastOperatorHandoffs.size > 32) {
+          this._lastOperatorHandoffs.delete(this._lastOperatorHandoffs.keys().next().value);
+        }
+      }
       for (const unsubscribe of runtime.subscriptions || []) {
         try { unsubscribe(); } catch (_) {}
       }

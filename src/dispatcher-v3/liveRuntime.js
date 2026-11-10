@@ -99,6 +99,7 @@ export class V3LiveDispatcher {
     this.connected = false;
     this._sequence = 1;
     this._lastOutputFailure = null;
+    this._uncertainCadOutcomes = [];
     this._sessionCustody = new V3ConnectionCustody();
     this._outbound = new V3OutboundScheduler({
       limits: outboundLimits,
@@ -205,7 +206,10 @@ export class V3LiveDispatcher {
       runtimeContext: this.context, getGeneration: () => this.runtimeGeneration,
     });
     this.synthesize = synthesize;
-    this._audioListener = (frame) => this.speech.pushFrame(frame);
+    // Relay already excludes the sender; fail closed if a future adapter
+    // ever loops locally injected AI audio into the same listener.
+    this._audioListener = (frame) => frame?.unitId === this.identity
+      ? false : this.speech.pushFrame(frame);
   }
 
   async start() {
@@ -323,6 +327,33 @@ export class V3LiveDispatcher {
       { speakerRef: identity.speakerRef, priorOutputCanceled: true }, null, identity);
   }
 
+  // Snapshot the facts available at the existing admin stop/takeover boundary,
+  // before stop() retires lifecycle states. No credential, audio, transcript,
+  // personal data or unverifiable rollback claim is exposed.
+  operatorHandoffSnapshot() {
+    const unfinished = [...this._lifecycle.turns.values()]
+      .filter(state => state.writeCount > 0 || state.pendingVerification > 0)
+      .slice(-64).map(state => ({
+        turnId: state.identity.turnId,
+        submittedWrites: state.writeCount,
+        possibleUnconfirmedWrite: state.pendingVerification > 0
+          || state.inFlightWrites.size > 0,
+      }));
+    return Object.freeze({
+      runtimeId: this.context.runtimeId,
+      dispatchCenterId: this.context.dispatchCenterId,
+      capturedAt: new Date().toISOString(),
+      requiresReview: this._uncertainCadOutcomes.length > 0
+        || unfinished.some(item => item.possibleUnconfirmedWrite),
+      uncertainCadOutcomes: this._uncertainCadOutcomes.map(item => ({ ...item })),
+      inFlightAtHandoff: unfinished,
+      lastOutputFailure: this._lastOutputFailure ? { ...this._lastOutputFailure } : null,
+      // External signaling owns physical emergency status; stop never calls
+      // endEmergencyForUnit. Human dispatch must monitor it separately.
+      physicalEmergencyActiveAtHandoff: this._emergency?.source === 'hardware',
+    });
+  }
+
   getPipelineStatus() {
     return {
       version: 'v3',
@@ -337,6 +368,7 @@ export class V3LiveDispatcher {
       scheduler: this._scheduler.status(),
       outbound: this._outbound.status(),
       lastOutputFailure: this._lastOutputFailure ? { ...this._lastOutputFailure } : null,
+      reconciliationAlerts: this._uncertainCadOutcomes.length,
       emergency: this._emergency ? {
         unitId: this._emergency.callsign,
         source: this._emergency.source,
@@ -1449,6 +1481,17 @@ export class V3LiveDispatcher {
     // answer window until the outbound lane reports completed injection.
     const life = this._lifecycle.get(turnEnvelope.turnId);
     if (life) this._lifecycle.releasePending(life);
+    if (result && (result.outcome === 'unknown' || result.outcome === 'partial'
+      || (life?.pendingVerification || 0) > 0)) {
+      this._uncertainCadOutcomes.push(Object.freeze({
+        turnId: turnEnvelope.turnId, at: new Date().toISOString(),
+        status: result.outcome === 'unknown' ? 'unknown' : result.outcome === 'partial'
+          ? 'partial' : 'verification_pending',
+        submittedWrites: life?.writeCount || result.submittedWrites || 0,
+        requiresHumanReconciliation: true,
+      }));
+      if (this._uncertainCadOutcomes.length > 64) this._uncertainCadOutcomes.shift();
+    }
     dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign, this._taskCustody(turnEnvelope));
     const responseText = composeV3Response({ plan, result, speakerCallsign, turnEnvelope,
       sharedIncident: sharedReply, channelName: this.context.channelName });
