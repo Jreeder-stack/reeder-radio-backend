@@ -177,11 +177,12 @@ jobs:
       - name: Desktop gateway test suite
         if: ${{ !cancelled() }}
         run: npm test --prefix desktop-app
-      - name: iOS project and resolved-package inventory (not Xcode build)
+      - name: iOS project source inventory (not Xcode build)
         if: ${{ !cancelled() }}
-        run: |
-          node ios-native/scripts/check-pbxproj.mjs
-          node ios-native/scripts/check-package-resolved.mjs
+        run: node ios-native/scripts/check-pbxproj.mjs
+      - name: iOS resolved-package inventory (not Xcode build)
+        if: ${{ !cancelled() }}
+        run: node ios-native/scripts/check-package-resolved.mjs
       - name: Preserve G-01 test JSON
         if: always()
         uses: actions/upload-artifact@v4
