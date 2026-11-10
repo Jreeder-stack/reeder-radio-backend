@@ -211,6 +211,7 @@
     this._cancelSignaling = null;
     this._cancelChannelJoin = null;
     this._cancelAudioConnect = null;
+    this._audioWebSocketProtocols = null;
   }
 
   function cancelledOperation() {
@@ -247,6 +248,15 @@
     }
 
     this._serverUrl = options.serverUrl.replace(/\/$/, '');
+    // CAD-origin audio proxy requires an authenticated WebSocket subprotocol.
+    // Configure this at initialization rather than replacing window.WebSocket.
+    if (options.audioWebSocketProtocols != null &&
+        (!Array.isArray(options.audioWebSocketProtocols) ||
+          !options.audioWebSocketProtocols.length ||
+          !options.audioWebSocketProtocols.every(function (value) { return typeof value === 'string' && value.length > 0; }))) {
+      throw new Error('audioWebSocketProtocols must be a non-empty array of strings');
+    }
+    this._audioWebSocketProtocols = options.audioWebSocketProtocols ? options.audioWebSocketProtocols.slice() : null;
     this._channelId = options.channelId || null;
     var channelId = this._channelId;
     var generation = ++this._channelGeneration;
@@ -549,7 +559,9 @@
       var host = self._serverUrl.replace(/^https?:\/\//, '');
       var url = proto + '//' + host + '/api/audio-ws?channelId=' +
         encodeURIComponent(channelId) + '&unitId=' + encodeURIComponent(self._unitId);
-      var ws = new WebSocket(url);
+      var ws = self._audioWebSocketProtocols
+        ? new WebSocket(url, self._audioWebSocketProtocols)
+        : new WebSocket(url);
       // Own the socket while it is CONNECTING, so a newer selection can close it.
       self._ws = ws;
       ws.binaryType = 'arraybuffer';

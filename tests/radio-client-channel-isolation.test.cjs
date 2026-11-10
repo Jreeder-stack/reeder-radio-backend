@@ -35,7 +35,7 @@ function harness(t, options = {}) {
   }
   class WebSocket {
     static OPEN = 1;
-    constructor(url) { this.url = url; this.readyState = 0; this.sent = []; this.closeCount = 0; webSockets.push(this); }
+    constructor(url, protocols) { this.url = url; this.protocols = protocols; this.readyState = 0; this.sent = []; this.closeCount = 0; webSockets.push(this); }
     open() { this.readyState = 1; this.onopen?.(); }
     send(data) { this.sent.push(data); }
     message(data) { this.onmessage?.({ data }); }
@@ -471,4 +471,28 @@ test('a released request cannot grant a newer press on the same channel', async 
   assert.equal(h.gumCalls, 0);
   grant(h, socket); assert.equal(await second, true);
   assert.equal(h.gumCalls, 1);
+});
+
+
+test('CAD audio handshake uses per-client authorized protocols without altering global WebSocket', async t => {
+  const h = harness(t);
+  const protocols = ['command-link', 'cad-auth.signed-session'];
+  const started = h.client.init({ serverUrl: 'https://cad.example.test', channelId: A, audioWebSocketProtocols: protocols });
+  await h.authenticate();
+  const ws = await h.acknowledge(A);
+  assert.equal(ws.url, 'wss://cad.example.test/api/audio-ws?channelId=North__Dispatch&unitId=UNIT-1');
+  assert.deepEqual(Array.from(ws.protocols), protocols);
+  ws.open();
+  await started;
+  const switchPromise = h.client.setChannel(B);
+  const next = await h.acknowledge(B);
+  assert.deepEqual(Array.from(next.protocols), protocols, 'channel switches retain the authorized protocol');
+  next.open();
+  await switchPromise;
+});
+
+test('radio client rejects malformed authorized audio protocols', async t => {
+  const h = harness(t);
+  await assert.rejects(h.client.init({ serverUrl: 'https://cad.example.test', channelId: A, audioWebSocketProtocols: [] }), /audioWebSocketProtocols/);
+  assert.equal(h.webSockets.length, 0);
 });
