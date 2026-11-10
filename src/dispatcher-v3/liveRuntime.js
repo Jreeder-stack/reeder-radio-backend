@@ -1425,7 +1425,12 @@ export class V3LiveDispatcher {
     const life = this._lifecycle.get(turnEnvelope.turnId);
     if (life) this._lifecycle.releasePending(life);
     dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign, this._taskCustody(turnEnvelope));
-    const responseText = composeV3Response({ plan, result, speakerCallsign, turnEnvelope, sharedIncident: sharedReply });
+    const responseText = composeV3Response({ plan, result, speakerCallsign, turnEnvelope,
+      sharedIncident: sharedReply, channelName: this.context.channelName });
+    if (plan.action === 'NO_ACTION' && plan.conversationAct && responseText) {
+      this._diag('conversation_only_reply_planned', correlationId, true,
+        { act: plan.conversationAct, recipient: speakerCallsign, cadAction: false }, turnEnvelope);
+    }
     this.conversations.completeTurn(turnEnvelope, { plan, result, submittedWrites: life?.writeCount || 0 });
     if (plan.action === 'NO_ACTION' && dialogueContext) {
       this.fieldIncidents.clear(speakerCallsign, this._taskCustody(turnEnvelope));

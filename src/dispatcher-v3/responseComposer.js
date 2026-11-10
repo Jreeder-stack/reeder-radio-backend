@@ -1,5 +1,6 @@
 import { V3_ACTIONS } from './actionContracts.js';
 import { isV3TurnEnvelope } from './turnEnvelope.js';
+import { composeV3ConversationReply } from './conversationReplies.js';
 
 const ROUTINE_ACK_ACTIONS = new Set([
   V3_ACTIONS.SET_UNIT_STATUS,
@@ -34,10 +35,15 @@ const SMALL_NUMBER_WORDS = Object.freeze([
 
 const TENS_WORDS = Object.freeze({ 20: 'twenty', 30: 'thirty', 40: 'forty', 50: 'fifty' });
 
-export function composeV3Response({ plan, result, speakerCallsign, now = new Date(), turnEnvelope = null, sharedIncident = null } = {}) {
+export function composeV3Response({ plan, result, speakerCallsign, now = new Date(), turnEnvelope = null, sharedIncident = null, channelName = null } = {}) {
   if (isV3TurnEnvelope(turnEnvelope) && turnEnvelope.speaker) speakerCallsign = turnEnvelope.speaker.callsign;
   const unit = clean(speakerCallsign) || 'unit';
-  if (plan?.action === 'NO_ACTION') return null;
+  if (plan?.action === 'NO_ACTION') {
+    return plan?.intentType === 'conversation_only' && plan.conversationAct
+      ? composeV3ConversationReply({ act: plan.conversationAct,
+        speakerCallsign: unit, channelName })
+      : null;
+  }
   if (plan?.action === 'CLARIFY') return clean(plan.clarification) || `${unit}, repeat your last.`;
   if (plan?.action === 'MULTI_ACTION') return compoundV3Response(unit, result, now);
   if (result?.outcome === 'unknown') {

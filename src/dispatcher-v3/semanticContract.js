@@ -6,6 +6,7 @@ import { hasV3Scope } from './runtimeContract.js';
 import { sanitizeV3OperationalContext } from './operationalContext.js';
 import { normalizeV3PendingTaskProposal, pendingV3TaskForModel } from './clarificationTasks.js';
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
+import { normalizeV3ConversationAct } from './conversationReplies.js';
 
 export const V3_INTENT_TYPES = Object.freeze([
   'action_request', 'question', 'observation', 'correction', 'cancellation',
@@ -183,6 +184,9 @@ function normalizeStep(raw, source, index, earlier) {
 export function normalizeV3SemanticPlan(raw, { source = 'model' } = {}) {
   if (!plain(raw)) throw invalid('Semantic model response must be an object', 'invalid_plan_shape');
   if (raw.actions !== undefined) {
+    if (raw.conversationAct != null) {
+      throw invalid('A compound CAD plan cannot carry a conversational response', 'conversation_mutation_conflict');
+    }
     if (!Array.isArray(raw.actions) || !raw.actions.length || raw.actions.length > MAX_PLAN_ACTIONS) {
       throw invalid('Compound action count is invalid', 'invalid_step_count');
     }
@@ -208,6 +212,20 @@ export function normalizeV3SemanticPlan(raw, { source = 'model' } = {}) {
 
   const action = normalizedAction(raw.action);
   const intentType = interpretType(raw.intentType, action, source);
+  const input = safeInput(raw.input, source);
+  const selectedAct = normalizeV3ConversationAct(raw.conversationAct);
+  if (selectedAct && (action !== 'NO_ACTION' || intentType !== 'conversation_only')) {
+    throw invalid('A CAD action or observation cannot carry a conversational reply', 'conversation_mutation_conflict');
+  }
+  if (action === 'NO_ACTION' && intentType === 'conversation_only'
+    && Object.keys(input).length > 0 && (selectedAct || raw.intentType === 'conversation_only')) {
+    throw invalid('Conversation-only replies cannot carry CAD input fields', 'conversation_mutation_conflict');
+  }
+  // Legacy NO_ACTION decisions without an explicit conversation intent remain
+  // silent; a model that explicitly chooses conversation_only always gets
+  // an actual reply, even if it omits its optional response subtype.
+  const conversationAct = selectedAct
+    || (action === 'NO_ACTION' && raw.intentType === 'conversation_only' ? 'acknowledgement' : null);
   const clarification = bounded(raw.clarification, 180) || null;
   if (action === 'CLARIFY' && !clarification) {
     throw invalid('A clarification needs a specific question', 'missing_clarification');
@@ -218,9 +236,10 @@ export function normalizeV3SemanticPlan(raw, { source = 'model' } = {}) {
   const pendingTask = action === 'CLARIFY' && raw.pendingTask != null
     ? normalizeV3PendingTaskProposal(raw.pendingTask) : null;
   return Object.freeze({
-    action, intentType, input: safeInput(raw.input, source),
+    action, intentType, input,
     confidence: normalizedConfidence(raw.confidence),
     clarification, reason: bounded(raw.reason, 200) || null,
+    ...(conversationAct ? { conversationAct } : {}),
     ...(pendingTask ? { pendingTask } : {}),
   });
 }
