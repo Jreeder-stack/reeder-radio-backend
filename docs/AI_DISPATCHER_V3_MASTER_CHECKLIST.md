@@ -1,9 +1,9 @@
 # AI Dispatcher V3 master checklist
 
-Plan AI-DISP-V3-001, version 1.22, November 10, 2026.
+Plan AI-DISP-V3-001, version 1.23, November 10, 2026.
 Repository: `Jreeder-stack/reeder-radio-backend`.
 Branch: `test/dispatcher-v3-01-01-baseline-20261028`; PR #163, unmerged.
-Latest scoped-validated executable source: `45a50a26f5c4580e9f40442a93a84c24ba54544a` (04-02 bounded factual read-answer selection; CI 42840228520, job 129913154768, Node 20: **12/12 new 04-02**, **647/647 V3** across 56 files, **26/26 audit**, **81/81 PTT**, **8/8 manager**; full V3 workflow green).
+Latest scoped-validated executable source: `a21fb09b03a6bcd5658e1788375d8713d84ad642` (04-03 through 04-08; CI 42875717002, job 130038376665, Node 20: **683/683 V3** across 62 files, **72/72 synthetic acceptance**, **26/26 audit**, **81/81 PTT**, **8/8 manager**; full V3 workflow green).
 Main at the implementation baseline: `c5ce5feed7a4feadb86ddca3d6d8c89e2c2f90fa`, identical to the audit. Latest inspected main independently advanced to `1c9a5d6df338dddf7b1333adb4ba1c477713194e` (later commits including PRs #164/#165/#166); integration with those revisions and the production revision remain unverified.
 
 ## Fixed objective and boundaries
@@ -21,8 +21,16 @@ Coding completion, scoped validation, pilot verification and release are separat
 | 01 | Reliable request processing | 8/8 | 8/8 |
 | 02 | Multi-unit conversation management | 8/8 | 8/8 |
 | 03 | Meaning-based understanding and safe CAD actions | 8/8 | 8/8 |
-| 04 | Natural conversation and useful responses | 2/8 | 2/8 |
-| Total | Original 32 items | 26/32 | 26/32 |
+| 04 | Natural conversation and useful responses | 8/8 | 8/8 |
+| Total | Original 32 items | 32/32 | 32/32 |
+
+**Parent 04 is coded and scoped synthetic-validated (November 10, 2026).** All eight original Parent 04 items and all 32 AI-DISP-V3-001 work-item IDs are now coded and scoped-validated. New work 04-03 through 04-08 covers finite task-owned clarification, truthful error and undelivered-output reporting, own-audio suppression, administrator stop/handoff snapshots, 68 held-out utterances and 10 multi-turn exchanges with five-unit fixtures, actual authenticated V3 PTT-to-CAD-to-radio synthetic tests, and a repeatable `--synthetic` acceptance runner/runbook.
+
+**Implementation chain:** 04-03 `6a26ff1c9996aefe6d01d6adcf362f1a875f2e67`, `b368083c93e382866e2a9abd476df6f414f0bd03`; 04-04 `4340672774d1b77f7eb0ff2319c02eb4fa2adee8`; 04-05 `ae00d436ea4c045a33a1cc5e490d7eb66bffca97`; 04-06 `a51819c9703e196b75c32335b928ce4ebc6b9157`; 04-07 `ed79486a5167780c12a858e9d8ebc302707d6d25`; 04-08 `bb577a929c469a316aef1d46b69ee3dfa80c2c90`, `b9a7d00bac45ec71be8a3dd3ed6aff222286ab77`.
+
+**Corrective validation:** First [CI 42874543308](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/42874543308) failed 11/683 V3 and 4/72 acceptance assertions. Root causes were legacy-safe error wording/clarification compatibility, nonunique held-out case IDs and new test harness mistakes. Corrected source `a21fb09b03a6bcd5658e1788375d8713d84ad642` preserves the original CAD/authorization/emergency checks. [CI 42875717002](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/42875717002), job 130038376665, Node 20: **683/683 V3**, **72/72 synthetic acceptance**, **26/26 audit**, **81/81 PTT**, **8/8 manager**; syntax and removed-legacy-engine checks green. GitHub-reported artifact 13790584839 SHA-256 `9a38289d7c6de263e9977c5cc146afe1ce6c520104f2f3f03e40089c8601365c`, not independently downloaded/rehashed.
+
+**Scope and next:** Coding/scoped validation 32/32 is not full release acceptance. G-01 through G-04 remain unchecked. Full repository/mobile, newer-main and external Command Link integration, paid/live model/STT/TTS, real radio audibility/five-unit field quality, production, pilot, approved latency/cost thresholds, rollback and operator sign-off are unverified. No merge, rebase, deployment, restart, production change or paid evaluation. Next stage is approved release-gate assessment; do not start live/paid/production work without separate authorization.
 
 **04-02 is coded and scoped-validated (November 10, 2026).** The existing semantic model can select up to four specific fields for supported CAD reads using a finite answer-focus contract; it cannot supply factual spoken text or a new operation. The grounded response composer answers from authorized CAD results and matching fresh verified shared-incident data, retains the authenticated speaker, labels unverified reports, states missing fields are unavailable, and bounds focused answers to 420 characters. Compound plans preserve the focus on each read step without altering write inputs. The previously verified CAD mutation, uncertainty, center isolation, hardware emergency and military-time boundaries remain unchanged. Implementation commit 6bb21b186ce0ccaec3380c92dc7b436463fbcd77, validated executable 45a50a26f5c4580e9f40442a93a84c24ba54544a. First CI 42840037884 passed 646/647 V3 tests with only a case-sensitive new test assertion; it was corrected without changing runtime safety logic. **[CI 42840228520](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/42840228520)**, job 129913154768: **12/12 new**, **647/647 V3** (56 files), **26/26 audit**, **81/81 PTT**, **8/8 manager**; syntax and legacy-absence checks passed. Synthetic model/PTT/CAD/output only; no real radio, paid provider calls or production changes. See dispatcher-v3/04-02-grounded-radio-responses-20261110.md and dispatcher-v3/validation/04-02-results.json. **Parent 04 2/8, total 26/32; next original 04-03.** G-01–G-04 unchecked, full repo/mobile, newer main, Command Link integration, real provider/radio, pilot and release unverified.
 
@@ -54,9 +62,9 @@ Coding completion, scoped validation, pilot verification and release are separat
 
 Read `dispatcher-v3/01-02-intake-trace-20261029.md`, `dispatcher-v3/validation/01-02-results.json` and `dispatcher-v3/validation/01-02-audit-results.json` for current implementation, commands, source hashes, CI comparison and limitations. The earlier `dispatcher-v3/03-01-phrase-containment-20261029.md` and `dispatcher-v3/validation/03-01-results.json` retain their historical evidence; the 01-01 baseline/results are also not rewritten as repair evidence.
 
-Next is **04-03: Recover from missing or unclear information**. Task 01 is 8/8, Task 02 is 8/8, Task 03 is 8/8, Task 04 is 2/8 coded/scoped-validated; G-01–G-04 remain open, with newer-main integration and real radio/provider verification unverified. Continue Task04 and release gates. Credential freshness and cancellation are owned by 01-05. No mutating pilot is authorized by this completion. Use one coordinated implementation stream for shared runtime/planner/state files. Write and run focused tests with each change; prefer mocked checks before paid calls and do not rerun unchanged expensive jobs without a diagnosis.
+Next are **G-01 through G-04**, still unchecked. Parent 01, 02, 03 and 04 are each 8/8 coded/scoped synthetic-validated, total 32/32. Newer-main/Command Link integration and real provider/radio/pilot checks remain unverified. Do not infer approval for paid/production testing, merge, deploy or restart. Credential freshness and cancellation are owned by 01-05. No mutating pilot is authorized by this completion. Use one coordinated implementation stream for shared runtime/planner/state files. Write and run focused tests with each change; prefer mocked checks before paid calls and do not rerun unchanged expensive jobs without a diagnosis.
 
-The deliverables and acceptance paragraphs below are retained verbatim from version1.0. Repeated pending-evidence boilerplate is consolidated: for every item except 01-01, 01-02, 01-03, 01-04, 01-05, 01-06, 01-07, 01-08, 02-01, 02-02, 02-03, 02-04, 02-05, 02-06, 02-07, 02-08, 03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07, 03-08, 04-01 and 04-02, commits/tests/implementation evidence remain pending and live/pilot status remains unverified for every item. Do not silently shorten requirements when implementing an item.
+The deliverables and acceptance paragraphs below are retained verbatim from version1.0. All 32 original items now have committed implementation and scoped synthetic validation evidence. G-01–G-04, actual audio/paid-provider, field and pilot/release acceptance are not established for any item. Preserve all original deliverable and acceptance requirements.
 
 ## Task 01: Reliable request processing
 
@@ -281,12 +289,12 @@ The deliverables and acceptance paragraphs below are retained verbatim from vers
 | --- | --- | --- | --- |
 | 04-01 | Add a first-class conversation-only response path | [x] | [x] |
 | 04-02 | Generate concise, grounded radio responses | [x] | [x] |
-| 04-03 | Recover from missing or unclear information | [ ] | [ ] |
-| 04-04 | Replace generic dead ends with truthful explanations | [ ] | [ ] |
-| 04-05 | Preserve radio discipline and human takeover | [ ] | [ ] |
-| 04-06 | Author an independent conversational evaluation set | [ ] | [ ] |
-| 04-07 | Wire natural conversation through the actual radio path | [ ] | [ ] |
-| 04-08 | Implement the end-to-end acceptance runner and runbook | [ ] | [ ] |
+| 04-03 | Recover from missing or unclear information | [x] | [x] |
+| 04-04 | Replace generic dead ends with truthful explanations | [x] | [x] |
+| 04-05 | Preserve radio discipline and human takeover | [x] | [x] |
+| 04-06 | Author an independent conversational evaluation set | [x] | [x] |
+| 04-07 | Wire natural conversation through the actual radio path | [x] | [x] |
+| 04-08 | Implement the end-to-end acceptance runner and runbook | [x] | [x] |
 
 ### 04-01: Add a first-class conversation-only response path
 
@@ -310,11 +318,15 @@ The deliverables and acceptance paragraphs below are retained verbatim from vers
 
 **Acceptance:** The user can answer with just the requested detail. The dispatcher does not repeatedly ask answered questions or loop forever. Critical ambiguities lead to a narrow clarification or human handoff, not fabricated certainty.
 
+**04-03 completion evidence (November 10, 2026):** The unit-owned task ledger now bounds clarification to three prompts and asks for the one unresolved field. A short reply preserves the original known operation and candidates; expired or noncandidate calls still disclose the original precise rejection. Terminal ambiguity retires only the pending task and does not invent an identity, location or CAD success. Final validated executable `a21fb09b03a6bcd5658e1788375d8713d84ad642`. [CI 42875717002](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/42875717002), job 130038376665, Node 20: **6/6 focused 04-03 tests**, **683/683 V3**, **72/72 synthetic acceptance**, **81/81 PTT**, **8/8 manager**, **26/26 audit**. Record: `dispatcher-v3/04-03-clarification-recovery-20261110.md` and `dispatcher-v3/validation/04-03-results.json`. Coding/scoped synthetic validation only; actual model/CAD/radio, newer main and G-01–G-04 unverified.
+
 ### 04-04: Replace generic dead ends with truthful explanations
 
 **Deliverable:** Distinguish unclear intent, unavailable capability, denied access, service failure, stale request and undelivered output. State what is known and what the unit can do next, using existing human-dispatcher/operator paths where supported. Show a bounded operational error when speech cannot be delivered.
 
 **Acceptance:** “I can't right now” is not the catch-all for unfamiliar language. The explanation identifies the real limitation without disclosing sensitive internals. A handoff is not announced as completed unless its delivery is verified; no new external service is silently added.
+
+**04-04 completion evidence (November 10, 2026):** Known authorization, unavailable service, stale turn and unsupported operation states produce finite accurate responses while retaining the original verified-mutation and uncertainty contract. Failed/expired/interrupted outbound traffic is recorded as an operator-visible, redacted delivery fault, not a promise of human audibility or completed handoff. Final validated executable `a21fb09b03a6bcd5658e1788375d8713d84ad642`. [CI 42875717002](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/42875717002), job 130038376665, Node 20: **12/12 focused 04-04 tests**, **683/683 V3**, **72/72 synthetic acceptance**, **81/81 PTT**, **8/8 manager**, **26/26 audit**. Record: `dispatcher-v3/04-04-truthful-operational-errors-20261110.md` and `dispatcher-v3/validation/04-04-results.json`. Coding/scoped synthetic validation only; actual model/CAD/radio, newer main and G-01–G-04 unverified.
 
 ### 04-05: Preserve radio discipline and human takeover
 
@@ -322,11 +334,15 @@ The deliverables and acceptance paragraphs below are retained verbatim from vers
 
 **Acceptance:** Human takeover stops new AI mutations and queued speech while exposing already-submitted unknown outcomes for reconciliation. Routine speech does not block an emergency. Canceling dialogue never clears the hardware emergency. Wider off-topic chat policy is not required to ship natural operational conversation.
 
+**04-05 completion evidence (November 10, 2026):** Own-radio audio is excluded from new intake. Existing floor priority and hardware emergency lifecycle remain unchanged. Existing administrator stop invalidates queued AI work and exposes redacted per-profile in-memory submitted-write/reconciliation and emergency-state snapshot through the admin-only handoff view. The handoff is not durable across process restarts or proof of operator acknowledgment. Final validated executable `a21fb09b03a6bcd5658e1788375d8713d84ad642`. [CI 42875717002](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/42875717002), job 130038376665, Node 20: **5/5 focused 04-05 tests**, **683/683 V3**, **72/72 synthetic acceptance**, **81/81 PTT**, **8/8 manager**, **26/26 audit**. Record: `dispatcher-v3/04-05-radio-discipline-takeover-20261110.md` and `dispatcher-v3/validation/04-05-results.json`. Coding/scoped synthetic validation only; actual model/CAD/radio, newer main and G-01–G-04 unverified.
+
 ### 04-06: Author an independent conversational evaluation set
 
 **Deliverable:** Prepare a held-out evaluation set not used to accumulate phrase patches. Include at least 50 varied utterances and 10 multi-turn exchanges, plus the five-unit scenarios from 02-08. Cover unfamiliar paraphrases, ordinary conversation, silence, ambiguity, negation, questions, compounds, corrections, unsupported requests and injected instructions. Identify acceptable outcomes before scoring.
 
 **Acceptance:** The evaluation scores task success, response relevance, clarification quality, wrong-target actions, stale execution, fabricated claims, latency and cost. Include positive requests so a system that always refuses cannot pass. The numerical sample sizes are proposed planning acceptance minima, not a statistical reliability guarantee.
+
+**04-06 completion evidence (November 10, 2026):** Independent untouched evaluation fixtures include 68 unique standalone utterances, ten multi-turn exchanges and five-unit scenarios. The standalone scorer checks positive success, relevance, clarifications, prohibited or stale writes, fabricated claims, measured latency and cost, explicitly fails when evidence is missing and cannot pass an always-refuse model. The examples are not converted into phrase patches; live evaluation has not been run. Final validated executable `a21fb09b03a6bcd5658e1788375d8713d84ad642`. [CI 42875717002](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/42875717002), job 130038376665, Node 20: **5/5 focused 04-06 tests**, **683/683 V3**, **72/72 synthetic acceptance**, **81/81 PTT**, **8/8 manager**, **26/26 audit**. Record: `dispatcher-v3/04-06-heldout-conversation-evaluation-20261110.md` and `dispatcher-v3/validation/04-06-results.json`. Coding/scoped synthetic validation only; actual model/CAD/radio, newer main and G-01–G-04 unverified.
 
 ### 04-07: Wire natural conversation through the actual radio path
 
@@ -334,11 +350,15 @@ The deliverables and acceptance paragraphs below are retained verbatim from vers
 
 **Acceptance:** The behavior is available in the existing dispatcher runtime, not only a text demo. All existing clients using the dispatcher PTT interface remain compatible. No new engine, codec, radio firmware, provider migration or broad Command Link rewrite is required.
 
+**04-07 completion evidence (November 10, 2026):** Real authenticated V3 mock PTT end-to-end tests trace conversation-only replies, center-scoped read answers, verified mutations, unknown outcomes, private units/centers and correct output-floor delivery. New redacted response composition diagnostics share the existing turn and outcome controls without adding a legacy engine or provider. Final validated executable `a21fb09b03a6bcd5658e1788375d8713d84ad642`. [CI 42875717002](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/42875717002), job 130038376665, Node 20: **6/6 focused 04-07 tests**, **683/683 V3**, **72/72 synthetic acceptance**, **81/81 PTT**, **8/8 manager**, **26/26 audit**. Record: `dispatcher-v3/04-07-natural-radio-path-20261110.md` and `dispatcher-v3/validation/04-07-results.json`. Coding/scoped synthetic validation only; actual model/CAD/radio, newer main and G-01–G-04 unverified.
+
 ### 04-08: Implement the end-to-end acceptance runner and runbook
 
 **Deliverable:** Provide repeatable scenarios for real runtime and audio-path testing with synthetic data, controlled provider failures, multi-unit interleaving and human interruption. Record expected results, trace IDs, task outcomes, delivery evidence and baseline comparisons. Document supervised pilot setup, operator takeover, candidate/previous revisions and rollback steps.
 
 **Acceptance:** The acceptance runner, fixtures, evaluation scoring and operator instructions are complete. Passing focused tests is recorded separately from actual-provider and real-radio evidence. The release gates below remain required; this work item does not authorize a deployment.
+
+**04-08 completion evidence (November 10, 2026):** The synthetic-only Node acceptance runner records 72/72 multi-unit, human takeover, controlled TTS failure and emergency-regression checks and emits machine-readable test and trace artifacts. Its runbook records distinct prior/tested/deployed revisions, supervised real-provider/radio procedures, approved cost caps and rollback, without treating synthetic injection as field release. Final validated executable `a21fb09b03a6bcd5658e1788375d8713d84ad642`. [CI 42875717002](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/42875717002), job 130038376665, Node 20: **2/2 focused 04-08 tests**, **683/683 V3**, **72/72 synthetic acceptance**, **81/81 PTT**, **8/8 manager**, **26/26 audit**. Record: `dispatcher-v3/04-08-acceptance-runner-20261110.md` and `dispatcher-v3/validation/04-08-results.json`. Coding/scoped synthetic validation only; actual model/CAD/radio, newer main and G-01–G-04 unverified.
 
 ## Integrated release gates: not an additional development task
 

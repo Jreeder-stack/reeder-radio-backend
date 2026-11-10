@@ -1,0 +1,127 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "04-05",
+  "date": "2026-11-10",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingDocumentationHead": "8eb10b113ebd504b5f8494237a921604c7e20061",
+  "previousValidatedExecutable": "45a50a26f5c4580e9f40442a93a84c24ba54544a",
+  "originalImplementationCommits": [
+    "ae00d436ea4c045a33a1cc5e490d7eb66bffca97"
+  ],
+  "correctiveCommit": "a21fb09b03a6bcd5658e1788375d8713d84ad642",
+  "validatedExecutableSource": "a21fb09b03a6bcd5658e1788375d8713d84ad642",
+  "implementationFeatures": [
+    "own-audio relay rejection",
+    "existing operator stop/takeover",
+    "in-memory bounded uncertain-write handoff",
+    "physical emergency not cleared"
+  ],
+  "initialCi": {
+    "runId": 42874543308,
+    "conclusion": "failure",
+    "v3": {
+      "passed": 672,
+      "failed": 11,
+      "total": 683
+    },
+    "syntheticAcceptance": {
+      "passed": 68,
+      "failed": 4,
+      "total": 72
+    },
+    "findings": [
+      "Original radio error and call-clarification wording compatibility",
+      "New acceptance test fixture mismatch",
+      "Duplicate held-out evaluation case IDs",
+      "Controlled hardware/TTS test-timer mismatches"
+    ],
+    "fixedWithoutWeakeningOriginalSafetyChecks": true
+  },
+  "validatedCi": {
+    "runId": 42875717002,
+    "jobId": 130038376665,
+    "nodeMajor": 20,
+    "conclusion": "success",
+    "newItemTests": {
+      "passed": 5,
+      "failed": 0,
+      "total": 5
+    },
+    "v3": {
+      "passed": 683,
+      "failed": 0,
+      "total": 683,
+      "files": 62
+    },
+    "syntheticAcceptance": {
+      "passed": 72,
+      "failed": 0,
+      "total": 72,
+      "files": 8
+    },
+    "audit": {
+      "passed": 26,
+      "failed": 0,
+      "total": 26
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "manager": {
+      "passed": 8,
+      "failed": 0,
+      "total": 8
+    },
+    "syntaxPassed": true,
+    "legacyEnginesAbsent": true,
+    "artifact": {
+      "id": 13790584839,
+      "name": "dispatcher-v3-evidence-42875717002-1",
+      "githubReportedSha256": "9a38289d7c6de263e9977c5cc146afe1ce6c520104f2f3f03e40089c8601365c",
+      "independentlyRehashed": false
+    }
+  },
+  "controls": {
+    "v3Only": true,
+    "allOriginalIdsPreserved": true,
+    "cadAuthorizationPreserved": true,
+    "independentlyVerifiedWriteResponses": true,
+    "centerIsolationPreserved": true,
+    "physicalEmergencyPolicyPreserved": true,
+    "noProviderSchemaTransportCodecFirmwareChange": true
+  },
+  "completion": {
+    "coding": true,
+    "scopedSyntheticValidation": true,
+    "fullV3CiGreen": true,
+    "fullRepositoryAndMobileVerified": false,
+    "newerMainIntegrated": false,
+    "commandLinkIntegrationVerified": false,
+    "realModelAndSpeechVerified": false,
+    "realRadioFieldVerified": false,
+    "productionDeployed": false,
+    "supervisedPilotVerified": false,
+    "approvedRelease": false,
+    "noPaidCalls": true,
+    "noMergeRebaseRestartOrProductionChange": true
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "taskCounts": {
+    "parent01": 8,
+    "parent02": 8,
+    "parent03": 8,
+    "parent04": 8,
+    "completed": 32,
+    "total": 32
+  },
+  "next": "G-01 through G-04; separate owner authorization required for live/paid/deployment work"
+}
