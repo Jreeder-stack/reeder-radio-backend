@@ -11,11 +11,11 @@ vi.mock('../../services/floorControlService.js',()=>({floorControlService:{},AI_
 vi.mock('../../services/emergencyPagingService.js',()=>({pageEmergencyUnits:()=>{throw Error('Live paging prohibited')}}));
 vi.mock('openai',()=>({AzureOpenAI:class{constructor(){throw Error('Paid model prohibited')}}}));
 import { START_TIME, createHarness } from './helpers/auditRuntimeHarness.js';
-let opened,network,scenarios;
+let opened,network,scenarios=[];
 beforeEach(()=>{vi.useFakeTimers();vi.setSystemTime(START_TIME);
  vi.stubEnv('AI_DISPATCHER_WAKE_WORDS','central,dispatch,dispatcher');
  network=vi.fn(()=>{throw Error('Network prohibited')});vi.stubGlobal('fetch',network);
- opened=[];scenarios=[];});
+ opened=[];});
 afterEach(async()=>{try{for(const h of opened)await h.close();
  expect(network).not.toHaveBeenCalled();expect(vi.getTimerCount()).toBe(0);}
  finally{vi.clearAllTimers();vi.useRealTimers();vi.restoreAllMocks();vi.unstubAllGlobals();vi.unstubAllEnvs();}});

@@ -63,6 +63,16 @@ jobs:
           node --check src/dispatcher-v3/groundedAnswers.js
           node --check src/dispatcher-v3/__tests__/conversationOnly.test.js
           node --check src/dispatcher-v3/__tests__/groundedRadioResponses.test.js
+          node --check src/dispatcher-v3/clarificationPolicy.js
+          node --check src/dispatcher-v3/operationalReplies.js
+          node --check src/dispatcher-v3/evaluation/scoreHeldOut.js
+          node --check src/dispatcher-v3/__tests__/clarificationRecovery04.test.js
+          node --check src/dispatcher-v3/__tests__/truthfulFailures04.test.js
+          node --check src/dispatcher-v3/__tests__/radioTakeover04.test.js
+          node --check src/dispatcher-v3/__tests__/conversationEvaluation04.test.js
+          node --check src/dispatcher-v3/__tests__/naturalRadioPath04.test.js
+          node --check src/dispatcher-v3/__tests__/acceptanceRunner04.test.js
+          node --check scripts/dispatcher-v3-acceptance.mjs
           node --check src/dispatcher-v3/actionReferenceGuard.js
           node --check src/dispatcher-v3/cadOutcomeReconciliation.js
           node --check src/dispatcher-v3/__tests__/referenceEvidence.test.js
@@ -112,6 +122,10 @@ jobs:
           mkdir -p reports
           node --version > reports/runtime.txt
           npm run test:v3 -- --reporter=default --reporter=json --outputFile=reports/v3-tests.json
+      - name: 04-08 synthetic acceptance runner (not a release gate)
+        if: ${{ !cancelled() }}
+        run: |
+          node scripts/dispatcher-v3-acceptance.mjs --synthetic
       - name: Preserve test and baseline evidence
         if: always()
         uses: actions/upload-artifact@v4
