@@ -35,9 +35,9 @@ describe('04-07 actual V3 authenticated PTT-to-response path',()=>{
   expect(h.writes('/api/radio/status')).toHaveLength(1);
   expect(h.relay.injectAudio).toHaveBeenCalledTimes(3);
   expect(h.floor.releaseFloor).toHaveBeenCalledTimes(3);
-  const composed=h.diagnostics.record.mock.calls.filter(([entry])=>entry.phase==='response_composed');
+  const composed=h.diagnostics.entries.filter(entry=>entry.phase==='response_composed');
   expect(composed.length).toBeGreaterThanOrEqual(3);
-  expect(composed.every(([entry])=>!entry.details?.transcript)).toBe(true);
+  expect(composed.every(entry=>!entry.details?.transcript)).toBe(true);
  });
  it('keeps unaddressed same-channel traffic silent while unrelated units advance',async()=>{
   const h=await make({llmPlans:[convo('presence')]});
