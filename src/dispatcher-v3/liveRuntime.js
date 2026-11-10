@@ -20,6 +20,7 @@ import { V3ConnectionCustody } from './connectionCustody.js';
 import { V3SharedIncidentFacts, clarifyV3GroupMutation } from './sharedIncidentFacts.js';
 import { classifyV3TaskTransition, modelV3TaskTransition } from './taskTransitions.js';
 import { createV3PendingTask, resumeV3PendingTask } from './clarificationTasks.js';
+import { clarificationQuestion, clarificationTerminal } from './clarificationPolicy.js';
 import { normalizeV3CommandText } from './deterministicIntent.js';
 import { materializeV3Plan } from './planMaterializer.js';
 import { assertV3ActionReferencesFresh } from './actionReferenceGuard.js';
@@ -1229,12 +1230,12 @@ export class V3LiveDispatcher {
           });
         } catch (selectionError) {
           plan = { action: 'CLARIFY', input: {}, confidence: 0,
-            clarification: `${speakerCallsign}, ${selectionError.message}. Which one did you mean?`,
+            clarification: clarificationQuestion(ownedPendingTask, null, speakerCallsign, transcript),
             reason: 'clarification_selection_rejected', pendingTask: ownedPendingTask };
         }
       } else if (ownedPendingTask && ['CLARIFY', 'NO_ACTION'].includes(plan.action)) {
         plan = { ...plan, action: 'CLARIFY', input: {},
-          clarification: plan.clarification || `${speakerCallsign}, which ${ownedPendingTask.unresolvedField === 'callId' ? 'call' : 'detail'}?`,
+          clarification: clarificationQuestion(ownedPendingTask, plan.clarification, speakerCallsign, transcript),
           pendingTask: ownedPendingTask };
       }
       // The original pending call/owner survives model interpretation. A
@@ -1409,6 +1410,23 @@ export class V3LiveDispatcher {
     }
 
     assertV3DeadlineActive();
+    // Only the authenticated unit's original task can exhaust this budget;
+    // the model cannot reset its counter or move it to another unit.
+    const budget = this.conversations.clarificationBudget(turnEnvelope);
+    const clarificationExhausted = plan?.action === 'CLARIFY' && !!plan.pendingTask
+      && (budget?.attempts || 0) >= (budget?.max || 3);
+    if (clarificationExhausted) {
+      plan = { ...plan, reason: 'clarification_exhausted', pendingTask: null,
+        clarification: clarificationTerminal(ownedPendingTask || originalPlan?.pendingTask,
+          speakerCallsign, (budget?.submittedWrites || 0) + (result?.submittedWrites || 0)) };
+      this._diag('clarification_exhausted', correlationId, false,
+        { reason: 'attempt_limit', attempt: budget?.attempts,
+          submittedWrites: budget?.submittedWrites }, turnEnvelope);
+    }
+    if (plan?.action === 'CLARIFY' && plan.pendingTask && !clarificationExhausted) {
+      plan = { ...plan, clarification: clarificationQuestion(plan.pendingTask,
+        plan.clarification, speakerCallsign, transcript) };
+    }
     if (result?.success) {
       this.sharedIncidents.remember({ plan, result, turnEnvelope });
       if (sharedIncident && [V3_ACTIONS.GET_CALL, V3_ACTIONS.GET_CURRENT_CALL].includes(plan?.action)) {
@@ -1432,13 +1450,14 @@ export class V3LiveDispatcher {
         { act: plan.conversationAct, recipient: speakerCallsign, cadAction: false }, turnEnvelope);
     }
     this.conversations.completeTurn(turnEnvelope, { plan, result, submittedWrites: life?.writeCount || 0 });
+    if (clarificationExhausted) this.conversations.exhaustClarification(turnEnvelope);
     if (plan.action === 'NO_ACTION' && dialogueContext) {
       this.fieldIncidents.clear(speakerCallsign, this._taskCustody(turnEnvelope));
       dialogueContext = null;
     }
 
     let followUp = null;
-    if (plan.action === 'CLARIFY') {
+    if (plan.action === 'CLARIFY' && !clarificationExhausted) {
       const task = plan.pendingTask;
       followUp = {
         clarification: plan.clarification,
