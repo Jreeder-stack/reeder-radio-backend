@@ -2,6 +2,7 @@
 // Only an authenticated, resolved PTT turn can read or write a conversation.
 import { randomUUID } from 'node:crypto';
 import { assertV3TurnEnvelope } from './turnEnvelope.js';
+import { V3_MAX_CLARIFICATION_PROMPTS } from './clarificationPolicy.js';
 
 export const V3_CONVERSATION_LIMITS = Object.freeze({
   ttlMs: 5 * 60 * 1000,
@@ -22,7 +23,7 @@ function newTask(record, envelope, time) {
     state: 'active', kind: 'operation', originalTurnId: envelope.turnId,
     latestTurnId: envelope.turnId,
     action: null, requestedInput: {}, pendingTask: null, pendingFollowUp: null,
-    lastOutcome: null, submittedWrites: 0, finishedAt: null,
+    lastOutcome: null, submittedWrites: 0, clarificationPrompts: 0, finishedAt: null,
     startedAt: time, updatedAt: time,
   };
 }
@@ -192,6 +193,8 @@ export class V3ConversationRecords {
         task.kind = 'task_clarification';
         task.finishedAt = null;
         task.lastOutcome = 'clarification_requested';
+        task.clarificationPrompts = Math.min(V3_MAX_CLARIFICATION_PROMPTS + 1,
+          (task.clarificationPrompts || 0) + 1);
       } else {
         task.action = action;
         task.requestedInput = copy(turn.input);
@@ -240,6 +243,31 @@ export class V3ConversationRecords {
         pendingTask: copy(task.pendingTask), originalTurnId: task.pendingTask.originalTurnId,
       } : {}),
     };
+  }
+
+
+  clarificationBudget(envelope) {
+    const record = this.get(envelope);
+    const task = record?.activeTask;
+    if (!task || ['canceled','expired'].includes(task.state)) return null;
+    return { attempts: task.clarificationPrompts || 0,
+      max: V3_MAX_CLARIFICATION_PROMPTS,
+      submittedWrites: task.submittedWrites || 0 };
+  }
+
+  // Retire precisely this original task after repeated unanswered questions.
+  // Do not clear another unit, a CAD mutation or the physical emergency.
+  exhaustClarification(envelope) {
+    const key = this.scopeKey(envelope), record = this.conversations.get(key);
+    const task = record?.activeTask;
+    if (!task || task.latestTurnId !== envelope.turnId) return false;
+    task.state = 'expired';
+    task.lastOutcome = 'clarification_exhausted';
+    task.finishedAt = this.now();
+    task.pendingFollowUp = null;
+    task.pendingTask = null;
+    task.updatedAt = this.now();
+    return true;
   }
 
   // Control utterances are committed without overwriting the task they
