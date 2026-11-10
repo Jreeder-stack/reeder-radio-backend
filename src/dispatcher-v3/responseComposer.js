@@ -2,6 +2,7 @@ import { V3_ACTIONS } from './actionContracts.js';
 import { isV3TurnEnvelope } from './turnEnvelope.js';
 import { composeV3ConversationReply } from './conversationReplies.js';
 import { composeV3GroundedRead } from './groundedAnswers.js';
+import { composeV3FailureReply } from './operationalReplies.js';
 
 const ROUTINE_ACK_ACTIONS = new Set([
   V3_ACTIONS.SET_UNIT_STATUS,
@@ -57,13 +58,15 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
     if (code === 'UNIT_AMBIGUOUS') return `${unit}, I have more than one matching unit. Repeat the callsign.`;
     if (code === 'UNIT_NOT_FOUND') return `${unit}, I couldn't locate that unit in this dispatch center.`;
     if (code === 'CALL_AMBIGUOUS') return `${unit}, which call?`;
-    if (code === 'UNAUTHORIZED') return `${unit}, unable. That action isn't authorized.`;
-    if (code === 'CAD_UNAVAILABLE') return `${unit}, CAD is unavailable. Try again.`;
+    if (code === 'UNAUTHORIZED') return composeV3FailureReply({speakerCallsign:unit,error:result?.error});
+    if (code === 'CAD_UNAVAILABLE') return composeV3FailureReply({speakerCallsign:unit,
+      error:result?.error,submittedWrites:result?.submittedWrites||0,outcome:result?.outcome});
     if (code === 'CALL_NOT_FOUND') return unit + ", I couldn't locate a call matching those details.";
     if (code === 'CALL_RELATIONSHIP_CHANGED') return unit + ', the call or assignment changed; no new action was confirmed.';
-    if (code === 'INVALID_ACTION' || code === 'INVALID_ACTION_INPUT') return unit + ', that request needs a valid CAD operation or detail.';
+    if (code === 'INVALID_ACTION' || code === 'INVALID_ACTION_INPUT') return composeV3FailureReply({speakerCallsign:unit,error:result?.error});
     if (code === 'DISPOSITION_REQUIRED') return `${unit}, what's your disposition?`;
-    return `${unit}, unable to complete that request.`;
+    return composeV3FailureReply({speakerCallsign:unit,error:result?.error,
+      submittedWrites:result?.submittedWrites||0,outcome:result?.outcome});
   }
 
   if (!mutationVerificationSatisfied(plan, result)) {

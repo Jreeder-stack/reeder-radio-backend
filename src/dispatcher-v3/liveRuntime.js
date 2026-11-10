@@ -21,6 +21,7 @@ import { V3SharedIncidentFacts, clarifyV3GroupMutation } from './sharedIncidentF
 import { classifyV3TaskTransition, modelV3TaskTransition } from './taskTransitions.js';
 import { createV3PendingTask, resumeV3PendingTask } from './clarificationTasks.js';
 import { clarificationQuestion, clarificationTerminal } from './clarificationPolicy.js';
+import { composeV3FailureReply, v3OperatorFault } from './operationalReplies.js';
 import { normalizeV3CommandText } from './deterministicIntent.js';
 import { materializeV3Plan } from './planMaterializer.js';
 import { assertV3ActionReferencesFresh } from './actionReferenceGuard.js';
@@ -97,6 +98,7 @@ export class V3LiveDispatcher {
     this.isRunning = false;
     this.connected = false;
     this._sequence = 1;
+    this._lastOutputFailure = null;
     this._sessionCustody = new V3ConnectionCustody();
     this._outbound = new V3OutboundScheduler({
       limits: outboundLimits,
@@ -120,6 +122,10 @@ export class V3LiveDispatcher {
             : this._speak(entry.text, entry.correlationId, entry.envelope, { signal: entry.controller.signal, check })));
       },
       onOutcome: (result, entry) => {
+        if (result.status !== 'completed') {
+          this._lastOutputFailure = v3OperatorFault({status:result.status,
+            reason:result.reason,turnId:result.turnId});
+        }
         // The outbound terminal outcome, NOT the question creation time,
         // establishes the answer clock for exactly this trusted unit/task.
         if (entry.kind === 'routine') this._settlePromptFromOutput(result, entry.envelope, entry.generation);
@@ -330,6 +336,7 @@ export class V3LiveDispatcher {
       processing: this._scheduler.status().executing,
       scheduler: this._scheduler.status(),
       outbound: this._outbound.status(),
+      lastOutputFailure: this._lastOutputFailure ? { ...this._lastOutputFailure } : null,
       emergency: this._emergency ? {
         unitId: this._emergency.callsign,
         source: this._emergency.source,
@@ -1565,6 +1572,8 @@ export class V3LiveDispatcher {
       channel: this.context.roomKey, generation: this.runtimeGeneration, turnId: envelope?.turnId || null,
     });
     if (!queued.accepted) {
+      this._lastOutputFailure = v3OperatorFault({status:'failed',
+        reason:queued.reason,turnId:envelope?.turnId});
       this._settlePromptFromOutput({
         recipient, channel: this.context.roomKey, status: 'failed',
       }, envelope);
@@ -1755,7 +1764,7 @@ function responseForResolutionError(error, speakerCallsign) {
   if (error?.code === 'CALL_NOT_FOUND') return `${unit}, I don't have an active call matching that.`;
   if (error?.code === 'UNIT_AMBIGUOUS') return `${unit}, repeat the unit callsign.`;
   if (error?.code === 'UNIT_NOT_FOUND') return `${unit}, I couldn't locate that unit in this dispatch center.`;
-  return 'Dispatcher is unable to process that request. Repeat shortly.';
+  return composeV3FailureReply({speakerCallsign:unit,error});
 }
 
 function assertExplicitUnitTargets({ transcript, plan, operationalContext, speakerCallsign }) {
