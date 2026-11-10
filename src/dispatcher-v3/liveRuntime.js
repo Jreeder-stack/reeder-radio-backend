@@ -1495,6 +1495,14 @@ export class V3LiveDispatcher {
     dialogueContext = this.fieldIncidents.getDialogueContext(speakerCallsign, this._taskCustody(turnEnvelope));
     const responseText = composeV3Response({ plan, result, speakerCallsign, turnEnvelope,
       sharedIncident: sharedReply, channelName: this.context.channelName });
+    // Same correlated response/delivery ledger for CAD results, conversational
+    // replies, missing information, errors, and intentionally silent turns.
+    // No transcript, untrusted CAD text or TTS payload enters diagnostics.
+    this._diag('response_composed', correlationId, true, {
+      action: plan.action, kind: plan.intentType || 'operational',
+      outcome: result?.outcome || (result?.success ? 'success' : 'not_applicable'),
+      status: responseText ? 'queued_next' : 'no_reply_required',
+    }, turnEnvelope);
     if (plan.action === 'NO_ACTION' && plan.conversationAct && responseText) {
       this._diag('conversation_only_reply_planned', correlationId, true,
         { act: plan.conversationAct, recipient: speakerCallsign, cadAction: false }, turnEnvelope);
