@@ -9,7 +9,7 @@ vi.mock('../../services/opusCodec.js',()=>({opusCodec:{}}));
 vi.mock('../../services/floorControlService.js',()=>({floorControlService:{},AI_FLOOR_IDENTITY:'AI-Dispatcher'}));
 vi.mock('../../services/emergencyPagingService.js',()=>({pageEmergencyUnits:()=>{throw Error('Live paging prohibited')}}));
 vi.mock('openai',()=>({AzureOpenAI:class{constructor(){throw Error('Paid model prohibited')}}}));
-import { START_TIME, createHarness } from './helpers/auditRuntimeHarness.js';
+import { START_TIME, createHarness, finish, observe } from './helpers/auditRuntimeHarness.js';
 let opened,network;
 beforeEach(()=>{vi.useFakeTimers();vi.setSystemTime(START_TIME);
  vi.stubEnv('AI_DISPATCHER_WAKE_WORDS','central,dispatch,dispatcher');
@@ -47,7 +47,7 @@ describe('04-05 radio discipline and operator takeover',()=>{
  it('retains physical emergency authority when stopping the AI',async()=>{
   const h=await make();
   h.runtime.signaling.endEmergencyForUnit=vi.fn();
-  await h.runtime.handleEmergencyStart(h.context.roomKey,'A1');
+  await finish(observe(h.runtime.handleEmergencyStart(h.context.roomKey,'A1')));
   expect(h.runtime.operatorHandoffSnapshot().physicalEmergencyActiveAtHandoff).toBe(true);
   await h.runtime.stop();
   expect(h.runtime.signaling.endEmergencyForUnit).not.toHaveBeenCalled();

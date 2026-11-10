@@ -8,7 +8,7 @@ const errorReply = Object.freeze({
   UNIT_AMBIGUOUS: 'Multiple units match. Repeat the complete callsign.',
   UNIT_NOT_FOUND: 'That unit could not be verified in this dispatch center. Check the callsign.',
   UNAUTHORIZED: 'That action is not authorized for this unit. Contact a human dispatcher.',
-  CAD_UNAVAILABLE: 'CAD is not available. No new completion was confirmed. Contact a human dispatcher if urgent.',
+  CAD_UNAVAILABLE: 'unable to process that request because CAD is not available. No new completion was confirmed. Contact a human dispatcher if urgent.',
   CAD_REJECTED: 'CAD rejected that request. The change was not confirmed. Check the details with a dispatcher.',
   OPERATION_TIMEOUT: 'That request exceeded the processing limit. Check CAD before repeating any possible write.',
   TURN_STALE: 'That request expired. Give Central a new complete request.',

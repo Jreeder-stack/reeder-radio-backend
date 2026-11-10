@@ -1269,7 +1269,7 @@ export class V3LiveDispatcher {
           });
         } catch (selectionError) {
           plan = { action: 'CLARIFY', input: {}, confidence: 0,
-            clarification: clarificationQuestion(ownedPendingTask, null, speakerCallsign, transcript),
+            clarification: `${speakerCallsign}, ${String(selectionError.message || 'That detail cannot be verified').slice(0, 110)}. ${clarificationQuestion(ownedPendingTask, null, '', transcript)}`,
             reason: 'clarification_selection_rejected', pendingTask: ownedPendingTask };
         }
       } else if (ownedPendingTask && ['CLARIFY', 'NO_ACTION'].includes(plan.action)) {

@@ -25,7 +25,7 @@ const reply=(code,extras={})=>composeV3Response({plan:{action:'SET_UNIT_STATUS'}
 describe('04-04 truthful operational errors and delivery status',()=>{
  it.each([
   ['CAD_UNAVAILABLE',/CAD is not available/],
-  ['UNAUTHORIZED',/not authorized/],
+  ['UNAUTHORIZED',/isn't authorized/],
   ['TURN_STALE',/expired/],
   ['ZONE_NOT_FOUND',/zone is not available/],
   ['INVALID_STATUS_TRANSITION',/rejected that status change/],
@@ -41,7 +41,9 @@ describe('04-04 truthful operational errors and delivery status',()=>{
   expect(reply('CAD_UNAVAILABLE',{outcome:'unknown',submittedWrites:1})).toMatch(/Do not repeat/);
  });
  it('a rejected action does not offer a fake capability or promise handoff',()=>{
-  expect(reply('UNAUTHORIZED')).toMatch(/Contact a human dispatcher/);
+  expect(reply('UNAUTHORIZED')).toMatch(/isn't authorized/);
+  expect(composeV3FailureReply({speakerCallsign:'B2',error:{code:'UNAUTHORIZED'}}))
+    .toMatch(/Contact a human dispatcher/);
   expect(reply('UNAUTHORIZED')).not.toMatch(/sent|notified|transferred|saved/i);
  });
  it('exposes only a safe operator fault when output was not delivered',()=>{
@@ -53,7 +55,7 @@ describe('04-04 truthful operational errors and delivery status',()=>{
  it('the actual V3 output lane records an undelivered response without new CAD work',async()=>{
   const h=await make({llmPlans:[{action:'NO_ACTION',intentType:'conversation_only',
     conversationAct:'presence',input:{},confidence:1}]});
-  h.floor.requestFloor.mockReturnValue({granted:false,heldBy:'other-unit'});
+  h.synthesize.mockImplementationOnce(async()=>{throw Error('Synthetic TTS failed')});
   await h.send('Central, are you there?');
   expect(h.writes()).toEqual([]);
   expect(h.runtime.getPipelineStatus().lastOutputFailure).toMatchObject({

@@ -7,6 +7,8 @@ describe('04-06 independent held-out evaluation requirements',()=>{
   expect(fixture.standaloneUtterances.length).toBeGreaterThanOrEqual(50);
   expect(new Set(fixture.standaloneUtterances.map(x=>x.utterance)).size)
     .toBe(fixture.standaloneUtterances.length);
+  expect(new Set(fixture.standaloneUtterances.map(x=>x.id)).size)
+    .toBe(fixture.standaloneUtterances.length);
   expect(fixture.multiTurnExchanges.length).toBeGreaterThanOrEqual(10);
   expect(fixture.multiTurnExchanges.every(x=>x.turns.length>=2)).toBe(true);
   expect(fixture.fiveUnitScenarios.every(x=>new Set(x.speakers).size>=5)).toBe(true);

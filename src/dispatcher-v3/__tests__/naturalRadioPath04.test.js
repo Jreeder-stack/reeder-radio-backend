@@ -9,7 +9,7 @@ vi.mock('../../services/opusCodec.js',()=>({opusCodec:{}}));
 vi.mock('../../services/floorControlService.js',()=>({floorControlService:{},AI_FLOOR_IDENTITY:'AI-Dispatcher'}));
 vi.mock('../../services/emergencyPagingService.js',()=>({pageEmergencyUnits:()=>{throw Error('Live paging prohibited')}}));
 vi.mock('openai',()=>({AzureOpenAI:class{constructor(){throw Error('Paid model prohibited')}}}));
-import { createHarness, START_TIME } from './helpers/auditRuntimeHarness.js';
+import { createHarness, START_TIME, finish } from './helpers/auditRuntimeHarness.js';
 let opened,network;
 beforeEach(()=>{vi.useFakeTimers();vi.setSystemTime(START_TIME);
  vi.stubEnv('AI_DISPATCHER_WAKE_WORDS','central,dispatch,dispatcher');
@@ -70,11 +70,12 @@ describe('04-07 actual V3 authenticated PTT-to-response path',()=>{
  });
  it('keeps client PTT start/end methods and captured identity intact',async()=>{
   const h=await make();
-  const capture=await h.begin('Central, radio check','B2');
+  const capture=await h.capture('B2');
   expect(capture.accepted).toBe(true);
+  h.frame(capture);
   const finished=h.end(capture,'Central, radio check');
+  expect(await finish(finished)).toBe(true);
   await h.flushOutput();
-  expect(await finished.promise).toBeDefined();
   expect(h.spoken().at(-1)).toMatch(/^B2, loud and clear/);
  });
 });

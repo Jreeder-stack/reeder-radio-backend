@@ -23,7 +23,8 @@ export function clarificationQuestion(pending, proposed, callsign, transcript=''
   const name = safe(callsign,36);
   if (HESITATION.test(safe(transcript,180))) return (name ? name+', ' : '') + question;
   const text = safe(proposed,180);
-  if (text && !VAGUE.test(text) && /\?/.test(text) && !/Which one did you mean/i.test(text)) return text;
+  if (text && !VAGUE.test(text) && !/Which one did you mean/i.test(text)
+    && (/\?/.test(text) || /active call|no longer active|not among the original candidates|couldn.t locate|not in this dispatch center/i.test(text))) return text;
   return (name ? name+', ' : '') + question;
 }
 
