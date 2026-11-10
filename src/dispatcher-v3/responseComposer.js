@@ -1,6 +1,7 @@
 import { V3_ACTIONS } from './actionContracts.js';
 import { isV3TurnEnvelope } from './turnEnvelope.js';
 import { composeV3ConversationReply } from './conversationReplies.js';
+import { composeV3GroundedRead } from './groundedAnswers.js';
 
 const ROUTINE_ACK_ACTIONS = new Set([
   V3_ACTIONS.SET_UNIT_STATUS,
@@ -84,10 +85,13 @@ export function composeV3Response({ plan, result, speakerCallsign, now = new Dat
   const data = result.data || {};
   const returned = data.call || data.assignment || data;
   const returnedId = clean(returned?.call_id || returned?.callId || returned?.id);
-  if (sharedIncident?.verifiedCadFacts && sharedIncident.callId === returnedId
-    && [V3_ACTIONS.GET_CALL, V3_ACTIONS.GET_CURRENT_CALL].includes(plan.action)) {
-    return sharedIncidentResponse(unit, sharedIncident);
-  }
+  const matchedSharedIncident = sharedIncident?.verifiedCadFacts && sharedIncident.callId === returnedId
+    && [V3_ACTIONS.GET_CALL, V3_ACTIONS.GET_CURRENT_CALL].includes(plan.action)
+    ? sharedIncident : null;
+  const focused = composeV3GroundedRead({ plan, result, speakerCallsign: unit,
+    sharedIncident: matchedSharedIncident, now, formatTime: formatMilitaryTimeForSpeech });
+  if (focused) return focused;
+  if (matchedSharedIncident) return sharedIncidentResponse(unit, matchedSharedIncident);
   switch (plan.action) {
     case V3_ACTIONS.RADIO_CHECK:
       return `${unit}, loud and clear.`;
@@ -165,13 +169,21 @@ function compoundV3Response(unit, result, now) {
       const data = step.result?.data || {};
       let read = null;
       if ([V3_ACTIONS.GET_CALL, V3_ACTIONS.GET_CURRENT_CALL].includes(action)) {
-        read = currentCallResponse('', data);
+        read = composeV3GroundedRead({ plan: { action, answerFocus: step.answerFocus },
+          result: step.result, speakerCallsign: '', now,
+          formatTime: formatMilitaryTimeForSpeech }) || currentCallResponse('', data);
       } else if (action === V3_ACTIONS.LIST_ACTIVE_CALLS) {
-        read = activeCallsResponse('', data);
+        read = composeV3GroundedRead({ plan: { action, answerFocus: step.answerFocus },
+          result: step.result, speakerCallsign: '', now,
+          formatTime: formatMilitaryTimeForSpeech }) || activeCallsResponse('', data);
       } else if (action === V3_ACTIONS.SEARCH_CALLS) {
-        read = searchCallsResponse('', { calls: data.calls || [] });
+        read = composeV3GroundedRead({ plan: { action, answerFocus: step.answerFocus },
+          result: step.result, speakerCallsign: '', now,
+          formatTime: formatMilitaryTimeForSpeech }) || searchCallsResponse('', { calls: data.calls || [] });
       } else if (action === V3_ACTIONS.STATUS_CHECK) {
-        read = statusCheckResponse('', data);
+        read = composeV3GroundedRead({ plan: { action, answerFocus: step.answerFocus },
+          result: step.result, speakerCallsign: '', now,
+          formatTime: formatMilitaryTimeForSpeech }) || statusCheckResponse('', data);
       } else if (action === V3_ACTIONS.TIME_CHECK) {
         read = formatMilitaryTimeForSpeech(data.timestamp || now);
       } else if (action === V3_ACTIONS.RADIO_CHECK) {

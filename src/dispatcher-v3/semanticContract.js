@@ -7,6 +7,7 @@ import { sanitizeV3OperationalContext } from './operationalContext.js';
 import { normalizeV3PendingTaskProposal, pendingV3TaskForModel } from './clarificationTasks.js';
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
 import { normalizeV3ConversationAct } from './conversationReplies.js';
+import { V3_READ_ANSWER_FIELDS } from './groundedAnswers.js';
 
 export const V3_INTENT_TYPES = Object.freeze([
   'action_request', 'question', 'observation', 'correction', 'cancellation',
@@ -149,9 +150,24 @@ function interpretType(value, action, source = 'model') {
   return value;
 }
 
+
+function normalizeAnswerFocus(raw, action) {
+  if (raw === undefined || raw === null) return null;
+  const allowed = V3_READ_ANSWER_FIELDS[action];
+  if (!allowed) throw invalid('Answer fields may only select supported CAD reads', 'invalid_answer_focus');
+  const requested = Array.isArray(raw) ? raw : [raw];
+  if (!requested.length || requested.length > 4
+    || requested.some(item => typeof item !== 'string' || !allowed.includes(item))
+    || new Set(requested).size !== requested.length
+    || (requested.includes('summary') && requested.length > 1)) {
+    throw invalid('Unsupported or contradictory read-answer fields', 'invalid_answer_focus');
+  }
+  return Object.freeze([...requested]);
+}
+
 function normalizeStep(raw, source, index, earlier) {
   if (!plain(raw) || typeof raw.action !== 'string'
-    || Object.keys(raw).some(key => !['id', 'action', 'input', 'dependsOn', 'callIdFrom'].includes(key))) {
+    || Object.keys(raw).some(key => !['id', 'action', 'input', 'dependsOn', 'callIdFrom', 'answerFocus'].includes(key))) {
     throw invalid('Each semantic step needs one supported action and trusted step fields', 'invalid_step');
   }
   const action = normalizedAction(raw.action);
@@ -167,6 +183,7 @@ function normalizeStep(raw, source, index, earlier) {
     throw invalid('A step may depend only on unique, earlier operations', 'invalid_step_dependency');
   }
   const input = safeInput(raw.input, source);
+  const answerFocus = normalizeAnswerFocus(raw.answerFocus, action);
   const callIdFrom = raw.callIdFrom;
   if (callIdFrom !== undefined && (typeof callIdFrom !== 'string'
     || !CALL_TARGET_ACTIONS.has(action) || !dependsOn.includes(callIdFrom)
@@ -175,6 +192,7 @@ function normalizeStep(raw, source, index, earlier) {
     throw invalid('Invalid call binding: use an earlier call-producing dependency, not an invented ID', 'invalid_step_call_binding');
   }
   return Object.freeze({ id, action, input, dependsOn: Object.freeze([...dependsOn]),
+    ...(answerFocus ? { answerFocus } : {}),
     ...(callIdFrom === undefined ? {} : { callIdFrom }) });
 }
 
@@ -186,6 +204,9 @@ export function normalizeV3SemanticPlan(raw, { source = 'model' } = {}) {
   if (raw.actions !== undefined) {
     if (raw.conversationAct != null) {
       throw invalid('A compound CAD plan cannot carry a conversational response', 'conversation_mutation_conflict');
+    }
+    if (raw.answerFocus != null) {
+      throw invalid('Answer fields belong on individual read steps', 'invalid_answer_focus');
     }
     if (!Array.isArray(raw.actions) || !raw.actions.length || raw.actions.length > MAX_PLAN_ACTIONS) {
       throw invalid('Compound action count is invalid', 'invalid_step_count');
@@ -214,6 +235,7 @@ export function normalizeV3SemanticPlan(raw, { source = 'model' } = {}) {
   const intentType = interpretType(raw.intentType, action, source);
   const input = safeInput(raw.input, source);
   const selectedAct = normalizeV3ConversationAct(raw.conversationAct);
+  const answerFocus = normalizeAnswerFocus(raw.answerFocus, action);
   if (selectedAct && (action !== 'NO_ACTION' || intentType !== 'conversation_only')) {
     throw invalid('A CAD action or observation cannot carry a conversational reply', 'conversation_mutation_conflict');
   }
@@ -240,6 +262,7 @@ export function normalizeV3SemanticPlan(raw, { source = 'model' } = {}) {
     confidence: normalizedConfidence(raw.confidence),
     clarification, reason: bounded(raw.reason, 200) || null,
     ...(conversationAct ? { conversationAct } : {}),
+    ...(answerFocus ? { answerFocus } : {}),
     ...(pendingTask ? { pendingTask } : {}),
   });
 }

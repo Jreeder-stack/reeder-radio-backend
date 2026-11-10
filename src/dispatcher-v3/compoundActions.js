@@ -170,6 +170,8 @@ export async function executeV3CompoundPlan({
       }
       const entry = Object.freeze({
         id, action: materialized.action, dependsOn, callIdFrom: sourceId || null,
+        ...(READS.has(materialized.action) && actionPlan.answerFocus
+          ? { answerFocus: actionPlan.answerFocus } : {}),
         input: materialized.input, status, attempted: true,
         submittedWrites: Math.max(0, submittedWrites() - before),
         fingerprint, result, ...(failure ? { error: failure } : {}),
