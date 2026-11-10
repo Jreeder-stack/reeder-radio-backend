@@ -1,9 +1,9 @@
 # AI Dispatcher V3 master checklist
 
-Plan AI-DISP-V3-001, version 1.21, November 10, 2026.
+Plan AI-DISP-V3-001, version 1.22, November 10, 2026.
 Repository: `Jreeder-stack/reeder-radio-backend`.
 Branch: `test/dispatcher-v3-01-01-baseline-20261028`; PR #163, unmerged.
-Latest scoped-validated executable source: `adb8c44102d5431c06401053ada554518abd0add` (04-01 model-selected grounded conversation-only V3 radio replies; CI 42837273748, job 129902724586, Node 20: **12/12 new 04-01**, **635/635 V3** across 55 files, 26/26 audit, 81/81 PTT, 8/8 manager; full V3 workflow green).
+Latest scoped-validated executable source: `45a50a26f5c4580e9f40442a93a84c24ba54544a` (04-02 bounded factual read-answer selection; CI 42840228520, job 129913154768, Node 20: **12/12 new 04-02**, **647/647 V3** across 56 files, **26/26 audit**, **81/81 PTT**, **8/8 manager**; full V3 workflow green).
 Main at the implementation baseline: `c5ce5feed7a4feadb86ddca3d6d8c89e2c2f90fa`, identical to the audit. Latest inspected main independently advanced to `1c9a5d6df338dddf7b1333adb4ba1c477713194e` (later commits including PRs #164/#165/#166); integration with those revisions and the production revision remain unverified.
 
 ## Fixed objective and boundaries
@@ -21,8 +21,10 @@ Coding completion, scoped validation, pilot verification and release are separat
 | 01 | Reliable request processing | 8/8 | 8/8 |
 | 02 | Multi-unit conversation management | 8/8 | 8/8 |
 | 03 | Meaning-based understanding and safe CAD actions | 8/8 | 8/8 |
-| 04 | Natural conversation and useful responses | 1/8 | 1/8 |
-| Total | Original 32 items | 25/32 | 25/32 |
+| 04 | Natural conversation and useful responses | 2/8 | 2/8 |
+| Total | Original 32 items | 26/32 | 26/32 |
+
+**04-02 is coded and scoped-validated (November 10, 2026).** The existing semantic model can select up to four specific fields for supported CAD reads using a finite answer-focus contract; it cannot supply factual spoken text or a new operation. The grounded response composer answers from authorized CAD results and matching fresh verified shared-incident data, retains the authenticated speaker, labels unverified reports, states missing fields are unavailable, and bounds focused answers to 420 characters. Compound plans preserve the focus on each read step without altering write inputs. The previously verified CAD mutation, uncertainty, center isolation, hardware emergency and military-time boundaries remain unchanged. Implementation commit 6bb21b186ce0ccaec3380c92dc7b436463fbcd77, validated executable 45a50a26f5c4580e9f40442a93a84c24ba54544a. First CI 42840037884 passed 646/647 V3 tests with only a case-sensitive new test assertion; it was corrected without changing runtime safety logic. **[CI 42840228520](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/42840228520)**, job 129913154768: **12/12 new**, **647/647 V3** (56 files), **26/26 audit**, **81/81 PTT**, **8/8 manager**; syntax and legacy-absence checks passed. Synthetic model/PTT/CAD/output only; no real radio, paid provider calls or production changes. See dispatcher-v3/04-02-grounded-radio-responses-20261110.md and dispatcher-v3/validation/04-02-results.json. **Parent 04 2/8, total 26/32; next original 04-03.** G-01–G-04 unchecked, full repo/mobile, newer main, Command Link integration, real provider/radio, pilot and release unverified.
 
 **04-01 is coded and scoped-validated (November 10, 2026).** Current validated executable `adb8c44102d5431c06401053ada554518abd0add`. The root cause was the existing `NO_ACTION` composer returning `null` for all radio conversation-only requests, leaving understandable addressed traffic without a reply even when the semantic model classified it. The shared `normalizeV3SemanticPlan` now admits only a bounded, validated `conversationAct` on non-mutating `NO_ACTION` `conversation_only` plans. `conversationReplies.js` composes trusted-speaker-grounded replies (presence, acknowledgement, identity, channel, supported capabilities, request_details, standby), never untrusted model-authored success claims or CAD instructions. Explicit conversation-only with no act safely acknowledges; previous implicit `NO_ACTION` and non-mutating observations remain silent. Existing model and deterministic plan paths, unit-owned turn/task ledger, trusted radio gate, live V3 outbound scheduler, PTT/floor/physical emergency policy, CAD authorization/read-back and center isolation are preserved. The model chooses semantic conversation type, not an input phrase matcher. [CI 42837273748](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/42837273748), job `129902724586` Node 20: **12/12 new**, **635/635 V3** across 55 files, **26/26 audit**, **81/81 PTT**, **8/8 manager**, syntax and legacy-engine absence checks green. Synthetic model, STT/TTS, and CAD boundaries only; no live provider calls or real audio. See `dispatcher-v3/04-01-conversation-only-20261110.md` and `dispatcher-v3/validation/04-01-results.json`. **Parent 04 1/8, total 25/32; next original 04-02.** G-01–G-04 unchecked; full repository/mobile, newer main, cross-repository Command Link, live radios/providers, pilot, field verification and production unverified.
 
@@ -52,9 +54,9 @@ Coding completion, scoped validation, pilot verification and release are separat
 
 Read `dispatcher-v3/01-02-intake-trace-20261029.md`, `dispatcher-v3/validation/01-02-results.json` and `dispatcher-v3/validation/01-02-audit-results.json` for current implementation, commands, source hashes, CI comparison and limitations. The earlier `dispatcher-v3/03-01-phrase-containment-20261029.md` and `dispatcher-v3/validation/03-01-results.json` retain their historical evidence; the 01-01 baseline/results are also not rewritten as repair evidence.
 
-Next is **04-02: Generate concise, grounded radio responses**. Task 01 is 8/8, Task 02 is 8/8, Task 03 is 8/8, Task 04 is 1/8 coded/scoped-validated; G-01–G-04 remain open, with newer-main integration and real radio/provider verification unverified. Continue Task04 and release gates. Credential freshness and cancellation are owned by 01-05. No mutating pilot is authorized by this completion. Use one coordinated implementation stream for shared runtime/planner/state files. Write and run focused tests with each change; prefer mocked checks before paid calls and do not rerun unchanged expensive jobs without a diagnosis.
+Next is **04-03: Recover from missing or unclear information**. Task 01 is 8/8, Task 02 is 8/8, Task 03 is 8/8, Task 04 is 2/8 coded/scoped-validated; G-01–G-04 remain open, with newer-main integration and real radio/provider verification unverified. Continue Task04 and release gates. Credential freshness and cancellation are owned by 01-05. No mutating pilot is authorized by this completion. Use one coordinated implementation stream for shared runtime/planner/state files. Write and run focused tests with each change; prefer mocked checks before paid calls and do not rerun unchanged expensive jobs without a diagnosis.
 
-The deliverables and acceptance paragraphs below are retained verbatim from version1.0. Repeated pending-evidence boilerplate is consolidated: for every item except 01-01, 01-02, 01-03, 01-04, 01-05, 01-06, 01-07, 01-08, 02-01, 02-02, 02-03, 02-04, 02-05, 02-06, 02-07, 02-08, 03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07, 03-08 and 04-01, commits/tests/implementation evidence remain pending and live/pilot status remains unverified for every item. Do not silently shorten requirements when implementing an item.
+The deliverables and acceptance paragraphs below are retained verbatim from version1.0. Repeated pending-evidence boilerplate is consolidated: for every item except 01-01, 01-02, 01-03, 01-04, 01-05, 01-06, 01-07, 01-08, 02-01, 02-02, 02-03, 02-04, 02-05, 02-06, 02-07, 02-08, 03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 03-07, 03-08, 04-01 and 04-02, commits/tests/implementation evidence remain pending and live/pilot status remains unverified for every item. Do not silently shorten requirements when implementing an item.
 
 ## Task 01: Reliable request processing
 
@@ -278,7 +280,7 @@ The deliverables and acceptance paragraphs below are retained verbatim from vers
 | ID | Work item | Coded | Validated |
 | --- | --- | --- | --- |
 | 04-01 | Add a first-class conversation-only response path | [x] | [x] |
-| 04-02 | Generate concise, grounded radio responses | [ ] | [ ] |
+| 04-02 | Generate concise, grounded radio responses | [x] | [x] |
 | 04-03 | Recover from missing or unclear information | [ ] | [ ] |
 | 04-04 | Replace generic dead ends with truthful explanations | [ ] | [ ] |
 | 04-05 | Preserve radio discipline and human takeover | [ ] | [ ] |
@@ -299,6 +301,8 @@ The deliverables and acceptance paragraphs below are retained verbatim from vers
 **Deliverable:** Compose natural replies using the correct unit, dialogue and Task 03 outcome contract. Answer the question actually asked; avoid needless repeated questions, boilerplate and long speeches. Use approved terminology and military time. Bound output length and preserve factual status when using natural-language generation.
 
 **Acceptance:** Replies are useful, brief and associated with the correct unit/incident. No invented calls, locations, assignments, capabilities or completed actions. Scripted emergency/error wording may remain where useful; officers do not need scripted input wording.
+
+**04-02 completion evidence (November 10, 2026):** Source commit 6bb21b186ce0ccaec3380c92dc7b436463fbcd77; validated executable 45a50a26f5c4580e9f40442a93a84c24ba54544a. Read answer focus is selected semantically; spoken values come from authorized CAD data and fresh verified shared-incident facts, never untrusted model prose. Focused call details, count-only searches, status/time checks and mixed read/write outcomes use the authenticated unit and original military-time standard. Missing data and unverified reports cannot become invented facts. An initial case-sensitive test-only failure (646/647) was corrected. [CI 42840228520](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/42840228520), job 129913154768, Node 20: 12/12 new, 647/647 V3, 26/26 audit, 81/81 PTT, 8/8 manager, syntax and legacy-engine absence green. See dispatcher-v3/04-02-grounded-radio-responses-20261110.md and dispatcher-v3/validation/04-02-results.json. Mocked/synthetic qualification only, not pilot or release.
 
 ### 04-03: Recover from missing or unclear information
 
