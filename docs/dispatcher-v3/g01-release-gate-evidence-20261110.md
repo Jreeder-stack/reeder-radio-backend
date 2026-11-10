@@ -107,3 +107,29 @@ Current source-defined operational limits are documented in the master checklist
 ### iOS applicability still unresolved
 
 The two separate iOS project inventory failures are identical to known baseline defects and do not arise from changed V3 code. Backend/V3, web and desktop build/test evidence is green; Android phone/bridge evidence is from a successful build of the identical \`android-native/\` tree. Whether iOS compilation must be required for this particular backend/dispatcher G-01 gate has **not** been approved as an exclusion. Regardless, this emergency-ingress defect independently prevents G-01 acceptance.
+
+
+## Approved G-01 emergency-ingress repair: scoped validation (November 10, 2026)
+
+**Status:** Implementation and scoped synthetic regression validation **passed**. **G-01 itself remains [ ]** pending separate qualification decisions. The earlier section above is preserved as a historical pre-repair diagnosis, not a description of the current branch behavior.
+
+Owner explicitly approved the narrow emergency-ingress repair. **Implementation commit:** `b1cab9645bc43d4464a2d3f0297560367b7c9717`. Five files changed: `src/controllers/dispatchController.js`, `src/services/aiDispatchService.js`, `src/services/__tests__/pttRuntimeRouting.test.js`, `.github/workflows/ai-dispatcher-v3-ci.yml`, and `docs/CAD_API_REFERENCE.md`.
+
+**Corrective behavior:** Authenticated callers of `POST /api/dispatch/notify-emergency` now receive HTTP **410 Gone**, `triggered: false` and code `LEGACY_EMERGENCY_INGRESS_DISABLED`; the handler no longer reads caller-supplied unit/channel as emergency authority, loads the manager or starts any emergency state. The previously exposed compatibility `aiService.handleEmergencySignal` forwarding shortcut was removed. Legitimate `signalingService.onEmergencyStart`/`onEmergencyEnd` still reach the V3 runtime; normal PTT, admin stop/takeover, center isolation and physical emergency state were not changed.
+
+**Nine new synthetic regression assertions** cover seven HTTP payload variations (same-unit, foreign-unit, foreign-center, unknown channel, self-asserted hardware origin, inactive and missing fields), repeated notifications across stop/restart and unavailable runtimes, and legitimate emergency callback delivery solely to the matching dispatch center. Existing live-runtime emergency regression coverage remains.
+
+### Actual GitHub CI result
+
+[Run **42918286141**](https://github.com/Jreeder-stack/reeder-radio-backend/actions/runs/42918286141), `b1cab9645bc43d4464a2d3f0297560367b7c9717`, Node v20.20.2 / GitHub-hosted Linux, November 10, 2026.
+
+| Job / tested surface | Verified result |
+| --- | --- |
+| V3 scoped job `130186281011` | **SUCCESS**: 683/683 V3 across 62 files, 72/72 synthetic acceptance, 90/90 PTT tests across 5 files (was 81; nine new), 8/8 manager, 26/26 audit assertions, runtime boundary syntax and obsolete-engine checks |
+| G-01 full repository job `130186281468` | **FAILURE overall**: all **955/955 root tests across 90 files pass**; Node server syntax passes; web client `npm ci`/`npm run build` passes; desktop gateway `npm test` passes **10/10**; two pre-existing iOS project checks still FAIL |
+| iOS source inventory | **FAIL**: four undeclared Swift files and an outdated `project.pbxproj`, identical known historical baseline failure |
+| iOS SwiftPM lock inventory | **FAIL**: missing `Package.resolved`, identical known historical baseline failure |
+
+Exact commands remain in the one-time G-01 workflow and preceding report. The new test cases ran in both the full root suite and the existing focused PTT group. GitHub-reported artifacts: V3 `13809469179` SHA-256 `9870fc622bfcf52b0cc8e98ef045bdc58ae5edb6e9c05de6e45e6368e2ab92f9`; root `13809424286` SHA-256 `445599bd632f1da0669fa7a8080bb01270e820d29dbb11e5e26ca6555bbef687`. Artifact digests are reported by GitHub, **not independently rehashed**. Do not report the overall workflow green or silently disregard iOS.
+
+**Remaining:** The safety blocker from the legacy HTTP emergency route is now **coded and synthetic-tested**, not live-deployed or field-verified. G-01 stays unchecked because the complete job is red, iOS applicability has not been approved as a scope exclusion, and newer-main/alternate environment integration remains unresolved. G-02–G-04 remain unchecked. PR #163 stays draft/open/unmerged/unmergeable. No provider, schema, transport, codec or firmware change; no merge, rebase, deployment, restart, real provider call, production CAD write or live radio test. The latest **CI-tested executable commit is `b1cab9645bc43d4464a2d3f0297560367b7c9717`**; any subsequent documentation-only commit does not imply a new executable test run.
