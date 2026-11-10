@@ -56,6 +56,8 @@ vi.mock('../signalingService.js', () => {
     onEmergencyStart: subscribe('emergencyStart'), onEmergencyEnd: subscribe('emergencyEnd'),
   } };
 });
+// Keep unrelated dispatch services offline when testing the legacy HTTP handler.
+vi.mock('../dispatchService.js', () => ({}));
 vi.mock('../azureSpeechService.js', () => ({ isConfigured: () => true }));
 vi.mock('../cadService.js', () => ({
   CORE_AI_DISPATCHER_CAD_SCOPES: ['unit.read', 'unit.write'],
@@ -82,6 +84,7 @@ vi.mock('../../dispatcher-v3/liveRuntime.js', () => ({
 
 import { AIDispatcherRuntimeManager } from '../aiDispatcherRuntimeManager.js';
 import { aiDispatcherSignaling } from '../aiDispatcherSignaling.js';
+import { notifyEmergency } from '../../controllers/dispatchController.js';
 import { getDispatcher, setActiveDispatcherCompatibility, setDispatcherPttCompatibilityResolver } from '../aiDispatchService.js';
 import {
   attachPttMetadata, createPttTransmission, finishPttTransmission,
@@ -339,5 +342,77 @@ describe('01-02 manager callbacks and compatibility forwarding', () => {
     const dispatcher = manager.runtimes.get('profile-a').dispatcher;
     expect(dispatcher.handleEmergencyStart).toHaveBeenCalledWith('a__OPS1', 'A1');
     expect(dispatcher.handleEmergencyEnd).toHaveBeenCalledWith('a__OPS1', 'A1');
+  });
+});
+
+function emergencyHttpResponse() {
+  const res = { statusCode: 200, body: null };
+  res.status = vi.fn((code) => { res.statusCode = code; return res; });
+  res.json = vi.fn((body) => { res.body = body; return res; });
+  return res;
+}
+async function postLegacyEmergency(body, session = { user: { id: 'account-a', username: 'account-a', unit_id: 'A1', role: 'user' } }) {
+  const res = emergencyHttpResponse();
+  await notifyEmergency({ session, body }, res);
+  return res;
+}
+
+describe('G-01 legacy HTTP emergency ingress must not synthesize hardware SOS', () => {
+  it.each([
+    ['same-unit request', { channel: 'a__OPS1', identity: 'A1', active: true }],
+    ['different authenticated unit', { channel: 'a__OPS1', identity: 'B2', active: true }],
+    ['different dispatch center', { channel: 'b__OPS1', identity: 'A1', active: true }],
+    ['unconfigured channel', { channel: 'unknown__OPS1', identity: 'A1', active: true }],
+    ['self-asserted hardware origin', { channel: 'a__OPS1', identity: 'A1', active: true, source: 'hardware', trusted: true }],
+    ['inactive notification', { channel: 'a__OPS1', identity: 'A1', active: false }],
+    ['missing fields', {}],
+  ])('returns explicit non-success for %s without invoking any SOS runtime', async (_name, body) => {
+    const a = profile('a', 41), b = profile('b', 42);
+    await start([a, b]);
+    const res = await postLegacyEmergency(body);
+    expect(res.statusCode).toBe(410);
+    expect(res.body).toMatchObject({ triggered: false, code: 'LEGACY_EMERGENCY_INGRESS_DISABLED' });
+    expect(getDispatcher().aiService).toBeUndefined();
+    for (const row of [a, b]) {
+      const dispatcher = manager.runtimes.get(row.id).dispatcher;
+      expect(dispatcher.handleEmergencyStart).not.toHaveBeenCalled();
+      expect(dispatcher.handleEmergencyEnd).not.toHaveBeenCalled();
+    }
+    expect(manager.runtimes.size).toBe(2);
+  });
+
+  it('rejects repeated and post-restart HTTP requests without altering runtime custody', async () => {
+    const a = profile('a', 41);
+    await start([a]);
+    for (let i = 0; i < 3; i++) {
+      expect((await postLegacyEmergency({ channel: a.room_key, identity: 'A1', active: true })).statusCode).toBe(410);
+    }
+    const previous = manager.runtimes.get(a.id).dispatcher;
+    expect(previous.handleEmergencyStart).not.toHaveBeenCalled();
+    await manager.restartProfile(a.id);
+    const current = manager.runtimes.get(a.id).dispatcher;
+    expect(current).not.toBe(previous);
+    expect((await postLegacyEmergency({ channel: a.room_key, identity: 'A1', active: true })).statusCode).toBe(410);
+    expect(current.handleEmergencyStart).not.toHaveBeenCalled();
+    await manager.shutdown();
+    expect((await postLegacyEmergency({ channel: a.room_key, identity: 'A1', active: true })).statusCode).toBe(410);
+    expect(manager.runtimes.size).toBe(0);
+  });
+
+  it('continues accepting legitimate signaling hardware emergency callbacks for the correct center', async () => {
+    const a = profile('a', 41), b = profile('b', 42);
+    await start([a, b]);
+    expect((await postLegacyEmergency({ channel: a.room_key, identity: 'B2', active: true })).statusCode).toBe(410);
+    await emit('emergencyStart', { channelId: b.room_key, unitId: 'A1' });
+    await emit('emergencyEnd', { channelId: b.room_key, unitId: 'A1' });
+    const bDispatcher = manager.runtimes.get(b.id).dispatcher;
+    const aDispatcher = manager.runtimes.get(a.id).dispatcher;
+    expect(bDispatcher.handleEmergencyStart).toHaveBeenCalledTimes(1);
+    expect(bDispatcher.handleEmergencyStart).toHaveBeenCalledWith(b.room_key, 'A1');
+    expect(bDispatcher.handleEmergencyEnd).toHaveBeenCalledTimes(1);
+    expect(bDispatcher.handleEmergencyEnd).toHaveBeenCalledWith(b.room_key, 'A1');
+    expect(aDispatcher.handleEmergencyStart).not.toHaveBeenCalled();
+    expect(aDispatcher.handleEmergencyEnd).not.toHaveBeenCalled();
+    expect(manager.runtimes.size).toBe(2);
   });
 });

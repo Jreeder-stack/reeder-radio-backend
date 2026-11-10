@@ -297,52 +297,12 @@ export async function notifyPtt(req, res) {
   }
 }
 
-export async function notifyEmergency(req, res) {
-  try {
-    const { channel, identity, active } = req.body;
-    
-    if (!channel || !identity) {
-      return error(res, 'Channel and identity required', 400);
-    }
-    
-    console.log(`[AI-Dispatcher] Emergency notification: ${identity} on ${channel}, active: ${active}`);
-    
-    const enabled = await isAiDispatchEnabled();
-    if (!enabled) {
-      return success(res, { 
-        triggered: false, 
-        reason: 'AI Dispatch is disabled' 
-      });
-    }
-    
-    const dispatcher = getDispatcher();
-    
-    if (!dispatcher || !dispatcher.room) {
-      console.log('[AI-Dispatcher] Dispatcher not connected, starting...');
-      const allChannels = await getAllChannels();
-      const channelData = allChannels.find(ch => ch.room_key === channel || ch.name === channel);
-      const roomKey = channelData?.room_key || channel;
-      await startDispatcher(channelData?.name || channel, roomKey);
-    }
-    
-    const activeDispatcher = getDispatcher();
-    
-    if (activeDispatcher && activeDispatcher.aiService && active) {
-      activeDispatcher.aiService.handleEmergencySignal(identity, channel);
-      return success(res, { 
-        triggered: true, 
-        channel,
-        message: 'Emergency escalation started' 
-      });
-    }
-    
-    success(res, { 
-      triggered: false, 
-      reason: 'AI Dispatcher not available or emergency cancelled',
-      channel 
-    });
-  } catch (err) {
-    console.error('Notify emergency error:', err);
-    error(res, 'Failed to process emergency notification', 500);
-  }
+// Legacy HTTP calls cannot prove a physical radio emergency from their body.
+// Fail closed at ingress, before any dispatcher, CAD, or radio side effects.
+export async function notifyEmergency(_req, res) {
+  return res.status(410).json({
+    triggered: false,
+    code: 'LEGACY_EMERGENCY_INGRESS_DISABLED',
+    error: 'Legacy HTTP emergency notification is disabled. Use the authenticated radio emergency signaling path.',
+  });
 }

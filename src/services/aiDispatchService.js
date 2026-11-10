@@ -22,11 +22,6 @@ function compatibilityView(dispatcher) {
     get displayChannel() { return dispatcher.context?.channelName || dispatcher.displayChannel || null; },
     get room() { return dispatcher.connected ? { name: dispatcher.context?.roomKey || null } : null; },
     get profileId() { return dispatcher.context?.profileId || null; },
-    get aiService() {
-      return {
-        handleEmergencySignal: async (unitId, channelId) => dispatcher.handleEmergencyStart(channelId, unitId),
-      };
-    },
     async rejoinIfNeeded() {
       if (dispatcher.isRunning && dispatcher.connected) return true;
       return dispatcher.start();
