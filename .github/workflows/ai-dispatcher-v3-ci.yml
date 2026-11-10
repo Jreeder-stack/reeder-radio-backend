@@ -134,3 +134,59 @@ jobs:
           path: reports/
           if-no-files-found: warn
           retention-days: 14
+
+  # One-time G-01 repository qualification. This is not a release or deployment job.
+  # Run only on the explicitly marked evidence commit, not on every ordinary V3 push.
+  g01-repository-qualification:
+    name: G-01 full repository and client qualification
+    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[G-01]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Check out pinned candidate
+        uses: actions/checkout@v4
+      - name: Set up supported Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Record candidate and runtime
+        run: |
+          git rev-parse HEAD
+          node --version
+          npm --version
+      - name: Install root dependencies from committed lockfile
+        run: npm ci
+      - name: Full repository Vitest suite (backend and browser unit tests)
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p reports
+          npm test -- --reporter=default --reporter=json --outputFile=reports/g01-full-repository-tests.json
+      - name: Backend entrypoint syntax
+        if: ${{ !cancelled() }}
+        run: |
+          node --check src/server.js
+          node --check server.js
+      - name: Build web client from committed lockfile
+        if: ${{ !cancelled() }}
+        run: |
+          npm ci --prefix client
+          npm run build --prefix client
+      - name: Desktop gateway test suite
+        if: ${{ !cancelled() }}
+        run: npm test --prefix desktop-app
+      - name: iOS project and resolved-package inventory (not Xcode build)
+        if: ${{ !cancelled() }}
+        run: |
+          node ios-native/scripts/check-pbxproj.mjs
+          node ios-native/scripts/check-package-resolved.mjs
+      - name: Preserve G-01 test JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dispatcher-g01-full-repository-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/g01-full-repository-tests.json
+          if-no-files-found: warn
+          retention-days: 14
