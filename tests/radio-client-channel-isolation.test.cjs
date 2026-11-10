@@ -496,3 +496,17 @@ test('radio client rejects malformed authorized audio protocols', async t => {
   await assert.rejects(h.client.init({ serverUrl: 'https://cad.example.test', channelId: A, audioWebSocketProtocols: [] }), /audioWebSocketProtocols/);
   assert.equal(h.webSockets.length, 0);
 });
+
+
+test('destroy clears the signed CAD audio handshake credential', async t => {
+  const h = harness(t);
+  const started = h.client.init({
+    serverUrl: 'https://cad.example.test', channelId: A,
+    audioWebSocketProtocols: ['command-link', 'cad-auth.short-lived'],
+  });
+  await h.authenticate();
+  const ws = await h.acknowledge(A); ws.open();
+  await started;
+  await h.client.destroy();
+  assert.equal(h.client._audioWebSocketProtocols, null);
+});

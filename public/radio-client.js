@@ -957,6 +957,8 @@
       this._leaveChannel(this._joinedChannelId);
     }
     this._closeAudioWs();
+    // Do not retain a signed CAD WebSocket credential after this client ends.
+    this._audioWebSocketProtocols = null;
     var socket = this._socket;
     this._socket = null;
     this._authenticated = false;
