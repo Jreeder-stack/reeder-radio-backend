@@ -145,7 +145,7 @@ describe('AI-DISP-V3-001 04-02 factual concise radio answer selection', () => {
     expect(plan.actions[0].answerFocus).toEqual(['location']);
     expect(() => normalizeV3SemanticPlan({ intentType: 'action_request',
       actions: [read, { ...write, answerFocus: ['status'] }] }))
-      .toThrow(/answer fields/);
+      .toThrow(/answer fields/i);
   });
 
   it('traverses actual authenticated PTT, CAD read, response and floor delivery', async () => {
