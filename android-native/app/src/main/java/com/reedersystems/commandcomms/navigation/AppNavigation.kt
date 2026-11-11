@@ -19,6 +19,7 @@ import androidx.navigation.navArgument
 import com.reedersystems.commandcomms.BuildConfig
 import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
+import com.reedersystems.commandcomms.hd760.Hd760ChannelCache
 import com.reedersystems.commandcomms.ui.login.LoginScreen
 import com.reedersystems.commandcomms.ui.radio.DeviceRegistrationScreen
 import com.reedersystems.commandcomms.ui.radio.LockedScreen
@@ -91,6 +92,15 @@ fun AppNavigation() {
             val isValid = validateTokenWithServer(app)
             if (!isValid) {
                 Log.w(TAG, "Stored token failed server validation — clearing prefs")
+                if (BuildConfig.FLAVOR == "hd760") {
+                    Hd760ChannelCache(context).clear()
+                    app.hd760SlotActive.value = false
+                    val stopIntent = Intent(context, BackgroundAudioService::class.java).apply {
+                        action = BackgroundAudioService.ACTION_STOP
+                    }
+                    ContextCompat.startForegroundService(context, stopIntent)
+                    app.serviceConnectionPrefs.clear()
+                }
                 app.radioTokenStore.clear()
                 app.apiClient.radioToken = null
                 navController.navigate(Routes.DEVICE_REGISTRATION) {
@@ -119,6 +129,7 @@ fun AppNavigation() {
         composable(Routes.DEVICE_REGISTRATION) {
             DeviceRegistrationScreen(
                 onRegistrationSuccess = {
+                    if (BuildConfig.FLAVOR == "hd760") Hd760ChannelCache(context).clear()
                     val rid = app.radioTokenStore.getRadioId() ?: ""
                     navController.navigate(Routes.unassigned(rid)) {
                         popUpTo(Routes.DEVICE_REGISTRATION) { inclusive = true }
@@ -151,6 +162,7 @@ fun AppNavigation() {
             RadioFlavorScreen(
                 onLocked = if (isRadioDevice) {
                     {
+                        if (BuildConfig.FLAVOR == "hd760") Hd760ChannelCache(context).clear()
                         app.radioTokenStore.clearAssignedUnit()
                         navController.navigate(Routes.locked(currentRadioId)) {
                             popUpTo(Routes.RADIO) { inclusive = true }
@@ -159,6 +171,7 @@ fun AppNavigation() {
                 } else null,
                 onUnassigned = if (isRadioDevice) {
                     {
+                        if (BuildConfig.FLAVOR == "hd760") Hd760ChannelCache(context).clear()
                         val stopIntent = Intent(context, BackgroundAudioService::class.java).apply {
                             action = BackgroundAudioService.ACTION_STOP
                         }
