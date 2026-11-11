@@ -27,16 +27,9 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # Ubuntu runners already provide sdkmanager. The setup-android action
-      # requests the removed SDK package named 'tools' and fails before build.
-      - name: Verify preinstalled Android SDK
-        run: |
-          test -n "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
-          sdkmanager --version
-
-      - name: Install Android SDK 34
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
-
+      # Match the already-validated phone/bridge workflow: Gradle uses the
+      # Android SDK preinstalled on ubuntu-latest. Avoid the broken
+      # setup-android 'tools' package request and missing sdkmanager PATH.
       - name: Set up Gradle 8.6
         uses: gradle/actions/setup-gradle@v4
         with:
