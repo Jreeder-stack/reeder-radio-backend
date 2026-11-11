@@ -27,8 +27,12 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # Ubuntu runners already provide sdkmanager. The setup-android action
+      # requests the removed SDK package named 'tools' and fails before build.
+      - name: Verify preinstalled Android SDK
+        run: |
+          test -n "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          sdkmanager --version
 
       - name: Install Android SDK 34
         run: sdkmanager "platforms;android-34" "build-tools;34.0.0"

@@ -142,7 +142,7 @@ jobs:
   # One-time G-01 repository qualification. This is not a release or deployment job.
   # Run only on the explicitly marked evidence commit, not on every ordinary V3 push.
   g01-repository-qualification:
-    name: G-01 full repository and client qualification
+    name: G-01 backend, web and desktop qualification
     if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[G-01]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -181,12 +181,18 @@ jobs:
       - name: Desktop gateway test suite
         if: ${{ !cancelled() }}
         run: npm test --prefix desktop-app
-      - name: iOS project source inventory (not Xcode build)
+      # Backend-only G-01: native application inventories remain covered by their
+      # own workflows whenever native sources change. Refuse to exclude native
+      # qualification if this V3 candidate itself modifies either client tree.
+      - name: Verify native clients are unchanged from current main
         if: ${{ !cancelled() }}
-        run: node ios-native/scripts/check-pbxproj.mjs
-      - name: iOS resolved-package inventory (not Xcode build)
-        if: ${{ !cancelled() }}
-        run: node ios-native/scripts/check-package-resolved.mjs
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if ! git diff --quiet origin/main HEAD -- ios-native/ android-native/; then
+            echo "::error::Native client sources differ from main; separate native build qualification is required."
+            exit 1
+          fi
+          echo "iOS/Android sources match main; native project checks are owned by platform-specific workflows."
       - name: Preserve G-01 test JSON
         if: always()
         uses: actions/upload-artifact@v4

@@ -4,7 +4,11 @@ on:
   push:
     branches:
       - main
+  # Only require iOS project checks for pull requests that change native iOS files.
+  # Main-branch pushes continue to report baseline iOS inventory health.
   pull_request:
+    paths:
+      - 'ios-native/**'
 
 jobs:
   check-pbxproj:
