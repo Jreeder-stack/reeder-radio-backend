@@ -92,15 +92,7 @@ fun AppNavigation() {
             val isValid = validateTokenWithServer(app)
             if (!isValid) {
                 Log.w(TAG, "Stored token failed server validation — clearing prefs")
-                if (BuildConfig.FLAVOR == "hd760") {
-                    Hd760ChannelCache(context).clear()
-                    app.hd760SlotActive.value = false
-                    val stopIntent = Intent(context, BackgroundAudioService::class.java).apply {
-                        action = BackgroundAudioService.ACTION_STOP
-                    }
-                    ContextCompat.startForegroundService(context, stopIntent)
-                    app.serviceConnectionPrefs.clear()
-                }
+                retireHd760RouteOnIdentityChange(app)
                 app.radioTokenStore.clear()
                 app.apiClient.radioToken = null
                 navController.navigate(Routes.DEVICE_REGISTRATION) {
@@ -129,7 +121,7 @@ fun AppNavigation() {
         composable(Routes.DEVICE_REGISTRATION) {
             DeviceRegistrationScreen(
                 onRegistrationSuccess = {
-                    if (BuildConfig.FLAVOR == "hd760") Hd760ChannelCache(context).clear()
+                    retireHd760RouteOnIdentityChange(app)
                     val rid = app.radioTokenStore.getRadioId() ?: ""
                     navController.navigate(Routes.unassigned(rid)) {
                         popUpTo(Routes.DEVICE_REGISTRATION) { inclusive = true }
@@ -281,6 +273,25 @@ fun AppNavigation() {
     }
 }
 
+/**
+ * A registration, server-verified reassignment or token rejection ends the
+ * previous HD760 channel's operational custody, not just its screen labels.
+ */
+private fun retireHd760RouteOnIdentityChange(app: CommandCommsApp) {
+    if (BuildConfig.FLAVOR != "hd760") return
+    Hd760ChannelCache(app).clear()
+    app.hd760SlotActive.value = false
+    app.hd760JoinedRoomKey.value = null
+    app.serviceConnectionPrefs.channelId = -1
+    app.serviceConnectionPrefs.channelRoomKey = null
+    app.serviceConnectionPrefs.channelName = null
+    app.serviceConnectionPrefs.unitId = null
+    val intent = Intent(app, BackgroundAudioService::class.java).apply {
+        action = BackgroundAudioService.ACTION_STOP
+    }
+    ContextCompat.startForegroundService(app, intent)
+}
+
 private suspend fun validateTokenWithServer(app: CommandCommsApp): Boolean =
     withContext(Dispatchers.IO) {
         try {
@@ -302,16 +313,19 @@ private suspend fun validateTokenWithServer(app: CommandCommsApp): Boolean =
                         val localUnitId = app.radioTokenStore.getAssignedUnitId()
                         if (serverAssignedId != null && serverUnitId != null && serverUnitId != localUnitId) {
                             Log.d(TAG, "Ping reports assignment unitId=$serverUnitId (local=$localUnitId) — syncing")
+                            retireHd760RouteOnIdentityChange(app)
                             app.radioTokenStore.saveAssignedUnit(serverUnitId)
                             app.sessionPrefs.unitId = serverUnitId
                             app.sessionPrefs.username = serverUnitId
                         } else if (serverAssignedId != null && serverUnitId == null) {
                             Log.w(TAG, "Ping reports assignedUnitId=$serverAssignedId but unitId unresolved — clearing local assignment")
+                            retireHd760RouteOnIdentityChange(app)
                             app.radioTokenStore.clearAssignedUnit()
                             app.sessionPrefs.unitId = null
                             app.sessionPrefs.username = null
                         } else if (serverAssignedId == null && localUnitId != null) {
                             Log.d(TAG, "Ping reports no assignment but local has $localUnitId — clearing")
+                            retireHd760RouteOnIdentityChange(app)
                             app.radioTokenStore.clearAssignedUnit()
                             app.sessionPrefs.unitId = null
                             app.sessionPrefs.username = null
