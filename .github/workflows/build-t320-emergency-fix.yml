@@ -5,9 +5,12 @@ on:
     branches:
       - agent/t320-emergency-no-auto-tx-apk
       - build/t320-ptt-emergency-fixed-apk
+  # Preserve T320 build enforcement for PRs that actually modify Android source.
   pull_request:
     branches:
       - main
+    paths:
+      - 'android-native/**'
 
 permissions:
   contents: read

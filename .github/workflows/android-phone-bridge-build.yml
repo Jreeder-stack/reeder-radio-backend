@@ -5,9 +5,13 @@ on:
     branches:
       - main
       - feature/android-uhf-vox-bridge
+  # Native build is required for PRs changing Android source, not backend-only V3.
+  # Retain current main-push and manual-dispatch coverage.
   pull_request:
     branches:
       - main
+    paths:
+      - 'android-native/**'
   workflow_dispatch:
 
 jobs:
