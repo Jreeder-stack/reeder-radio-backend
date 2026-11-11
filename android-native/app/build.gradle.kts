@@ -43,6 +43,16 @@ android {
             versionNameSuffix = "-sd7"
             buildConfigField("String", "RADIO_DEVICE_TYPE", "\"siyata_sd7\"")
         }
+        create("hd760") {
+            dimension = "device"
+            // Reuse base app ID already registered in google-services.json.
+            // HD760 is on separate hardware; its deviceType remains specific.
+            minSdk = 25
+            targetSdk = 25
+            versionCode = 1
+            versionNameSuffix = "-hd760"
+            buildConfigField("String", "RADIO_DEVICE_TYPE", "\"anysecu_hd760\"")
+        }
     }
 
     sourceSets {
@@ -124,6 +134,8 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.0.1")
 
     implementation(fileTree("libs") { include("*.jar") })
+
+    testImplementation("junit:junit:4.13.2")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

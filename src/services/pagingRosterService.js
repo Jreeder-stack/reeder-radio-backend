@@ -252,3 +252,36 @@ export async function resolveRadioRecipients({ radioIds, listId }) {
 
   return Array.from(byRadio.values());
 }
+
+
+/** Resolve the same validated radio rows used by manual paging, for native fallback. */
+export async function resolveNativePageRecipients({ targetType, targetId, radioIds }) {
+  if (targetType === 'units') return resolveRadioRecipients({ radioIds });
+  if (targetType === 'list') return resolveRadioRecipients({ listId: targetId });
+  const value = String(targetId ?? '');
+  let sql;
+  let params;
+  if (targetType === 'unit') {
+    sql = [
+      'SELECT r.id FROM radios r LEFT JOIN users u ON u.id = r.assigned_unit_id',
+      'WHERE COALESCE(r.is_active, true) = true AND',
+      '(r.radio_id = $1 OR u.unit_id = $1 OR u.username = $1)'
+    ].join(' ');
+    params = [value];
+  } else if (targetType === 'channel') {
+    sql = [
+      'SELECT DISTINCT r.id FROM radios r',
+      'JOIN user_channel_access uca ON uca.user_id = r.assigned_unit_id',
+      'JOIN channels ch ON ch.id = uca.channel_id',
+      'WHERE COALESCE(r.is_active, true) = true AND',
+      '(ch.id::text = $1 OR ch.name = $1 OR',
+      "(COALESCE(ch.zone, 'Default') || '__' || ch.name) = $1)"
+    ].join(' ');
+    params = [value];
+  } else if (targetType === 'all') {
+    sql = 'SELECT id FROM radios WHERE COALESCE(is_active, true) = true';
+    params = [];
+  } else throw new Error('Unsupported native page target');
+  const rows = await pool.query(sql, params);
+  return resolveRadioRecipients({ radioIds: rows.rows.map(row => row.id) });
+}

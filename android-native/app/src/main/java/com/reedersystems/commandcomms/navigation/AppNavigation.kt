@@ -1,6 +1,7 @@
 package com.reedersystems.commandcomms.navigation
 
 import android.content.Intent
+import androidx.core.content.ContextCompat
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -161,7 +162,7 @@ fun AppNavigation() {
                         val stopIntent = Intent(context, BackgroundAudioService::class.java).apply {
                             action = BackgroundAudioService.ACTION_STOP
                         }
-                        context.startForegroundService(stopIntent)
+                        ContextCompat.startForegroundService(context, stopIntent)
                         app.radioTokenStore.clearAssignedUnit()
                         app.sessionPrefs.unitId = null
                         app.sessionPrefs.username = null

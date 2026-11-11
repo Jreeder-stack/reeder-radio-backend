@@ -13,6 +13,7 @@ export default function PageModal({ target, onClose }) {
   const [sending, setSending] = useState(false);
   const [sentPage, setSentPage] = useState(null);
   const [acks, setAcks] = useState([]);
+  const [nativeStatuses, setNativeStatuses] = useState([]);
   const [targetedUnits, setTargetedUnits] = useState([]);
 
   const pollAcks = useCallback(async (pageId) => {
@@ -21,6 +22,7 @@ export default function PageModal({ target, onClose }) {
       if (res.ok) {
         const data = await res.json();
         setAcks(data.acks || []);
+        setNativeStatuses(data.native || []);
       }
     } catch (err) {
       console.error('[PageModal] Failed to poll acks:', err);
@@ -65,6 +67,7 @@ export default function PageModal({ target, onClose }) {
   };
 
   const ackedIds = new Set(acks.map(a => a.radio_id || a.unit_id));
+  const statusesByRadio = new Map(nativeStatuses.map(row => [String(row.radioId), row]));
 
   return (
     <div
@@ -84,7 +87,7 @@ export default function PageModal({ target, onClose }) {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--dispatch-text, #eee)' }}>
-            {sentPage ? 'Page Sent' : `Page ${target.label}`}
+            {sentPage ? 'Page Created' : `Page ${target.label}`}
           </h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--dispatch-secondary, #888)', cursor: 'pointer', fontSize: 20 }}>✕</button>
         </div>
@@ -118,7 +121,7 @@ export default function PageModal({ target, onClose }) {
         ) : (
           <div>
             <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#86efac', fontSize: 13, marginBottom: 16 }}>
-              <strong>Page dispatched:</strong> &ldquo;{sentPage.message}&rdquo;
+              <strong>Page recorded:</strong> &ldquo;{sentPage.message}&rdquo;
             </div>
 
             <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 600, color: 'var(--dispatch-text, #eee)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Delivery Confirmation</h4>
@@ -128,18 +131,29 @@ export default function PageModal({ target, onClose }) {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {targetedUnits.map(unit => {
-                  const acked = ackedIds.has(unit.radioId);
+                  const native = statusesByRadio.get(String(unit.radioId));
                   const ackRecord = acks.find(a => a.radio_id === unit.radioId);
-                  const failed = unit.hasDeliveryToken === false;
+                  const operatorAcked = native?.status === 'acknowledged';
+                  const delivered = operatorAcked || native?.status === 'delivered' ||
+                    (!native && ackedIds.has(unit.radioId));
+                  const expired = native?.status === 'expired';
+                  const failed = expired || (!native && unit.hasDeliveryToken === false && !unit.hasNativePage);
+                  const statusText = operatorAcked ? 'Acknowledged by radio operator'
+                    : delivered ? 'Delivered to app'
+                    : expired ? 'Expired without delivery'
+                    : native?.status === 'queued' ? 'Queued, radio offline'
+                    : native?.status === 'pending' ? 'Sent, awaiting app receipt'
+                    : failed ? 'Failed, no delivery path'
+                    : 'Pending delivery confirmation';
                   return (
-                    <div key={unit.radioPk || unit.radioId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 7, background: 'var(--dispatch-surface, #222)', border: `1px solid ${acked ? 'rgba(34,197,94,0.4)' : failed ? 'rgba(239,68,68,0.45)' : 'var(--dispatch-border, #333)'}` }}>
-                      <span style={{ fontSize: 16 }}>{acked ? '✅' : failed ? '⚠️' : '⏳'}</span>
+                    <div key={unit.radioPk || unit.radioId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 7, background: 'var(--dispatch-surface, #222)', border: `1px solid ${delivered ? 'rgba(34,197,94,0.4)' : failed ? 'rgba(239,68,68,0.45)' : 'var(--dispatch-border, #333)'}` }}>
+                      <span style={{ fontSize: 16 }}>{delivered ? '✅' : failed ? '⚠️' : '⏳'}</span>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 13, color: 'var(--dispatch-text, #eee)', fontWeight: 500 }}>{unit.unitId || unit.radioId}</div>
                         <div style={{ fontSize: 11, color: 'var(--dispatch-secondary, #888)' }}>Radio {unit.radioId}</div>
-                        {acked && ackRecord && <div style={{ fontSize: 11, color: '#86efac', marginTop: 2 }}>Received {new Date(ackRecord.acked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>}
-                        {!acked && failed && <div style={{ fontSize: 11, color: '#fca5a5', marginTop: 2 }}>Failed — no registered push token</div>}
-                        {!acked && !failed && <div style={{ fontSize: 11, color: 'var(--dispatch-secondary, #888)', marginTop: 2 }}>Pending...</div>}
+                        <div style={{ fontSize: 11, color: delivered ? '#86efac' : failed ? '#fca5a5' : 'var(--dispatch-secondary, #888)', marginTop: 2 }}>{statusText}</div>
+                        {delivered && (native?.deliveredAt || ackRecord?.acked_at) &&
+                          <div style={{ fontSize: 10, color: 'var(--dispatch-secondary, #888)' }}>{new Date(native?.deliveredAt || ackRecord.acked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>}
                       </div>
                     </div>
                   );

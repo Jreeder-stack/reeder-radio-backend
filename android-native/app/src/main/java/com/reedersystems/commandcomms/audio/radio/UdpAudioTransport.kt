@@ -1,6 +1,7 @@
 package com.reedersystems.commandcomms.audio.radio
 
 import android.util.Log
+import android.os.SystemClock
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,8 +67,17 @@ class UdpAudioTransport(
 
     var channelId: String = ""
     var channelIndex: Int = 0
+    // Extra *receive-only* channel keepalives maintain NAT registration with
+    // the relay. TX framing always uses channelIndex, never these scan IDs.
+    @Volatile var scanChannelIndexes: Set<Int> = emptySet()
+
+    fun updateScanChannels(ids: Set<Int>) {
+        scanChannelIndexes = ids.filter { it > 0 && it != channelIndex }.toSet()
+        sendImmediateKeepalive()
+    }
     var unitId: String = ""
     var deviceId: String = ""
+    @Volatile var suppressSameUnitDuringLocalTx: Boolean = false
     var onPacketReceived: ((packet: OpusRadioPacket) -> Unit)? = null
     var onSocketRecreated: (() -> Unit)? = null
     val localPort: Int?
@@ -89,6 +99,9 @@ class UdpAudioTransport(
     @Volatile
     var txPacketCount: Long = 0
         private set
+    @Volatile var lastPacketSentAtMs: Long = 0L
+        private set
+    @Volatile private var transportEpoch: Long = 0L
 
     fun configure(host: String, port: Int) {
         this.relayHost = host
@@ -115,10 +128,12 @@ class UdpAudioTransport(
         val sock = socket ?: return
         scope.launch {
             try {
-                val keepalivePacket = buildKeepalivePacket()
                 val address = resolveAddress() ?: return@launch
-                val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
-                sock.send(dgram)
+                for (id in (setOf(channelIndex) + scanChannelIndexes)) {
+                    val keepalivePacket = buildKeepalivePacket(id)
+                    val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
+                    sock.send(dgram)
+                }
                 Log.d(TAG, "UDP_KEEPALIVE_IMMEDIATE_SENT to=$relayHost:$relayPort ${RadioDiagLog.elapsedTag()}")
             } catch (e: Exception) {
                 Log.w("[RadioError]", "UDP immediate keepalive send error: ${e::class.simpleName}: ${e.message} dest=$relayHost:$relayPort method=sendImmediateKeepalive")
@@ -134,6 +149,7 @@ class UdpAudioTransport(
         try {
             val sock = DatagramSocket()
             sock.soTimeout = RECEIVE_TIMEOUT_MS
+            transportEpoch++
             socket = sock
             _connectionHealth.value = TransportHealth.CONNECTED
             Log.d(TAG, """{"event":"UDP_SOCKET_OPENED","localPort":${sock.localPort},"timeoutMs":$RECEIVE_TIMEOUT_MS}""")
@@ -147,6 +163,7 @@ class UdpAudioTransport(
     }
 
     fun stop() {
+        transportEpoch++ // invalidate frames belonging to the old socket/session
         keepaliveJob?.cancel()
         keepaliveJob = null
         receiveJob?.cancel()
@@ -161,6 +178,11 @@ class UdpAudioTransport(
         _connectionHealth.value = TransportHealth.DISCONNECTED
         fastKeepaliveUntilMs = 0L
         rxSeqTracker.clear()
+        var discardedQueuedAudio = 0
+        while (sendPacketQueue.tryReceive().isSuccess) discardedQueuedAudio++
+        if (discardedQueuedAudio > 0) {
+            Log.w(TAG, "TX_QUEUE_CLEARED_ON_STOP packets=$discardedQueuedAudio")
+        }
         Log.d(TAG, "UDP transport stopped txTotal=$txPacketCount rxTotal=$rxPacketCount txFailures=$txFailures rxDropped=$rxDropped ${RadioDiagLog.elapsedTag()}")
         rxPacketCount = 0
         txPacketCount = 0
@@ -207,24 +229,55 @@ class UdpAudioTransport(
         }
     }
 
-    private data class QueuedPacket(val framed: ByteArray, val payloadBytes: Int)
+    private data class QueuedPacket(
+        val framed: ByteArray,
+        val payloadBytes: Int,
+        val enqueuedAtMs: Long,
+        val epoch: Long
+    )
 
     private val sendPacketQueue = Channel<QueuedPacket>(capacity = 64)
+    private var lastQueueDropLogMs: Long = 0L
+    private var queuedDropCount: Long = 0L
 
-    fun send(data: ByteArray) {
-        if (relayHost.isBlank()) {
-            Log.w("[RadioError]", "Cannot send — relay host not configured method=send")
-            return
+    @Synchronized private fun recordQueueDrop(reason: String) {
+        txFailures++
+        queuedDropCount++
+        val now = SystemClock.elapsedRealtime()
+        if (lastQueueDropLogMs == 0L || now - lastQueueDropLogMs >= 1_000L) {
+            Log.w("[RadioError]", "TX_QUEUE_DROP reason=$reason droppedSinceLast=$queuedDropCount")
+            queuedDropCount = 0L
+            lastQueueDropLogMs = now
+        }
+    }
+
+    /** Report actual acceptance to the encoder; a full/dead queue is not successful TX. */
+    fun send(data: ByteArray): Boolean {
+        if (relayHost.isBlank() || socket == null || sendJob?.isActive != true) {
+            recordQueueDrop("transport_not_ready")
+            return false
         }
         val payloadBytes = data.size
         val framed = framePacket(data)
-        sendPacketQueue.trySend(QueuedPacket(framed, payloadBytes))
+        val enqueued = sendPacketQueue.trySend(
+            QueuedPacket(framed, payloadBytes, SystemClock.elapsedRealtime(), transportEpoch)
+        ).isSuccess
+        if (!enqueued) {
+            recordQueueDrop("queue_full_capacity_64")
+        }
+        return enqueued
     }
 
     private fun startSendLoop() {
         sendJob = scope.launch {
             try {
                 for (qp in sendPacketQueue) {
+                    val ageMs = SystemClock.elapsedRealtime() - qp.enqueuedAtMs
+                    if (!RadioTxFramePolicy.maySend(qp.epoch, transportEpoch, ageMs)) {
+                        recordQueueDrop(if (qp.epoch != transportEpoch) "old_socket_generation"
+                            else "stale_audio_age_ms_$ageMs")
+                        continue
+                    }
                     var sock = socket
                     if (sock == null) {
                         var waitedMs = 0L
@@ -246,6 +299,7 @@ class UdpAudioTransport(
                             val packet = DatagramPacket(framed, framed.size, address, relayPort)
                             sock.send(packet)
                             txPacketCount++
+                            lastPacketSentAtMs = System.currentTimeMillis()
                             txSummaryBytes += framed.size
 
                             txRateLimiter.tick()
@@ -348,8 +402,18 @@ class UdpAudioTransport(
                             // get a defensive exact-device suppression here.
                             val samePhysicalDevice = parsed.senderDeviceId.isNotBlank() &&
                                 deviceId.isNotBlank() && parsed.senderDeviceId == deviceId
-                            if (samePhysicalDevice) {
-                                Log.d(TAG, "SELF_AUDIO_SUPPRESSED senderUnitId=${parsed.senderUnitId} senderDeviceId=${parsed.senderDeviceId} localDeviceId=$deviceId seq=${parsed.sequence}")
+                            // When HD760 is keyed, own-unit legacy/v1 echo
+                            // cannot be distinguished by device ID. Suppress
+                            // it only during this physical device's local TX;
+                            // unkeyed sibling devices with the same callsign
+                            // must still receive one another's traffic.
+                            val ownUnitDuringTx = suppressSameUnitDuringLocalTx &&
+                                unitId.isNotBlank() && parsed.senderUnitId == unitId
+                            if (samePhysicalDevice || ownUnitDuringTx) {
+                                Log.i("CC-HD760", "SELF_AUDIO_SUPPRESSED senderUnitId=" +
+                                    parsed.senderUnitId + " senderDeviceId=" +
+                                    parsed.senderDeviceId + " reason=" +
+                                    if (samePhysicalDevice) "device_id" else "own_tx")
                             } else {
                                 rxPacketCount++
                                 rxSummaryBytes += packet.length
@@ -445,10 +509,12 @@ class UdpAudioTransport(
                     continue
                 }
                 try {
-                    val keepalivePacket = buildKeepalivePacket()
                     val address = resolveAddress() ?: continue
-                    val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
-                    sock.send(dgram)
+                    for (id in (setOf(channelIndex) + scanChannelIndexes)) {
+                        val keepalivePacket = buildKeepalivePacket(id)
+                        val dgram = DatagramPacket(keepalivePacket, keepalivePacket.size, address, relayPort)
+                        sock.send(dgram)
+                    }
                     Log.d(TAG, """{"event":"UDP_KEEPALIVE_SENT","dest":"$relayHost:$relayPort","fast":$isFast,"intervalMs":$interval}""")
                 } catch (e: Exception) {
                     Log.w("[RadioError]", """{"event":"UDP_KEEPALIVE_FAILED","error":"${e::class.simpleName}","message":"${e.message}","dest":"$relayHost:$relayPort"}""")
@@ -458,10 +524,10 @@ class UdpAudioTransport(
         }
     }
 
-    private fun buildKeepalivePacket(): ByteArray {
+    private fun buildKeepalivePacket(scanChannelId: Int = channelIndex): ByteArray {
         val senderBytes = unitId.toByteArray(Charsets.UTF_8)
         val senderLen = senderBytes.size.coerceAtMost(255)
-        val channelNumeric = channelIndex
+        val channelNumeric = scanChannelId
         val timestampMs = (System.currentTimeMillis() and 0xFFFFFFFFL).toInt()
         val frame = ByteArray(RADIO_HEADER_FIXED_LEN + senderLen)
         var offset = 0

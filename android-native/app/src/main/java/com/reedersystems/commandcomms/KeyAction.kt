@@ -33,4 +33,13 @@ sealed class KeyAction {
      * Wired to RadioViewModel.toggleScanChannel(currentChannelId).
      */
     object ScanListToggleCurrent : KeyAction()
+
+    // HD760-specific navigation and side keys.
+    object Hd760Up : KeyAction()
+    object Hd760Down : KeyAction()
+    object Hd760Left : KeyAction()
+    object Hd760Right : KeyAction()
+    object Hd760Select : KeyAction()
+    object Hd760Back : KeyAction()
+    data class Hd760SideButton(val button: Int, val longPress: Boolean) : KeyAction()
 }

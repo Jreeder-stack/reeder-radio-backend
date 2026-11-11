@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.reedersystems.commandcomms.messaging.CommandCommsFirebaseService
+import com.reedersystems.commandcomms.messaging.NativeRadioPaging
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -69,6 +70,7 @@ class PageAlertActivity : ComponentActivity() {
                 receivedAt = timestamp,
                 onAcknowledge = {
                     CommandCommsFirebaseService.stopPagingTone()
+                    NativeRadioPaging.acknowledge(applicationContext, pageId)
                     CommandCommsFirebaseService.clearPagingNotification(applicationContext)
                     finish()
                 }
@@ -84,6 +86,7 @@ class PageAlertActivity : ComponentActivity() {
 
     override fun finish() {
         CommandCommsFirebaseService.stopPagingTone()
+        NativeRadioPaging.stopTone()
         CommandCommsFirebaseService.clearPagingNotification(applicationContext)
         super.finish()
     }

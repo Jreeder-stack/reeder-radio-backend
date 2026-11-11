@@ -7,6 +7,8 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
+import androidx.core.content.ContextCompat
+import com.reedersystems.commandcomms.BuildConfig
 import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.KeyAction
 import java.util.concurrent.atomic.AtomicLong
@@ -42,6 +44,22 @@ class PttHardwareReceiver : BroadcastReceiver() {
         // Every action→service mapping below has been verified against Inrico T320
         // firmware broadcasts and must not be changed, reordered, or removed.
         val pttAction: String? = when (action) {
+            // Confirmed on the physical Anysecu HD760 with com.loudtalks
+            // force-stopped and no running process: OEM broadcast remains active.
+            // The com.zello name is a firmware compatibility API, not a dependency.
+            "com.zello.ptt.down" -> if (BuildConfig.FLAVOR == "hd760") {
+                BackgroundAudioService.ACTION_PTT_DOWN
+            } else null
+            "com.zello.ptt.up" -> if (BuildConfig.FLAVOR == "hd760") {
+                BackgroundAudioService.ACTION_PTT_UP
+            } else null
+            // On HD760, the SOS broadcast is authoritative, not KEYCODE_STEM_3.
+            "com.zello.intent.buttonSOS.down" -> if (BuildConfig.FLAVOR == "hd760") {
+                BackgroundAudioService.ACTION_EMERGENCY_DOWN
+            } else null
+            "com.zello.intent.buttonSOS.up" -> if (BuildConfig.FLAVOR == "hd760") {
+                BackgroundAudioService.ACTION_EMERGENCY_UP
+            } else null
             // Internal self-sent actions (legacy / foreground callers)
             ACTION_PTT_DOWN     -> BackgroundAudioService.ACTION_PTT_DOWN
             ACTION_PTT_UP       -> BackgroundAudioService.ACTION_PTT_UP
@@ -180,6 +198,9 @@ class PttHardwareReceiver : BroadcastReceiver() {
         if (pttAction == null) return
 
         Log.d(TAG, "PttHardwareReceiver: mapped action=$action -> svcAction=$pttAction")
+        if (BuildConfig.FLAVOR == "hd760") {
+            Log.i("CC-HD760", "HARDWARE action=" + action + " service=" + pttAction)
+        }
 
         // Every accepted DOWN starts a new physical press generation. The delayed
         // release watchdog from an older press is therefore prevented from cutting
@@ -216,7 +237,7 @@ class PttHardwareReceiver : BroadcastReceiver() {
             }
         }
         try {
-            context.startForegroundService(serviceIntent)
+            ContextCompat.startForegroundService(context, serviceIntent)
         } catch (e: Exception) {
             Log.e(TAG, "PttHardwareReceiver: startForegroundService failed — ${e::class.simpleName}: ${e.message}")
         }
@@ -236,7 +257,7 @@ class PttHardwareReceiver : BroadcastReceiver() {
                     this.action = BackgroundAudioService.ACTION_PTT_UP
                 }
                 try {
-                    context.applicationContext.startForegroundService(releaseIntent)
+                    ContextCompat.startForegroundService(context.applicationContext, releaseIntent)
                     Log.w(TAG, "PTT release watchdog sent generation=$pressGeneration")
                 } catch (e: Exception) {
                     Log.e(TAG, "PTT release watchdog failed — ${e::class.simpleName}: ${e.message}")
@@ -249,7 +270,7 @@ class PttHardwareReceiver : BroadcastReceiver() {
                 this.action = BackgroundAudioService.ACTION_EMERGENCY_UP
             }
             try {
-                context.startForegroundService(upIntent)
+                ContextCompat.startForegroundService(context, upIntent)
                 Log.d(TAG, "PttHardwareReceiver: SOS.shortpress follow-up EMERGENCY_UP sent")
             } catch (e: Exception) {
                 Log.e(TAG, "PttHardwareReceiver: SOS.shortpress EMERGENCY_UP failed — ${e::class.simpleName}: ${e.message}")

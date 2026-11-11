@@ -18,6 +18,29 @@ class RadioStateManager {
     private val _signalQuality = MutableStateFlow(SignalQuality.NONE)
     val signalQuality: StateFlow<SignalQuality> = _signalQuality.asStateFlow()
 
+    // Measured native media state is distinct from signaling/floor state.
+    // A floor grant alone cannot light the HD760 TX meter.
+    private val _txCaptureActive = MutableStateFlow(false)
+    val txCaptureActive: StateFlow<Boolean> = _txCaptureActive.asStateFlow()
+    private val _txAudioBars = MutableStateFlow(0)
+    val txAudioBars: StateFlow<Int> = _txAudioBars.asStateFlow()
+    private val _rxMediaActive = MutableStateFlow(false)
+    val rxMediaActive: StateFlow<Boolean> = _rxMediaActive.asStateFlow()
+    private val _rxAudioBars = MutableStateFlow(0)
+    val rxAudioBars: StateFlow<Int> = _rxAudioBars.asStateFlow()
+
+    fun setTxCaptureActive(active: Boolean) {
+        _txCaptureActive.value = active
+        if (!active) _txAudioBars.value = 0
+    }
+
+    fun setTxAudioBars(bars: Int) { _txAudioBars.value = bars.coerceIn(0, 5) }
+    fun setRxMediaActive(active: Boolean) {
+        _rxMediaActive.value = active
+        if (!active) _rxAudioBars.value = 0
+    }
+    fun setRxAudioBars(bars: Int) { _rxAudioBars.value = bars.coerceIn(0, 5) }
+
     fun updateSignalQuality(quality: SignalQuality) {
         if (_signalQuality.value != quality) {
             _signalQuality.value = quality
@@ -72,6 +95,8 @@ class RadioStateManager {
         txPipelineRunning = false
         rxPipelineRunning = false
         _signalQuality.value = SignalQuality.NONE
+        setTxCaptureActive(false)
+        setRxMediaActive(false)
         Log.d(TAG, "State RESET: $old -> IDLE activeChannel=${activeChannelKey ?: "none"}")
     }
 }

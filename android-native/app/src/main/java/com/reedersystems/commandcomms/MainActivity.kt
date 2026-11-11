@@ -9,6 +9,8 @@ import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.Bundle
 import android.os.PowerManager
 import android.os.SystemClock
@@ -16,6 +18,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.InputDevice
 import android.view.KeyEvent
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -36,6 +39,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.reedersystems.commandcomms.audio.BackgroundAudioService
+import com.reedersystems.commandcomms.hd760.Hd760KnobMapping
+import com.reedersystems.commandcomms.hd760.Hd760Preferences
 import com.reedersystems.commandcomms.data.prefs.formatKeyLabel
 import com.reedersystems.commandcomms.data.prefs.isNonCapturableKey
 import com.reedersystems.commandcomms.navigation.AppNavigation
@@ -64,10 +69,56 @@ class MainActivity : ComponentActivity() {
     private val app get() = application as CommandCommsApp
 
     private var starDownTime = 0L
+    private val hd760LockHandler = Handler(Looper.getMainLooper())
+    private var hd760StarHeld = false
+    private var hd760StarTriggered = false
+    private var hd760LockTask: Runnable? = null
+    private var hd760Dimmed = false
+    private val hd760FrontKeys = (KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9).toSet() +
+        setOf(KeyEvent.KEYCODE_POUND, KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_CALL,
+            KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_DEL,
+            KeyEvent.KEYCODE_SOFT_LEFT, KeyEvent.KEYCODE_SOFT_RIGHT,
+            KeyEvent.KEYCODE_SEARCH, KeyEvent.KEYCODE_HOME,
+            KeyEvent.KEYCODE_APP_SWITCH)
+    private fun hd760ToggleDim() {
+        hd760Dimmed = !hd760Dimmed
+        val attributes = window.attributes
+        attributes.screenBrightness = if (hd760Dimmed) 0.035f else
+            WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        window.attributes = attributes
+        Log.i("CC-HD760", "SCREEN_DIM enabled=" + hd760Dimmed)
+    }
+    private fun hd760HandleStar(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            hd760StarHeld = true
+            hd760StarTriggered = false
+            val task = Runnable {
+                if (hd760StarHeld && !hd760StarTriggered && app.hd760RadioScreenActive) {
+                    hd760StarTriggered = true
+                    val locked = !app.hd760KeyLocked.value
+                    app.hd760KeyLocked.value = locked
+                    getSharedPreferences("HD760Hardware", MODE_PRIVATE)
+                        .edit().putBoolean("key_locked", locked).apply()
+                    app.toneEngine.playKeypadConfirmation()
+                    Log.i("CC-HD760", "KEY_LOCK_CHANGED locked=" + locked + " while_held=true")
+                }
+            }
+            hd760LockTask = task
+            hd760LockHandler.postDelayed(task, 1000L)
+        } else if (event.action == KeyEvent.ACTION_UP) {
+            hd760StarHeld = false
+            hd760LockTask?.let { hd760LockHandler.removeCallbacks(it) }
+            hd760LockTask = null
+        }
+        return true
+    }
     private var lastCapturedKeyCode = -1
     private val rootFocusRequester = FocusRequester()
     private var lastT320VolumeDetentAtMs = 0L
     private var lastT320VolumeDirection = 0
+    private val hd760Keys = setOf(4, 5, 19, 20, 21, 22, 23, 66, 265, 266, 267)
 
     private var pendingBatteryPromptAfterFullScreenIntent = false
     private var pendingOverlayPromptAfterBattery = false
@@ -96,7 +147,8 @@ class MainActivity : ComponentActivity() {
 
         val micGranted = isGranted(Manifest.permission.RECORD_AUDIO)
         val locationGranted = isGranted(Manifest.permission.ACCESS_FINE_LOCATION)
-        val notifGranted = isGranted(Manifest.permission.POST_NOTIFICATIONS)
+        val notifGranted = !AndroidApiCompatibility.requiresNotificationRuntimePermission(Build.VERSION.SDK_INT) ||
+            isGranted(Manifest.permission.POST_NOTIFICATIONS)
 
         Log.d(TAG, "Multi-permission results: mic=$micGranted location=$locationGranted notif=$notifGranted")
 
@@ -119,8 +171,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "APP_START")
-        setTurnScreenOn(true)
-        setShowWhenLocked(true)
+        applyLockScreenFlagsCompat()
         enableEdgeToEdge()
         hideSystemBars()
         requestAppPermissions()
@@ -163,6 +214,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        hd760StarHeld = false
+        hd760LockTask?.let { hd760LockHandler.removeCallbacks(it) }
+        hd760LockTask = null
         try {
             unregisterReceiver(remoteKioskReceiver)
         } catch (_: Exception) {
@@ -203,6 +257,19 @@ class MainActivity : ComponentActivity() {
         if (hasFocus) hideSystemBars()
     }
 
+    private fun applyLockScreenFlagsCompat() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setTurnScreenOn(true)
+            setShowWhenLocked(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+            )
+        }
+    }
+
     private fun hideSystemBars() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
@@ -214,8 +281,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        setTurnScreenOn(true)
-        setShowWhenLocked(true)
+        applyLockScreenFlagsCompat()
         if (intent.getBooleanExtra(BackgroundAudioService.EXTRA_EMERGENCY_KEY_DOWN, false)) {
             Log.d(TAG, "onNewIntent: emergency DOWN — routing to ViewModel")
             app.keyEventFlow.tryEmit(KeyAction.EmergencyDown)
@@ -254,10 +320,11 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
 
-        val notifGranted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.POST_NOTIFICATIONS
-        ) == PackageManager.PERMISSION_GRANTED
+        val notifGranted = !AndroidApiCompatibility.requiresNotificationRuntimePermission(Build.VERSION.SDK_INT) ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
 
         val bgLocationGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
                 ContextCompat.checkSelfPermission(
@@ -265,15 +332,17 @@ class MainActivity : ComponentActivity() {
                     Manifest.permission.ACCESS_BACKGROUND_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
 
-        val btConnectGranted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.BLUETOOTH_CONNECT
-        ) == PackageManager.PERMISSION_GRANTED
+        val btConnectGranted = !AndroidApiCompatibility.requiresBluetoothRuntimePermission(Build.VERSION.SDK_INT) ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
 
-        val btScanGranted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.BLUETOOTH_SCAN
-        ) == PackageManager.PERMISSION_GRANTED
+        val btScanGranted = !AndroidApiCompatibility.requiresBluetoothRuntimePermission(Build.VERSION.SDK_INT) ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_SCAN
+            ) == PackageManager.PERMISSION_GRANTED
 
         app.sessionPrefs.micPermissionGranted = micGranted
         app.sessionPrefs.locationPermissionGranted = locationGranted
@@ -283,9 +352,13 @@ class MainActivity : ComponentActivity() {
 
         if (!micGranted) permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
         if (!locationGranted) permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
-        if (!notifGranted) permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
-        if (!btConnectGranted) permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
-        if (!btScanGranted) permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
+        if (AndroidApiCompatibility.requiresNotificationRuntimePermission(Build.VERSION.SDK_INT) && !notifGranted) {
+            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        if (AndroidApiCompatibility.requiresBluetoothRuntimePermission(Build.VERSION.SDK_INT)) {
+            if (!btConnectGranted) permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
+            if (!btScanGranted) permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
+        }
 
         if (permissionsToRequest.isNotEmpty()) {
             requestMultiplePermissionsLauncher.launch(permissionsToRequest.toTypedArray())
@@ -417,6 +490,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun isOurKey(keyCode: Int, @Suppress("UNUSED_PARAMETER") event: KeyEvent? = null): Boolean {
+        // Do not swallow D-pad UI focus during non-touch HD760 provisioning.
+        // Normal radio-mode arrow keys continue using the existing channel/zone actions.
+        if (BuildConfig.FLAVOR == "hd760" &&
+            app.radioTokenStore.getAssignedUnitId() == null &&
+            keyCode in arrayOf(KEY_DPAD_UP, KEY_DPAD_DOWN, KEY_DPAD_LEFT, KEY_DPAD_RIGHT, KEY_DPAD_CENTER)
+        ) return false
         if (isPttKey(keyCode)) return true
         if (isEmergencyKey(keyCode)) return true
         if (
@@ -446,6 +525,10 @@ class MainActivity : ComponentActivity() {
 
     private fun handlePreviewKeyEvent(event: androidx.compose.ui.input.key.KeyEvent): Boolean {
         val nativeEvent = event.nativeKeyEvent
+        // HD760 controls are routed once through dispatchKeyEvent, not Compose focus.
+        if (BuildConfig.FLAVOR == "hd760" &&
+            (nativeEvent.keyCode in hd760Keys ||
+                Hd760KnobMapping.positionForKeyCode(nativeEvent.keyCode) != null)) return false
         if (app.keyCapturingFlow.value) {
             if (event.type == KeyEventType.KeyDown) {
                 return handleKeyCaptureIfActive(nativeEvent.keyCode)
@@ -469,6 +552,65 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (BuildConfig.FLAVOR == "hd760") {
+            // Only enforce the front keypad lock on the active radio screen,
+            // not the registration/permission UI. Side PTT and SOS remain active.
+            if (app.hd760RadioScreenActive) {
+                if (event.keyCode == KeyEvent.KEYCODE_STAR) return hd760HandleStar(event)
+                if (event.keyCode == KeyEvent.KEYCODE_ENDCALL) {
+                    if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                        hd760ToggleDim()
+                    }
+                    return true
+                }
+                if (app.hd760KeyLocked.value &&
+                    event.keyCode in hd760FrontKeys &&
+                    event.keyCode != KeyEvent.KEYCODE_DPAD_LEFT &&
+                    event.keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    return true
+                }
+            }
+            val position = Hd760KnobMapping.positionForKeyCode(event.keyCode)
+            if (position != null && event.device?.name == "rotate-gpio-keys") {
+                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    Hd760Preferences(this).savePosition(position)
+                    app.hd760KnobPosition.value = position
+                    Log.i("CC-HD760", "ABSOLUTE_KNOB position=" + position + " keyCode=" + event.keyCode)
+                }
+                return true
+            }
+            // Never allow Android's green-call key to open the stock dialer.
+            if (event.keyCode == KeyEvent.KEYCODE_CALL) return true
+            // HD760 emits both an SOS KeyEvent and firmware broadcasts.
+            // Use the broadcast as the only emergency source, even with screen off.
+            if (event.keyCode == 267) return true
+            if (app.hd760RadioScreenActive) {
+                val nav = when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP -> KeyAction.Hd760Up
+                    KeyEvent.KEYCODE_DPAD_DOWN -> KeyAction.Hd760Down
+                    KeyEvent.KEYCODE_DPAD_LEFT -> KeyAction.Hd760Left
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> KeyAction.Hd760Right
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> KeyAction.Hd760Select
+                    KeyEvent.KEYCODE_BACK -> KeyAction.Hd760Back
+                    else -> null
+                }
+                if (nav != null) {
+                    if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                        app.keyEventFlow.tryEmit(nav)
+                    }
+                    return true
+                }
+                if (event.keyCode == 265 || event.keyCode == 266) {
+                    if (event.action == KeyEvent.ACTION_UP) {
+                        val durationMs = event.eventTime - event.downTime
+                        val button = if (event.keyCode == 265) 1 else 2
+                        app.keyEventFlow.tryEmit(KeyAction.Hd760SideButton(button, durationMs >= 600L))
+                        Log.i("CC-HD760", "SIDE button=" + button + " heldMs=" + durationMs)
+                    }
+                    return true
+                }
+            }
+        }
         if (event.keyCode == KeyEvent.KEYCODE_CALL && app.kioskPrefs.kioskEnabled) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 Log.d(TAG, "Kiosk: swallowing KEYCODE_CALL to block dialer launch")

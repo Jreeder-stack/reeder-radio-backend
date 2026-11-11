@@ -78,7 +78,17 @@ export function installAudioRelaySiblingDeviceHardening(audioRelayService) {
 
           const isSourceEndpoint = subInfo.address === source.address &&
             Number(subInfo.port) === Number(source.port);
-          if (isSourceEndpoint) continue;
+          // NAT rebinding can leave a second endpoint entry for the same
+          // device. The transmitting physical radio must never get its own
+          // audio, even when its old and new endpoints differ.
+          const samePhysicalDevice = source.deviceId && subInfo.deviceId &&
+            source.deviceId === subInfo.deviceId;
+          if (isSourceEndpoint || samePhysicalDevice) {
+            if (samePhysicalDevice && !isSourceEndpoint) {
+              console.warn(`[AudioRelay] SELF_AUDIO_DUPLICATE_DEVICE_SUPPRESSED channelKey=${key} sender=${senderUnitId} deviceId=${source.deviceId}`);
+            }
+            continue;
+          }
 
           const endpointKey = `${subInfo.address}:${subInfo.port}`;
           if (sentEndpoints.has(endpointKey)) continue;

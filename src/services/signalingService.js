@@ -17,6 +17,7 @@ import pool, {
 } from '../db/index.js';
 import { randomUUID } from 'crypto';
 import { config } from '../config/env.js';
+import { replayNativePages, recordNativePageReceipt } from './nativePageDeliveryService.js';
 import {
   loadSessionPttPrincipal, loadRadioPttPrincipal, createPttTransmission,
   finishPttTransmission, getPttMetadata, attachPttMetadata, ownsPttTransmission,
@@ -246,6 +247,13 @@ class SignalingService {
         }
       });
       socket.on('disconnect', () => this._handleDisconnect(socket));
+      socket.on('radio:page_receipt', data => {
+        recordNativePageReceipt(socket, data).then(success => {
+          socket.emit('radio:page_receipt_ack', {
+            pageId: data?.pageId, kind: data?.kind, success
+          });
+        }).catch(err => console.error('[NativePage] receipt failed:', err.message));
+      });
 
       if (radioToken) {
         try {
@@ -332,6 +340,9 @@ class SignalingService {
 
           socket.radioTokenPending = false;
           socket.emit('authenticated', { unitId: socket.unitId });
+          // Reconnect replay targets this radio's server-verified radio_id only.
+          replayNativePages(socket).catch(err =>
+            console.error('[NativePage] replay failed:', err.message));
           console.log(`[Signaling] Emitted authenticated for radio device: radioId=${radio.radio_id} unitId=${socket.unitId} socket=${socket.id}`);
 
           if (radio.kiosk_unlock_expires_at) {
