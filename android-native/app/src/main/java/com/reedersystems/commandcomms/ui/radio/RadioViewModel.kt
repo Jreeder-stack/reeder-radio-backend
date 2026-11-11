@@ -136,7 +136,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private var hd760LockFeedbackJob: Job? = null
 
     private fun syncHd760ScanConfig() {
-        if (!isHd760) return
+        if (!isHd760 || !_uiState.value.hasFreshChannels) return
         val state = _uiState.value
         val eligible = state.zones.flatMap { it.channels }.associateBy { it.id }
         val selected = state.scanChannels.filter { it.enabled }
