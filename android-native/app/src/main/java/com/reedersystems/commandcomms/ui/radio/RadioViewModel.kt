@@ -24,6 +24,11 @@ import com.reedersystems.commandcomms.BuildConfig
 import com.reedersystems.commandcomms.hd760.Hd760Preferences
 import com.reedersystems.commandcomms.hd760.Hd760SideAction
 import com.reedersystems.commandcomms.hd760.Hd760KnobMapping
+import com.reedersystems.commandcomms.hd760.Hd760ChannelCache
+import com.reedersystems.commandcomms.hd760.Hd760CatalogScope
+import com.reedersystems.commandcomms.hd760.Hd760SavedZone
+import com.reedersystems.commandcomms.hd760.Hd760StartupPolicy
+import com.reedersystems.commandcomms.data.repository.HttpException
 import com.reedersystems.commandcomms.audio.radio.RadioState
 import com.reedersystems.commandcomms.audio.radio.SignalQuality
 import com.reedersystems.commandcomms.data.model.Channel
@@ -63,6 +68,9 @@ data class RadioUiState(
     val currentZoneIndex: Int = 0,
     val currentChannelIndex: Int = 0,
     val isLoading: Boolean = true,
+    val hasFreshChannels: Boolean = false,
+    val showingSavedChannels: Boolean = false,
+    val radioJoinedRoomKey: String? = null,
     val error: String? = null,
     val signalingState: ConnectionState = ConnectionState.DISCONNECTED,
     val pttState: PttState = PttState.IDLE,
@@ -122,6 +130,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private val KEY_SCAN_ACTIVE = "scan_active"
     private val isHd760 = BuildConfig.FLAVOR == "hd760"
     private val hd760Prefs = if (isHd760) Hd760Preferences(application) else null
+    private val hd760Cache = if (isHd760) Hd760ChannelCache(application) else null
+    private var hd760ChannelRefreshJob: Job? = null
     private var hd760AnnouncementJob: Job? = null
     private var hd760LockFeedbackJob: Job? = null
 
@@ -251,8 +261,21 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 updateBattery()
             }
         }
-        loadChannels()
-        observeSignaling()
+        if (isHd760) {
+            restoreHd760Catalog()
+            observeSignaling()
+            viewModelScope.launch {
+                app.hd760JoinedRoomKey.collect { joined ->
+                    _uiState.update { it.copy(radioJoinedRoomKey = joined) }
+                }
+            }
+            // Authentication no longer waits for the first HTTP channel fetch.
+            connectSignaling()
+            loadChannels()
+        } else {
+            loadChannels()
+            observeSignaling()
+        }
         collectKeyEvents()
         if (isHd760) {
             viewModelScope.launch {
@@ -406,28 +429,163 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(batteryLevel = pct) }
     }
 
+    private fun hd760Scope(): Hd760CatalogScope? =
+        Hd760ChannelCache.scope(app.radioTokenStore, app.apiClient.baseUrl)
+
+    private fun persistHd760SelectedZone() {
+        if (!isHd760) return
+        _uiState.value.currentZone?.let { hd760Cache?.saveSelectedZone(hd760Scope(), it) }
+    }
+
+    /** Display-only catalog, never a substitute for authenticated server permission. */
+    private fun applyHd760Catalog(zones: List<Zone>, fresh: Boolean, scope: Hd760CatalogScope) {
+        val previous = _uiState.value
+        val previousZone = previous.currentZone?.let { Hd760SavedZone(it.id, it.name) }
+        val savedZone = previousZone ?: hd760Cache?.selectedZone(scope)
+        val knob = app.hd760KnobPosition.value ?: hd760Prefs?.lastPosition()
+        zones.forEach { hd760Prefs?.initializeZone(it) }
+        val selected = Hd760StartupPolicy.restoreSelection(zones, savedZone, knob) { zone, position ->
+            hd760Prefs?.channelIdForSlot(zone, position)
+        }
+        val scanItems = zones.flatMap { it.channels }.map { channel ->
+            ScanChannelItem(channel.id, channel.name, loadScanEnabled(channel.id))
+        }
+        val oldOperationalRoom = app.serviceConnectionPrefs.channelRoomKey
+        _uiState.update {
+            it.copy(
+                zones = zones,
+                currentZoneIndex = selected.zoneIndex,
+                currentChannelIndex = selected.channelIndex,
+                hd760KnobPosition = knob,
+                hd760SlotEmpty = selected.emptySlot,
+                scanChannels = scanItems,
+                isScanning = scanPrefs.getBoolean(KEY_SCAN_ACTIVE, false),
+                showingSavedChannels = !fresh,
+                hasFreshChannels = fresh,
+                isLoading = false,
+                error = null
+            )
+        }
+        val selectedRoom = _uiState.value.currentChannel?.roomKey
+            ?.takeUnless { selected.emptySlot }
+        // A saved name may match an already active service room, but a newly
+        // selected cached name must never activate an unverified TX route.
+        app.hd760SlotActive.value = selectedRoom != null &&
+            (fresh || selectedRoom == oldOperationalRoom)
+        if (fresh) {
+            persistHd760SelectedZone()
+            if (selectedRoom == null) deactivateHd760Channel()
+            else onChannelChanged(oldOperationalRoom)
+            syncHd760ScanConfig()
+        }
+        Log.d(STARTUP_TAG, "HD760_CATALOG_APPLIED fresh=" + fresh +
+            " zones=" + zones.size + " selectedRoomPresent=" + (selectedRoom != null))
+    }
+
+    private fun restoreHd760Catalog() {
+        val scope = hd760Scope()
+        val saved = hd760Cache?.restore(scope)
+        if (scope != null && saved != null) {
+            applyHd760Catalog(saved, fresh = false, scope = scope)
+            Log.d(STARTUP_TAG, "HD760_CATALOG_RESTORED zones=" + saved.size)
+        } else {
+            Log.d(STARTUP_TAG, "HD760_CATALOG_NOT_AVAILABLE")
+        }
+    }
+
+    private fun deactivateHd760Channel() {
+        if (!isHd760) return
+        app.hd760SlotActive.value = false
+        val previousRoom = app.serviceConnectionPrefs.channelRoomKey
+        if (previousRoom != null) {
+            app.signalingRepository.leaveChannel(previousRoom)
+            app.signalingRepository.leaveRadioChannel(previousRoom)
+        }
+        app.serviceConnectionPrefs.channelId = -1
+        app.serviceConnectionPrefs.channelRoomKey = null
+        app.serviceConnectionPrefs.channelName = null
+        if (previousRoom != null) {
+            // Release floor, audio and UDP state before another channel is usable.
+            sendServiceIntent(BackgroundAudioService.ACTION_STOP)
+        }
+    }
+
+    private fun invalidateHd760Catalog() {
+        hd760Cache?.clear()
+        _uiState.update {
+            it.copy(
+                zones = emptyList(),
+                scanChannels = emptyList(),
+                currentZoneIndex = 0,
+                currentChannelIndex = 0,
+                hd760SlotEmpty = true,
+                hasFreshChannels = false,
+                showingSavedChannels = false,
+                isLoading = false
+            )
+        }
+        deactivateHd760Channel()
+    }
+
     private fun loadChannels() {
+        if (isHd760) {
+            if (hd760ChannelRefreshJob?.isActive == true) return
+            hd760ChannelRefreshJob = viewModelScope.launch {
+                var backoffMs = 2_000L
+                while (isActive) {
+                    val scope = hd760Scope()
+                    if (scope == null) {
+                        invalidateHd760Catalog()
+                        break
+                    }
+                    Log.d(STARTUP_TAG, "HD760_CHANNEL_REFRESH_REQUEST")
+                    val result = app.channelRepository.getZones()
+                    if (hd760Scope() != scope) {
+                        // Token or assigned user changed while HTTP was in flight.
+                        invalidateHd760Catalog()
+                        break
+                    }
+                    if (result.isSuccess) {
+                        val zones = result.getOrThrow()
+                        // An authorized empty result is a real revocation; save it.
+                        hd760Cache?.save(scope, zones)
+                        applyHd760Catalog(zones, fresh = true, scope = scope)
+                        Log.d(STARTUP_TAG, "HD760_CHANNEL_REFRESH_SUCCESS")
+                        break
+                    }
+                    val failure = result.exceptionOrNull()
+                    if (failure is HttpException && failure.code in setOf(401, 403)) {
+                        invalidateHd760Catalog()
+                        _uiState.update { it.copy(error = "CHANNEL AUTHORIZATION REQUIRED") }
+                        Log.w(STARTUP_TAG, "HD760_CHANNEL_AUTH_REJECTED " + failure.code)
+                        break
+                    }
+                    // A timeout or lost service never erases saved metadata.
+                    _uiState.update { it.copy(isLoading = false, error = null) }
+                    Log.w(STARTUP_TAG, "HD760_CHANNEL_REFRESH_RETRY ms=" + backoffMs)
+                    delay(backoffMs)
+                    backoffMs = (backoffMs * 2).coerceAtMost(30_000L)
+                }
+            }
+            return
+        }
+        // Preserve current T320/SD7/phone/bridge startup semantics.
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             Log.d(STARTUP_TAG, "CHANNEL_FETCH_START")
             val result = app.channelRepository.getZones()
             if (result.isSuccess) {
                 val zones = result.getOrThrow()
-                Log.d(STARTUP_TAG, "CHANNEL_FETCH_SUCCESS zones=${zones.size}")
+                Log.d(STARTUP_TAG, "CHANNEL_FETCH_SUCCESS zones=" + zones.size)
                 val allChannels = zones.flatMap { it.channels }
                 val scanChannels = allChannels.map { ch ->
                     ScanChannelItem(ch.id, ch.name, loadScanEnabled(ch.id))
                 }
                 val savedScanning = scanPrefs.getBoolean(KEY_SCAN_ACTIVE, false)
-                if (isHd760) zones.forEach { hd760Prefs?.initializeZone(it) }
                 _uiState.update { it.copy(zones = zones, isLoading = false, scanChannels = scanChannels, isScanning = savedScanning) }
-                if (isHd760) {
-                    hd760Prefs?.lastPosition()?.let { selectHd760Position(it) }
-                    syncHd760ScanConfig()
-                }
                 connectSignaling()
             } else {
-                Log.e(STARTUP_TAG, "CHANNEL_FETCH_FAILED reason=${result.exceptionOrNull()?.message}")
+                Log.e(STARTUP_TAG, "CHANNEL_FETCH_FAILED reason=" + result.exceptionOrNull()?.message)
                 _uiState.update {
                     it.copy(isLoading = false, error = result.exceptionOrNull()?.message ?: "Failed to load channels")
                 }
