@@ -132,6 +132,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     private val hd760Prefs = if (isHd760) Hd760Preferences(application) else null
     private val hd760Cache = if (isHd760) Hd760ChannelCache(application) else null
     private var hd760ChannelRefreshJob: Job? = null
+    private var hd760CatalogGeneration: Long = 0L
     private var hd760AnnouncementJob: Job? = null
     private var hd760LockFeedbackJob: Job? = null
 
@@ -512,6 +513,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun invalidateHd760Catalog() {
+        hd760CatalogGeneration++
         hd760Cache?.clear()
         _uiState.update {
             it.copy(
@@ -532,8 +534,12 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         if (isHd760) {
             if (hd760ChannelRefreshJob?.isActive == true) return
             hd760ChannelRefreshJob = viewModelScope.launch {
+                // The boot splash owns STARTING; after it, show WAITING FOR SERVICE
+                // even while HTTP is blocked on cellular network initialization.
+                _uiState.update { it.copy(isLoading = false) }
                 var backoffMs = 2_000L
                 while (isActive) {
+                    val generation = hd760CatalogGeneration
                     val scope = hd760Scope()
                     if (scope == null) {
                         invalidateHd760Catalog()
@@ -541,6 +547,12 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     Log.d(STARTUP_TAG, "HD760_CHANNEL_REFRESH_REQUEST")
                     val result = app.channelRepository.getZones()
+                    if (hd760CatalogGeneration != generation ||
+                        _uiState.value.isRadioLocked || _uiState.value.isRadioUnassigned) {
+                        // A lock/unassignment may arrive while HTTP is in flight.
+                        // Never resurrect catalog metadata after an explicit revoke.
+                        break
+                    }
                     if (hd760Scope() != scope) {
                         // Token or assigned user changed while HTTP was in flight.
                         invalidateHd760Catalog()
