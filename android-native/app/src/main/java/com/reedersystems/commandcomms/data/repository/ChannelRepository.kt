@@ -7,13 +7,24 @@ import com.reedersystems.commandcomms.data.api.ApiClient
 import com.reedersystems.commandcomms.data.model.Channel
 import com.reedersystems.commandcomms.data.model.Zone
 import com.reedersystems.commandcomms.data.model.toZones
+import com.reedersystems.commandcomms.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import okhttp3.CookieJar
 
 class HttpException(val code: Int, message: String) : Exception(message)
 
 class ChannelRepository(private val api: ApiClient) {
+
+    // A dedicated HD760 must be authorized as its assigned radio, never as
+    // an unrelated user session left in the app's persistent cookie jar.
+    // Keep the normal cookie-authenticated client for phone/desktop flows.
+    private val catalogClient by lazy {
+        if (BuildConfig.FLAVOR == "hd760") {
+            api.httpClient.newBuilder().cookieJar(CookieJar.NO_COOKIES).build()
+        } else api.httpClient
+    }
 
     private companion object {
         const val AUTH_TAG = "[AUTH-TRACE]"
@@ -28,12 +39,15 @@ class ChannelRepository(private val api: ApiClient) {
                     .get()
                     .build()
                 Log.d(AUTH_TAG, "CHANNEL_FETCH_REQUEST_SENT url=${request.url.redact()}")
-                val hasCookie = api.cookieJar.hasCookiesForUrl(request.url)
-                Log.d(AUTH_TAG, "CHANNEL_FETCH_AUTH_ATTACHED cookie=${if (hasCookie) "yes" else "no"} token=no")
-                if (!hasCookie) {
-                    Log.w(AUTH_TAG, "AUTH_MISSING_REASON noCookiesForUrl=${request.url.redact()} cookieJarEmpty=${!api.cookieJar.hasCookies()}")
+                val dedicatedRadio = BuildConfig.FLAVOR == "hd760"
+                val hasCookie = !dedicatedRadio && api.cookieJar.hasCookiesForUrl(request.url)
+                Log.d(AUTH_TAG, "CHANNEL_FETCH_AUTH_ATTACHED cookie=" +
+                    (if (hasCookie) "yes" else "no") + " radioToken=" +
+                    (if (dedicatedRadio && !api.radioToken.isNullOrBlank()) "yes" else "no"))
+                if (!hasCookie && !dedicatedRadio) {
+                    Log.w(AUTH_TAG, "AUTH_MISSING_REASON noCookiesForUrl=" + request.url.redact())
                 }
-                val response = api.httpClient.newCall(request).execute()
+                val response = catalogClient.newCall(request).execute()
                 val body = response.body?.string() ?: "{}"
                 Log.d(AUTH_TAG, "CHANNEL_FETCH_HTTP_RESPONSE code=${response.code}")
                 if (!response.isSuccessful) {
