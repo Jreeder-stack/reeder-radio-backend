@@ -366,6 +366,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                 if (channels[chIdx].id == targetChannelId) {
                     val oldRoomKey = _uiState.value.currentChannel?.roomKey
                     _uiState.update { it.copy(currentZoneIndex = zoneIdx, currentChannelIndex = chIdx) }
+                    persistHd760SelectedZone()
                     onChannelChangedWithAnnouncement(oldRoomKey) {
                         if (playAnnouncement) {
                             playChannelAnnouncement(targetChannelId)
@@ -607,11 +608,12 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
             app.signalingRepository.connectionState.collect { connState ->
                 _uiState.update { it.copy(signalingState = connState) }
                 if (connState == ConnectionState.AUTHENTICATED) {
+                    if (isHd760) loadChannels()
                     val wasReconnect = hadPriorAuth
                     val hadEmergency = _uiState.value.myEmergencyActive
                     hadPriorAuth = true
                     val roomKey = _uiState.value.currentChannel?.roomKey
-                    if (roomKey != null) {
+                    if (roomKey != null && (!isHd760 || _uiState.value.hasFreshChannels)) {
                         Log.d(STARTUP_TAG, "CHANNEL_JOIN_ATTEMPT channel=$roomKey")
                         app.signalingRepository.joinChannel(roomKey)
                         updateServiceChannel()
@@ -771,6 +773,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is SignalingEvent.RadioLocked -> {
                         Log.d(TAG, "radio:locked — suspending radio functionality")
+                        if (isHd760) invalidateHd760Catalog()
                         _uiState.update { it.copy(isRadioLocked = true) }
                     }
                     is SignalingEvent.RadioUnlocked -> {
@@ -779,6 +782,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is SignalingEvent.RadioUnassigned -> {
                         Log.d(TAG, "radio:unassigned — navigating to unassigned screen")
+                        if (isHd760) invalidateHd760Catalog()
                         _uiState.update { it.copy(isRadioUnassigned = true) }
                     }
                     is SignalingEvent.RadioAssigned -> {
@@ -786,6 +790,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         val currentUnitId = _uiState.value.unitId
                         Log.d(TAG, "radio:assigned — newUnitId=$newUnitId currentUnitId=$currentUnitId")
                         if (newUnitId != currentUnitId && newUnitId.isNotBlank()) {
+                            if (isHd760) invalidateHd760Catalog()
                             app.radioTokenStore.saveAssignedUnit(newUnitId)
                             app.sessionPrefs.unitId = newUnitId
                             app.sessionPrefs.username = newUnitId
@@ -1241,6 +1246,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun updateServiceChannel() {
+        if (isHd760 && !_uiState.value.hasFreshChannels) return
         val channel = _uiState.value.currentChannel ?: return
         app.serviceConnectionPrefs.channelId = channel.id
         app.serviceConnectionPrefs.channelRoomKey = channel.roomKey
@@ -1274,19 +1280,21 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         if (channelId == null || index < 0) {
             _uiState.update { it.copy(hd760SlotEmpty = true) }
             app.hd760SlotActive.value = false
-            val previous = oldRoomKeyOverride ?: _uiState.value.currentChannel?.roomKey
-            if (previous != null) app.signalingRepository.leaveChannel(previous)
-            app.serviceConnectionPrefs.channelId = -1
-            app.serviceConnectionPrefs.channelRoomKey = null
-            app.serviceConnectionPrefs.channelName = null
+            if (_uiState.value.hasFreshChannels) deactivateHd760Channel()
             Log.w(TAG, "HD760_EMPTY_SLOT zone=" + zone.name + " position=" + position)
             return
         }
         val oldRoomKey = oldRoomKeyOverride ?: _uiState.value.currentChannel?.roomKey
         val wasActive = app.hd760SlotActive.value
         _uiState.update { it.copy(currentChannelIndex = index, hd760SlotEmpty = false) }
-        app.hd760SlotActive.value = true
         val newRoomKey = _uiState.value.currentChannel?.roomKey
+        val fresh = _uiState.value.hasFreshChannels
+        app.hd760SlotActive.value = fresh ||
+            (newRoomKey != null && newRoomKey == app.serviceConnectionPrefs.channelRoomKey)
+        if (!fresh) {
+            Log.d(STARTUP_TAG, "HD760_SLOT_SAVED_PENDING_AUTHORIZATION")
+            return
+        }
         if (oldRoomKey != newRoomKey || !wasActive) {
             // Join the target immediately; coalesce spoken announcements.
             onChannelChanged(if (wasActive) oldRoomKey else null)
@@ -1382,7 +1390,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val newZone = _uiState.value.currentZone
         val newChannel = _uiState.value.currentChannel
         if (isHd760) {
-            val position = hd760Prefs?.lastPosition()
+            persistHd760SelectedZone()
+            val position = app.hd760KnobPosition.value ?: hd760Prefs?.lastPosition()
             if (position != null) selectHd760Position(position, oldRoomKey)
             else onChannelChanged(oldRoomKey)
         } else onChannelChangedWithAnnouncement(oldRoomKey) {
@@ -1399,7 +1408,8 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         val newZone = _uiState.value.currentZone
         val newChannel = _uiState.value.currentChannel
         if (isHd760) {
-            val position = hd760Prefs?.lastPosition()
+            persistHd760SelectedZone()
+            val position = app.hd760KnobPosition.value ?: hd760Prefs?.lastPosition()
             if (position != null) selectHd760Position(position, oldRoomKey)
             else onChannelChanged(oldRoomKey)
         } else onChannelChangedWithAnnouncement(oldRoomKey) {
@@ -1432,6 +1442,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun onChannelChanged(oldRoomKey: String? = null) {
+        if (isHd760 && !_uiState.value.hasFreshChannels) return
         val newRoomKey = _uiState.value.currentChannel?.roomKey
         if (oldRoomKey != null && oldRoomKey != newRoomKey) {
             activeTransmittingUnitStaleJob?.cancel()
@@ -1450,6 +1461,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         oldRoomKey: String?,
         announcementBlock: suspend () -> Unit
     ) {
+        if (isHd760 && !_uiState.value.hasFreshChannels) return
         val newRoomKey = _uiState.value.currentChannel?.roomKey
         if (oldRoomKey != null && oldRoomKey != newRoomKey) {
             activeTransmittingUnitStaleJob?.cancel()
@@ -1553,6 +1565,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
         cancelArmingJob?.cancel()
         activeTransmittingUnitStaleJob?.cancel()
         scanClearJob?.cancel()
+        hd760ChannelRefreshJob?.cancel()
         app.toneEngine.stopCountdownBeep()
         locationTracker.stopTracking()
         runCatching { getApplication<Application>().unregisterReceiver(pttTxFailedReceiver) }
