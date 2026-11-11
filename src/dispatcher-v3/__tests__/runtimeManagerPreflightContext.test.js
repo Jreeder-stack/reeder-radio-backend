@@ -57,6 +57,7 @@ vi.mock('../liveRuntime.js', () => ({
 
 vi.mock('../../services/aiDispatchService.js', () => ({
   setActiveDispatcherCompatibility: vi.fn(),
+  setDispatcherPttCompatibilityResolver: vi.fn(),
 }));
 
 const { AIDispatcherRuntimeManager } = await import('../../services/aiDispatcherRuntimeManager.js');

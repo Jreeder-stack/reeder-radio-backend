@@ -45,6 +45,13 @@ router.post('/:id/stop', async (req, res) => {
   catch (error) { sendError(res, error); }
 });
 
+// Admin-only, redacted snapshot from the existing stop/takeover control.
+// This is not proof that unknown CAD writes have been reconciled.
+router.get('/:id/handoff', async (req, res) => {
+  try { res.json({ handoff: aiDispatcherRuntimeManager.getOperatorHandoff(req.params.id) }); }
+  catch (error) { sendError(res, error); }
+});
+
 router.post('/:id/restart', async (req, res) => {
   try { await aiDispatcherRuntimeManager.restartProfile(req.params.id); res.json({ success: true }); }
   catch (error) { sendError(res, error); }

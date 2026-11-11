@@ -1,4 +1,5 @@
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
+import { withV3Stage, V3_DEADLINES } from '../dispatcher-v3/operationDeadline.js';
 
 const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
 const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || 'eastus';
@@ -246,126 +247,98 @@ function extractPcmFromWav(buffer) {
   return buffer.slice(44);
 }
 
-export async function speechToText(audioBuffer) {
-  if (!isConfigured()) {
-    throw new Error('Azure Speech not configured');
-  }
-
-  return new Promise((resolve, reject) => {
-    try {
-      const speechConfig = sdk.SpeechConfig.fromSubscription(AZURE_SPEECH_KEY, AZURE_SPEECH_REGION);
-      speechConfig.speechRecognitionLanguage = 'en-US';
-
-      const pushStream = sdk.AudioInputStream.createPushStream(
-        sdk.AudioStreamFormat.getWaveFormatPCM(16000, 16, 1)
-      );
-      const pcmBuffer = extractPcmFromWav(audioBuffer);
-      pushStream.write(pcmBuffer);
-      pushStream.close();
-
-      const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
-      const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-
-      const phraseList = sdk.PhraseListGrammar.fromRecognizer(recognizer);
-      for (const phrase of PHRASE_LIST) {
-        phraseList.addPhrase(phrase);
-      }
-
+export async function speechToText(audioBuffer, options = {}) {
+  if (!isConfigured()) throw new Error('Azure Speech not configured');
+  return withV3Stage('speech_sdk_recognition', options.timeoutMs || V3_DEADLINES.transcriptionMs,
+    ({ signal }) => new Promise((resolve, reject) => {
+      let recognizer = null;
+      let stream = null;
+      let done = false;
+      let stopping = false;
+      const timers = new Set();
       const segments = [];
-      let silenceTimer = null;
-      let guardTimer = null;
-      let noSpeechTimer = null;
-      let settled = false;
       let heardSpeech = false;
-
-      function settle() {
-        if (settled) return;
-        settled = true;
-        if (silenceTimer) clearTimeout(silenceTimer);
-        if (guardTimer) clearTimeout(guardTimer);
-        if (noSpeechTimer) clearTimeout(noSpeechTimer);
-        recognizer.stopContinuousRecognitionAsync(
-          () => {
-            recognizer.close();
-            const transcript = segments.join(' ').trim();
-            resolve(transcript);
-          },
-          (err) => {
-            recognizer.close();
-            resolve(segments.join(' ').trim());
-          }
+      const arm = (fn, ms) => {
+        const timer = setTimeout(() => { timers.delete(timer); fn(); }, ms);
+        timer.unref?.();
+        timers.add(timer);
+        return timer;
+      };
+      const clearTimers = () => {
+        for (const timer of timers) clearTimeout(timer);
+        timers.clear();
+      };
+      const finish = (error = null) => {
+        if (done) return;
+        done = true;
+        clearTimers();
+        signal.removeEventListener('abort', canceled);
+        try { recognizer?.close(); } catch (_) {}
+        try { stream?.close(); } catch (_) {}
+        if (error) reject(error);
+        else resolve(segments.join(' ').trim());
+      };
+      const canceled = () => finish(new Error('Speech recognition canceled or deadline exceeded'));
+      signal.addEventListener('abort', canceled, { once: true });
+      const stop = () => {
+        if (done || stopping) return;
+        stopping = true;
+        clearTimers();
+        // SDK callbacks are not guaranteed to fire after a connection loss.
+        arm(() => finish(new Error('Speech SDK stop callback deadline exceeded')), V3_DEADLINES.sdkStopMs);
+        try {
+          recognizer.stopContinuousRecognitionAsync(
+            () => finish(),
+            (error) => finish(error instanceof Error ? error : new Error(String(error))),
+          );
+        } catch (error) { finish(error); }
+      };
+      const resetSilence = () => {
+        if (done || stopping) return;
+        clearTimers();
+        arm(stop, SILENCE_TIMEOUT_MS);
+        arm(stop, SESSION_GUARD_TIMEOUT_MS);
+      };
+      try {
+        if (signal.aborted) return canceled();
+        const config = sdk.SpeechConfig.fromSubscription(AZURE_SPEECH_KEY, AZURE_SPEECH_REGION);
+        config.speechRecognitionLanguage = 'en-US';
+        stream = sdk.AudioInputStream.createPushStream(
+          sdk.AudioStreamFormat.getWaveFormatPCM(16000, 16, 1),
         );
-      }
-
-      function resetSilenceTimer() {
-        if (silenceTimer) clearTimeout(silenceTimer);
-        silenceTimer = setTimeout(() => settle(), SILENCE_TIMEOUT_MS);
-      }
-
-      recognizer.recognized = (_sender, event) => {
-        if (event.result.reason === sdk.ResultReason.RecognizedSpeech && event.result.text) {
-          segments.push(event.result.text);
-          if (!heardSpeech) {
+        stream.write(extractPcmFromWav(audioBuffer));
+        stream.close();
+        const audioConfig = sdk.AudioConfig.fromStreamInput(stream);
+        recognizer = new sdk.SpeechRecognizer(config, audioConfig);
+        const phrases = sdk.PhraseListGrammar.fromRecognizer(recognizer);
+        for (const phrase of PHRASE_LIST) phrases.addPhrase(phrase);
+        recognizer.recognized = (_sender, event) => {
+          if (done || stopping) return;
+          if (event.result.reason === sdk.ResultReason.RecognizedSpeech && event.result.text) {
+            segments.push(event.result.text);
             heardSpeech = true;
-            if (noSpeechTimer) clearTimeout(noSpeechTimer);
-          }
-          resetSilenceTimer();
-        } else if (event.result.reason === sdk.ResultReason.NoMatch && heardSpeech) {
-          resetSilenceTimer();
-        }
-      };
-
-      recognizer.speechStartDetected = () => {
-        if (!heardSpeech) {
+            resetSilence();
+          } else if (event.result.reason === sdk.ResultReason.NoMatch && heardSpeech) resetSilence();
+        };
+        recognizer.speechStartDetected = () => {
+          if (done || stopping) return;
           heardSpeech = true;
-          if (noSpeechTimer) clearTimeout(noSpeechTimer);
-        }
-        resetSilenceTimer();
-      };
-
-      recognizer.canceled = (_sender, event) => {
-        if (event.reason === sdk.CancellationReason.EndOfStream) {
-          settle();
-        } else if (event.reason === sdk.CancellationReason.Error) {
-          if (!settled) {
-            settled = true;
-            if (silenceTimer) clearTimeout(silenceTimer);
-            if (guardTimer) clearTimeout(guardTimer);
-            if (noSpeechTimer) clearTimeout(noSpeechTimer);
-            recognizer.close();
-            if (segments.length > 0) {
-              resolve(segments.join(' ').trim());
-            } else {
-              reject(new Error(`Speech recognition canceled: ${event.errorDetails}`));
-            }
-          }
-        }
-      };
-
-      recognizer.sessionStopped = () => {
-        settle();
-      };
-
-      noSpeechTimer = setTimeout(() => settle(), NO_SPEECH_TIMEOUT_MS);
-      guardTimer = setTimeout(() => settle(), SESSION_GUARD_TIMEOUT_MS);
-
-      recognizer.startContinuousRecognitionAsync(
-        () => {},
-        (error) => {
-          if (!settled) {
-            settled = true;
-            if (silenceTimer) clearTimeout(silenceTimer);
-            if (guardTimer) clearTimeout(guardTimer);
-            if (noSpeechTimer) clearTimeout(noSpeechTimer);
-            recognizer.close();
-            reject(error);
-          }
-        }
-      );
-    } catch (error) {
-      reject(error);
-    }
-  });
+          resetSilence();
+        };
+        recognizer.canceled = (_sender, event) => {
+          if (done) return;
+          if (event.reason === sdk.CancellationReason.EndOfStream) stop();
+          else finish(new Error('Speech recognition canceled: ' + String(event.errorDetails || event.reason)));
+        };
+        recognizer.sessionStopped = stop;
+        arm(stop, NO_SPEECH_TIMEOUT_MS);
+        arm(stop, SESSION_GUARD_TIMEOUT_MS);
+        recognizer.startContinuousRecognitionAsync(
+          () => {},
+          (error) => finish(error instanceof Error ? error : new Error(String(error))),
+        );
+      } catch (error) { finish(error); }
+    }), { signal: options.signal });
 }
 
 const ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
@@ -384,38 +357,37 @@ function prepareForTTS(text) {
   });
 }
 
-export async function textToSpeech(text) {
-  if (!isConfigured()) {
-    throw new Error('Azure Speech not configured');
-  }
-
+export async function textToSpeech(text, options = {}) {
+  if (!isConfigured()) throw new Error('Azure Speech not configured');
   const ttsText = prepareForTTS(text);
-
-  return new Promise((resolve, reject) => {
-    try {
-      const speechConfig = sdk.SpeechConfig.fromSubscription(AZURE_SPEECH_KEY, AZURE_SPEECH_REGION);
-      speechConfig.speechSynthesisVoiceName = process.env.AI_DISPATCHER_VOICE || 'en-US-GuyNeural';
-      speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Raw16Khz16BitMonoPcm;
-
-      const synthesizer = new sdk.SpeechSynthesizer(speechConfig, null);
-
-      synthesizer.speakTextAsync(
-        ttsText,
-        (result) => {
-          synthesizer.close();
-          if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
-            resolve(Buffer.from(result.audioData));
-          } else {
-            reject(new Error(`TTS failed: ${result.errorDetails}`));
-          }
-        },
-        (error) => {
-          synthesizer.close();
-          reject(error);
-        }
-      );
-    } catch (error) {
-      reject(error);
-    }
-  });
+  return withV3Stage('speech_sdk_synthesis', options.timeoutMs || V3_DEADLINES.synthesisMs,
+    ({ signal }) => new Promise((resolve, reject) => {
+      let synthesizer = null;
+      let finished = false;
+      const finish = (error = null, audio = null) => {
+        if (finished) return;
+        finished = true;
+        signal.removeEventListener('abort', canceled);
+        try { synthesizer?.close(); } catch (_) {}
+        if (error) reject(error);
+        else resolve(audio);
+      };
+      const canceled = () => finish(new Error('Speech synthesis canceled or deadline exceeded'));
+      signal.addEventListener('abort', canceled, { once: true });
+      try {
+        if (signal.aborted) return canceled();
+        const config = sdk.SpeechConfig.fromSubscription(AZURE_SPEECH_KEY, AZURE_SPEECH_REGION);
+        config.speechSynthesisVoiceName = process.env.AI_DISPATCHER_VOICE || 'en-US-GuyNeural';
+        config.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Raw16Khz16BitMonoPcm;
+        synthesizer = new sdk.SpeechSynthesizer(config, null);
+        synthesizer.speakTextAsync(
+          ttsText,
+          (result) => {
+            if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) finish(null, Buffer.from(result.audioData));
+            else finish(new Error('TTS failed: ' + String(result.errorDetails)));
+          },
+          (error) => finish(error instanceof Error ? error : new Error(String(error))),
+        );
+      } catch (error) { finish(error); }
+    }), { signal: options.signal });
 }

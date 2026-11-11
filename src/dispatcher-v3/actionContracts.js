@@ -212,14 +212,56 @@ export function validateV3ActionRequest(request = {}, runtimeContext = null) {
   const action = String(request.action || '').trim().toUpperCase();
   const definition = getV3ActionDefinition(action);
   if (!definition) throw new DispatcherV3Error(V3_ERROR_CODES.INVALID_ACTION, `Unknown Dispatcher V3 action: ${action || '(empty)'}`, { statusCode: 400, details: { action: action || null } });
+  if (action === V3_ACTIONS.DECLARE_EMERGENCY) {
+    throw new DispatcherV3Error(V3_ERROR_CODES.UNAUTHORIZED,
+      'The emergency system may only be activated by the physical hardware control', { statusCode: 403 });
+  }
   if (runtimeContext) requireV3Scopes(runtimeContext, definition.scopes);
   let input;
-  try { input = definition.validate(request.input || {}); }
-  catch (error) {
+  try {
+    validateV3InputShape(request.input ?? {});
+    input = definition.validate(request.input || {});
+    // A contract must reject unknown keys, not quietly drop them and
+    // accidentally allow an untrusted planner to smuggle future fields.
+    const unknown = Object.keys(request.input || {}).filter(key => !Object.hasOwn(input, key));
+    if (unknown.length) throw invalidInput('Unsupported field for ' + action, unknown[0]);
+    if (action === V3_ACTIONS.UPDATE_CALL
+      && !Object.entries(input).some(([key, value]) => key !== 'callId' && value != null)) {
+      throw invalidInput('At least one call field must be updated');
+    }
+  } catch (error) {
     if (error instanceof DispatcherV3Error) throw error;
     throw invalidInput(error?.message || 'Invalid action input');
   }
   return Object.freeze({ action, input: deepFreeze(input), scopes: definition.scopes });
+}
+
+// Validate untrusted action input at the authoritative server/tool boundary,
+// not only in the model's semantic preflight.
+export function validateV3InputShape(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)
+    || (Object.getPrototypeOf(input) !== Object.prototype && Object.getPrototypeOf(input) !== null)) {
+    throw invalidInput('Action input must be a plain object');
+  }
+  const entries = Object.entries(input);
+  if (entries.length > 36) throw invalidInput('Too many CAD action fields');
+  for (const [key, value] of entries) {
+    if (!/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/.test(key)
+      || ['__proto__', 'constructor', 'prototype'].includes(key)) throw invalidInput('Unsafe action field', key);
+    if (value === undefined || value === null) continue;
+    if (typeof value === 'string') {
+      if (value.length > 1500 || /[\u0000-\u0008\u000B\u000E-\u001F]/.test(value)) {
+        throw invalidInput('Invalid or oversized action text', key);
+      }
+    } else if (typeof value === 'number') {
+      if (!Number.isFinite(value)) throw invalidInput('Invalid numeric action value', key);
+    } else if (Array.isArray(value)) {
+      if (value.length > 24 || value.some(item => typeof item !== 'string' || item.length > 1500)) {
+        throw invalidInput('Invalid CAD action array', key);
+      }
+    } else throw invalidInput('Unsupported CAD action value type', key);
+  }
+  return true;
 }
 
 function define(scopes, validate) { return Object.freeze({ scopes: Object.freeze([...scopes]), validate }); }

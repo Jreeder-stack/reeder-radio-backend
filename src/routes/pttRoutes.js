@@ -3,6 +3,10 @@ import { randomUUID } from 'crypto';
 import { signalingService } from '../services/signalingService.js';
 import { floorControlService } from '../services/floorControlService.js';
 import pool, { upsertDevice, updateDeviceLastSeen } from '../db/index.js';
+import {
+  loadSessionPttPrincipal, loadRadioPttPrincipal, matchPttChannelGrant,
+  createPttTransmission, attachPttMetadata, getPttMetadata, ownsPttTransmission, findPttRequest, pttRequestMatches,
+} from '../services/pttProvenance.js';
 
 const router = Router();
 
@@ -18,134 +22,42 @@ function resolveDeviceId(req) {
   return null;
 }
 
-/**
- * Look up a DB user by unit_id or username and verify they have
- * access to the given numeric channelId via user_channel_access.
- * Returns the user row on success, null otherwise.
- */
-async function dbVerifyUnitChannelAccess(identity, channelId) {
-  const result = await pool.query(
-    `SELECT u.id, u.unit_id, u.username
-     FROM users u
-     JOIN user_channel_access uca ON uca.user_id = u.id
-     WHERE (u.unit_id = $1 OR u.username = $1)
-       AND uca.channel_id = $2
-     LIMIT 1`,
-    [identity, channelId]
-  );
-  return result.rows[0] ?? null;
-}
-
-/**
- * Resolve auth for PTT start/end requests.
- *
- * Primary  : unit in signalingService.unitPresence (Socket.IO authenticated).
- * Fallback : valid session cookie + DB channel access verification.
- *
- * Returns { channelId, unitId, presenceSynthesized } on success,
- * or null (response already sent) on failure.
- */
-async function resolveChannel(rawChannelId) {
-  if (typeof rawChannelId === 'string' && rawChannelId.includes('__')) {
-    const result = await pool.query(
-      `SELECT id, COALESCE(zone,'Default') || '__' || name AS room_key FROM channels WHERE COALESCE(zone,'Default') || '__' || name = $1 LIMIT 1`,
-      [rawChannelId]
-    );
-    if (!result.rows[0]) return null;
-    return { numericId: result.rows[0].id, roomKey: result.rows[0].room_key };
-  }
-  const parsed = Number(rawChannelId);
-  if (!Number.isFinite(parsed)) return null;
-  const result = await pool.query(
-    `SELECT id, COALESCE(zone,'Default') || '__' || name AS room_key FROM channels WHERE id = $1 LIMIT 1`,
-    [parsed]
-  );
-  if (!result.rows[0]) return null;
-  return { numericId: result.rows[0].id, roomKey: result.rows[0].room_key };
-}
-
+/** HTTP presence and client device IDs are routing hints, never account proof. */
 async function validatePttRequest(req, res) {
-  const { channelId: rawChannelId, unitId } = req.body;
-
-  if (!rawChannelId || !unitId) {
+  const { channelId: rawChannelId, unitId: requestedUnitId } = req.body;
+  if (!rawChannelId || !requestedUnitId) {
     res.status(400).json({ error: 'channelId and unitId required' });
     return null;
   }
-
-  const deviceId = resolveDeviceId(req);
-
-  const resolved = await resolveChannel(rawChannelId);
-
-  if (!resolved) {
-    res.status(400).json({ error: 'Invalid channelId or roomKey' });
-    return null;
-  }
-
-  const { numericId: numericChannelId, roomKey } = resolved;
-  const channelId = roomKey;
-
-  // Primary: live Socket.IO presence
-  const presence = signalingService.unitPresence?.get(unitId);
-  if (presence) {
-    return {
-      channelId,
-      numericChannelId,
-      roomKey,
-      unitId,
-      deviceId,
-      sessionUser: req.session?.user || null,
-      presenceSynthesized: !!presence.synthesized,
-    };
-  }
-
-  // Fallback: session cookie identity match
-  const sessionUser = req.session?.user;
-  if (!sessionUser) {
-    console.warn(`[PTT-HTTP] Rejected ${unitId} on ch${channelId}: not in presence, no session (cookie=${!!req.headers.cookie})`);
-    res.status(403).json({ error: 'Unit not authenticated' });
-    return null;
-  }
-
-  const identityMatchesSession =
-    sessionUser.unit_id === unitId || sessionUser.username === unitId;
-  if (!identityMatchesSession) {
-    console.warn(`[PTT-HTTP] Rejected ${unitId} on ch${channelId}: session belongs to "${sessionUser.username}", not requested unit`);
-    res.status(403).json({ error: 'Unit not authenticated' });
-    return null;
-  }
-
-  let dbUser = null;
+  let principal;
   try {
-    dbUser = await dbVerifyUnitChannelAccess(unitId, numericChannelId);
-  } catch (dbErr) {
-    console.error('[PTT-HTTP] DB channel access check failed:', dbErr.message);
-    res.status(500).json({ error: 'Internal error during authorization' });
+    principal = req.session?.user && req.sessionID
+      ? await loadSessionPttPrincipal(req.sessionID)
+      : await loadRadioPttPrincipal(req.headers['x-radio-token']);
+  } catch (_) {
+    res.status(503).json({ error: 'Authentication unavailable' });
     return null;
   }
-
-  if (!dbUser) {
-    console.warn(`[PTT-HTTP] Rejected ${unitId} on ch${channelId}: session valid but no DB channel access`);
-    res.status(403).json({ error: 'Unit does not have access to this channel' });
+  if (!principal || ![principal.unitId, principal.username].includes(String(requestedUnitId))) {
+    res.status(403).json({ error: 'Unit not authenticated' });
     return null;
   }
-
-  const synthPresence = {
-    unitId,
-    status: 'online',
-    channels: [channelId],
-    synthesized: true,
-  };
-  signalingService.unitPresence.set(unitId, synthPresence);
-  console.log(`[PTT-HTTP] Session+DB fallback auth OK: "${unitId}" on ch${channelId} — minimal presence synthesized`);
-
+  const grant = matchPttChannelGrant(principal, rawChannelId);
+  if (!grant) {
+    res.status(403).json({ error: 'Unit does not have unambiguous access to this channel' });
+    return null;
+  }
+  const channelId = grant.roomKey;
+  const unitId = principal.unitId;
+  let presence = signalingService.unitPresence.get(unitId);
+  if (!presence) {
+    presence = { unitId, status: 'online', channels: [channelId], synthesized: true };
+    signalingService.unitPresence.set(unitId, presence);
+  }
   return {
-    channelId,
-    numericChannelId,
-    roomKey,
-    unitId,
-    deviceId,
-    sessionUser,
-    presenceSynthesized: true,
+    channelId, numericChannelId: grant.channelId, roomKey: grant.roomKey,
+    unitId, principal, deviceId: resolveDeviceId(req),
+    sessionUser: { id: principal.accountId }, presenceSynthesized: !!presence.synthesized,
   };
 }
 
@@ -169,8 +81,11 @@ async function ensureDeviceRegistered(deviceId, sessionUser, unitId, deviceType 
 router.post('/start', async (req, res) => {
   const validated = await validatePttRequest(req, res);
   if (!validated) return;
-  const { channelId, unitId, presenceSynthesized, sessionUser } = validated;
+  const { channelId, unitId, presenceSynthesized, sessionUser, principal } = validated;
   let { deviceId } = validated;
+  if (findPttRequest(principal, channelId, req.body.requestId)) {
+    return res.json({ success: true, duplicate: true });
+  }
 
   // CAD HTTP PTT requires a device identity so the originating device can be
   // distinguished from sibling devices on the same unitId (e.g. a T320 radio
@@ -195,7 +110,11 @@ router.post('/start', async (req, res) => {
     }
 
     const existingTransmission = signalingService.activeTransmissions.get(channelId);
-    if (existingTransmission && existingTransmission.unitId === unitId && existingTransmission.deviceId !== deviceId) {
+    if (existingTransmission && ownsPttTransmission(getPttMetadata(existingTransmission), principal)
+        && existingTransmission.deviceId === deviceId) {
+      return res.json({ success: true, deviceId, duplicate: true });
+    }
+    if (existingTransmission && existingTransmission.unitId === unitId) {
       console.warn(`[PTT-HTTP] Floor denied for ${unitId}/dev=${deviceId.substring(0, 8)} on ch${channelId}: already transmitting from another device on same unit`);
       return res.status(409).json({
         error: 'Channel busy',
@@ -205,7 +124,7 @@ router.post('/start', async (req, res) => {
     }
 
     const drainingTx = signalingService.drainingTransmissions?.get(channelId);
-    if (drainingTx && drainingTx.deviceId !== deviceId && drainingTx.unitId !== unitId) {
+    if (drainingTx && !ownsPttTransmission(getPttMetadata(drainingTx.transmission), principal)) {
       console.warn(`[PTT-HTTP] Floor denied for ${unitId} on ch${channelId}: channel draining (held by ${drainingTx.unitId})`);
       return res.status(409).json({
         error: 'Channel busy',
@@ -213,7 +132,7 @@ router.post('/start', async (req, res) => {
         reason: 'channel_busy',
       });
     }
-    if (drainingTx && (drainingTx.deviceId === deviceId || drainingTx.unitId === unitId)) {
+    if (drainingTx && ownsPttTransmission(getPttMetadata(drainingTx.transmission), principal)) {
       signalingService._cancelDrain(channelId);
     }
 
@@ -232,6 +151,11 @@ router.post('/start', async (req, res) => {
       });
     }
 
+    if (existingTransmission) {
+      signalingService._emitTransmissionEnd(existingTransmission, {
+        unitId: existingTransmission.unitId, channelId, timestamp: Date.now(), reason: 'preempted_emergency',
+      });
+    }
     const transmissionData = {
       unitId,
       deviceId,
@@ -242,6 +166,9 @@ router.post('/start', async (req, res) => {
       source: 'cad',
     };
 
+    attachPttMetadata(transmissionData, createPttTransmission(principal, {
+      channelId, source: 'http-ptt', captureStartedAt: transmissionData.timestamp, clientRequestId: req.body.requestId,
+    }));
     signalingService.activeTransmissions.set(channelId, transmissionData);
 
     // Only mutate per-unit presence.status when the presence belongs to this
@@ -288,7 +215,7 @@ router.post('/start', async (req, res) => {
 router.post('/end', async (req, res) => {
   const validated = await validatePttRequest(req, res);
   if (!validated) return;
-  const { channelId, unitId, presenceSynthesized, sessionUser } = validated;
+  const { channelId, unitId, presenceSynthesized, sessionUser, principal } = validated;
   let { deviceId } = validated;
 
   if (!deviceId) {
@@ -301,11 +228,6 @@ router.post('/end', async (req, res) => {
     }
   }
 
-  const deviceType = req.session?.deviceType || 'cad';
-  if (deviceId) {
-    await ensureDeviceRegistered(deviceId, sessionUser, unitId, deviceType);
-  }
-
   try {
     const io = signalingService.io;
     if (!io) {
@@ -314,6 +236,11 @@ router.post('/end', async (req, res) => {
     }
 
     const transmission = signalingService.activeTransmissions.get(channelId);
+    if (!transmission) return res.json({ success: true, ignored: true });
+    if (!ownsPttTransmission(getPttMetadata(transmission), principal)
+        || !pttRequestMatches(getPttMetadata(transmission), req.body.requestId)) {
+      return res.status(403).json({ error: 'Transmission belongs to another authenticated connection' });
+    }
     if (transmission && deviceId && transmission.deviceId && transmission.deviceId !== deviceId) {
       console.warn(`[PTT-HTTP] PTT END deviceId mismatch for ${unitId}: floor held by dev=${transmission.deviceId?.substring(0, 8)}, end from dev=${deviceId.substring(0, 8)} — ignoring`);
       return res.json({ success: true, ignored: true });

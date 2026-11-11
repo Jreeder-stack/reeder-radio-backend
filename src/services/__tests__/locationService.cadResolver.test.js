@@ -49,9 +49,11 @@ describe('LocationService Command Link resolver', () => {
     expect(result).toMatchObject({
       source: 'MAI',
       businessName: 'Fayette County Fairgrounds',
-      road: '132 Pechin Road',
+      road: 'Fayette County Fairgrounds — 132 Pechin Road',
+      streetAddress: '132 Pechin Road',
       city: 'Dunbar',
-      state: 'PA',
+      state: null,
+      postalState: 'PA',
       maiAddressId: 'mai-fair',
       lat: 39.976,
       lng: -79.614,

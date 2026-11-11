@@ -1,0 +1,81 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "01-05",
+  "date": "2026-10-29",
+  "repo": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "3d8a394c0f10fd959d1d1cd772d29a49193777c4",
+  "primaryImplementation": "c96382c435734d9a75622d8e7a79b47303fa3d8c",
+  "credentialRevalidation": "4f75b734ece4b167a8c9e40bb3e6d45e13e8f3f0",
+  "testedSource": "1a65c775808332cfe8b8ab17069ef55d86ef3e56",
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "liveVerified": false,
+    "releaseApproved": false
+  },
+  "ci": {
+    "run": 40956768862,
+    "job": 123738828314,
+    "nodeMajor": 20,
+    "v3": {
+      "passed": 387,
+      "failed": 1,
+      "total": 388,
+      "files": 37
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0
+    },
+    "new0105Tests": {
+      "passed": 13,
+      "failed": 0
+    },
+    "artifact": {
+      "id": 12932624642,
+      "reportedDigest": "sha256:983a59e79ec7036bb351cc42d2a334e93608075d6ece8aa6ff11835416181caa",
+      "independentlyHashed": false
+    }
+  },
+  "tests": [
+    "active_account_revoked",
+    "channel_grant_revoked",
+    "unit_identity_changed",
+    "unchanged_permitted_actor",
+    "restart_during_STT",
+    "restart_during_model",
+    "pending_reply_expires_during_model",
+    "five_minute_queued_transcription",
+    "targeted_supersession",
+    "submitted_CAD_write_reconciliation_required",
+    "stale_generation_after_restart",
+    "expired_session",
+    "locked_radio_token"
+  ],
+  "knownUnrepaired": [
+    "R01",
+    "R05",
+    "R08",
+    "R11",
+    "R12",
+    "R13",
+    "R14"
+  ],
+  "knownFailure": "CREATE_CALL unverified fixture in phase4Pipeline.test.js; safe refusal to announce success",
+  "limitations": [
+    "No rollback for submitted CAD writes",
+    "No public cancellation API or voice-command rewrite",
+    "Actual production audio/provider and mobile unverified",
+    "New main integration unverified",
+    "03-06 reconciliation pending"
+  ],
+  "nextItem": "01-06",
+  "releaseGates": [
+    "G-01",
+    "G-02",
+    "G-03",
+    "G-04"
+  ]
+}

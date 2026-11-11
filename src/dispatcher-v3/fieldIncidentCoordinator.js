@@ -1,6 +1,20 @@
 import { DispatcherV3Error, V3_ERROR_CODES } from './errors.js';
+import { assertV3CurrentTaskCall } from './operationalContext.js';
+import { currentV3Life } from './turnLifecycle.js';
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
+
+// Task ownership comes from the trusted V3 turn, never a spoken callsign.
+// The optional legacy-free key supports the coordinator's direct unit tests.
+function incidentKey(unitRef, custody = null) {
+  const unit = normalizeUnit(unitRef);
+  if (!custody) return unit;
+  if (typeof custody.scopeKey !== 'string' || !custody.scopeKey
+    || typeof custody.taskId !== 'string' || !custody.taskId) {
+    throw new TypeError('Authenticated conversation task custody required for field incident');
+  }
+  return JSON.stringify([unit, custody.scopeKey, custody.taskId]);
+}
 
 export class V3FieldIncidentCoordinator {
   constructor({
@@ -32,12 +46,14 @@ export class V3FieldIncidentCoordinator {
     this.incidents = new Map();
   }
 
-  getDialogueContext(unitRef) {
-    const key = normalizeUnit(unitRef);
-    const state = this.incidents.get(key);
+  getDialogueContext(unitRef, custody = null) {
+    const key = incidentKey(unitRef, custody);
+    const state = this.incidents.get(key) || (!custody
+      ? [...this.incidents.values()].reverse().find((item) => item.callsign && normalizeUnit(item.callsign) === normalizeUnit(unitRef))
+      : null);
     if (!state) return null;
     if (state.expiresAt < this.now()) {
-      this.incidents.delete(key);
+      this.incidents.delete(state.key);
       return null;
     }
     return {
@@ -49,19 +65,35 @@ export class V3FieldIncidentCoordinator {
     };
   }
 
-  clear(unitRef) {
-    this.incidents.delete(normalizeUnit(unitRef));
+  clear(unitRef, custody = null) {
+    if (custody) this.incidents.delete(incidentKey(unitRef, custody));
+    else for (const [key, state] of this.incidents) {
+      if (normalizeUnit(state.callsign) === normalizeUnit(unitRef)) this.incidents.delete(key);
+    }
+  }
+
+  // Move only the same authenticated owner's still-live task state after a
+  // validated session handoff. No CAD mutation or incident fact is fabricated.
+  rebindCustody(unitRef, prior, current) {
+    const oldKey = incidentKey(unitRef, prior);
+    const newKey = incidentKey(unitRef, current);
+    const state = this.incidents.get(oldKey);
+    if (!state || state.expiresAt < this.now() || this.incidents.has(newKey)) return false;
+    this.incidents.delete(oldKey);
+    state.key = newKey;
+    this.incidents.set(newKey, state);
+    return true;
   }
 
   clearAll() {
     this.incidents.clear();
   }
 
-  async report({ input, correlationId }) {
+  async report({ input, correlationId, custody = null }) {
     const identity = await this.unitIdentityService.resolve(input.unitId, { correlationId });
     const context = await this.operationalContextService.snapshot({ speakerCallsign: identity.callsign, correlationId });
     const state = {
-      key: normalizeUnit(identity.callsign),
+      key: incidentKey(identity.callsign, custody),
       callsign: identity.callsign,
       unitId: identity.unitId,
       eventType: input.eventType,
@@ -69,8 +101,9 @@ export class V3FieldIncidentCoordinator {
       callId: context.currentCall?.id || null,
       call: context.currentCall || null,
       noteRecorded: false,
+      recordedReports: [],
       pendingGoals: initialGoals(input),
-      deferredNotes: [],
+      deferredNotes: [], uncertainNotes: [],
       partialErrors: [],
       expiresAt: this.now() + this.ttlMs,
     };
@@ -99,37 +132,51 @@ export class V3FieldIncidentCoordinator {
       eventType: state.eventType,
       pendingGoals: [...state.pendingGoals],
       partialErrors: state.partialErrors,
+      deferredCount: state.deferredNotes.length,
+      unknownCount: state.uncertainNotes.length,
+      verified: state.partialErrors.length === 0 && state.deferredNotes.length === 0
+        && state.uncertainNotes.length === 0 && (state.noteRecorded || state.recordedReports.length > 0),
+      recordedReports: [...state.recordedReports],
       keepListening: state.pendingGoals.length > 0,
       radioResponse: initialRadioResponse(state),
     };
   }
 
-  async update({ input, correlationId }) {
+  async update({ input, correlationId, custody = null }) {
     const identity = await this.unitIdentityService.resolve(input.unitId, { correlationId });
-    let state = this.incidents.get(normalizeUnit(identity.callsign));
+    const key = incidentKey(identity.callsign, custody);
+    let state = this.incidents.get(key);
     if (state?.expiresAt < this.now()) {
-      this.incidents.delete(normalizeUnit(identity.callsign));
+      this.incidents.delete(key);
       state = null;
     }
 
     if (!state) {
       const context = await this.operationalContextService.snapshot({ speakerCallsign: identity.callsign, correlationId });
+      if (!context.currentCall?.id) {
+        throw new DispatcherV3Error(V3_ERROR_CODES.CALL_NOT_FOUND,
+          'There is no current call for this independent field update. Identify a call or start a new incident.', { statusCode: 404 });
+      }
       state = {
-        key: normalizeUnit(identity.callsign), callsign: identity.callsign, unitId: identity.unitId,
+        key, callsign: identity.callsign, unitId: identity.unitId,
         eventType: 'operational_update', originalNote: input.note || input.value,
         callId: context.currentCall?.id || null, call: context.currentCall || null,
-        noteRecorded: false, pendingGoals: [], deferredNotes: [], partialErrors: [],
+        noteRecorded: false, recordedReports: [], pendingGoals: [], deferredNotes: [], uncertainNotes: [], partialErrors: [],
         expiresAt: this.now() + this.ttlMs,
       };
     }
 
+    // The retained incident's call is a historical reference, not proof of
+    // present assignment. Re-read CAD before this follow-up and each write.
+    await this._assertCurrentRelationship(state, correlationId);
     state.partialErrors = [];
+    state.recordedReports = [];
     if (input.informationType === 'location') {
-      await this._applyLocation(state, input.value, correlationId);
+      await this._applyLocation(state, input.value, correlationId, { followUp: true });
       removeGoal(state, 'location');
     } else {
       const prefix = informationPrefix(input.informationType);
-      await this._tryRecordNote(state, input.note || `${prefix}${input.value}`, correlationId);
+      await this._tryRecordNote(state, input.note || `${prefix}${input.value}`, correlationId, { followUp: true });
       if (input.informationType === 'subject_description') removeGoal(state, 'subject_description');
     }
 
@@ -142,12 +189,17 @@ export class V3FieldIncidentCoordinator {
       eventType: state.eventType,
       pendingGoals: [...state.pendingGoals],
       partialErrors: state.partialErrors,
+      deferredCount: state.deferredNotes.length,
+      unknownCount: state.uncertainNotes.length,
+      verified: state.partialErrors.length === 0 && state.deferredNotes.length === 0
+        && state.uncertainNotes.length === 0 && (state.noteRecorded || state.recordedReports.length > 0),
+      recordedReports: [...state.recordedReports],
       keepListening: state.pendingGoals.length > 0,
       radioResponse: askForDescription ? `10-4. What's the subject's description?` : '10-4.',
     };
   }
 
-  async _applyLocation(state, query, correlationId) {
+  async _applyLocation(state, query, correlationId, { followUp = false } = {}) {
     const resolution = await this.gateway.get('/api/radio/locations/resolve', {
       correlationId,
       query: { q: clean(query) },
@@ -161,9 +213,12 @@ export class V3FieldIncidentCoordinator {
     }
 
     if (!state.callId) {
-      await this._tryCreateCall(state, location.address, correlationId, location);
+      if (followUp) await this._assertCurrentRelationship(state, correlationId);
+      await this._tryCreateCall(state, location.address, correlationId, location, { followUp });
     } else {
+      if (followUp) await this._assertCurrentRelationship(state, correlationId);
       const updated = await this.updateCall({
+        beforeCadWrite: followUp ? () => this._assertCurrentRelationship(state, correlationId) : null,
         input: {
           callId: state.callId,
           location: location.address,
@@ -183,13 +238,15 @@ export class V3FieldIncidentCoordinator {
     }
 
     const verificationNote = locationVerificationNote(location);
-    if (verificationNote) await this._tryRecordNote(state, verificationNote, correlationId);
-    await this._flushDeferredNotes(state, correlationId);
+    if (verificationNote) await this._tryRecordNote(state, verificationNote, correlationId, { followUp });
+    await this._flushDeferredNotes(state, correlationId, { followUp });
   }
 
-  async _tryCreateCall(state, query, correlationId, resolved = null) {
+  async _tryCreateCall(state, query, correlationId, resolved = null, { followUp = false } = {}) {
+    const before = currentV3Life()?.writeCount || 0;
     try {
       const created = await this.createCall({
+        beforeCadWrite: followUp ? () => this._assertCurrentRelationship(state, correlationId) : null,
         input: {
           type: natureForEvent(state.eventType),
           location: query,
@@ -210,38 +267,67 @@ export class V3FieldIncidentCoordinator {
       });
       state.call = created?.call || created?.data?.call || null;
       state.callId = callId(state.call) || callId(created);
-      await this._flushDeferredNotes(state, correlationId);
     } catch (error) {
-      state.partialErrors.push(errorResult(error, 'create_call'));
+      if (followUp && [V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED, V3_ERROR_CODES.CAD_UNAVAILABLE].includes(error?.code)) throw error;
+      state.partialErrors.push(errorResult(error, 'create_call',
+        (currentV3Life()?.writeCount || 0) > before));
     }
+    // A newly created call is a real CAD mutation. A later assignment check
+    // may still fail; do not silently flush deferred notes to a changed call.
+    await this._flushDeferredNotes(state, correlationId, { followUp });
   }
 
-  async _tryRecordNote(state, note, correlationId) {
+  async _tryRecordNote(state, note, correlationId, { followUp = false } = {}) {
     const text = clean(note);
     if (!text) return;
     if (!state.callId) {
       state.deferredNotes.push(text);
       return;
     }
+    // A changed/closed call is not a transient note-write error. Do not
+    // swallow it into deferredNotes or retry later against the wrong call.
+    if (followUp) await this._assertCurrentRelationship(state, correlationId);
+    const before = currentV3Life()?.writeCount || 0;
     try {
-      const result = await this.addCallNote({ input: { callId: state.callId, note: text, unitId: state.unitId }, correlationId });
+      const result = await this.addCallNote({
+        input: { callId: state.callId, note: text, unitId: state.unitId }, correlationId,
+        beforeCadWrite: followUp ? () => this._assertCurrentRelationship(state, correlationId) : null,
+      });
       state.call = result?.call || state.call;
-      if (text === state.originalNote) state.noteRecorded = true;
+      if (result?.verified === true) {
+        state.recordedReports = [...(state.recordedReports || []), text].slice(-8);
+        if (text === state.originalNote) state.noteRecorded = true;
+      }
     } catch (error) {
-      state.partialErrors.push(errorResult(error, 'add_note'));
-      state.deferredNotes.push(text);
+      if (followUp && [V3_ERROR_CODES.CALL_RELATIONSHIP_CHANGED, V3_ERROR_CODES.CAD_UNAVAILABLE].includes(error?.code)) throw error;
+      const submitted = (currentV3Life()?.writeCount || 0) > before;
+      state.partialErrors.push(errorResult(error, 'add_note', submitted));
+      // Never replay a note with an uncertain receipt. Only notes that have
+      // NOT been attempted may be deferred until an incident has a call ID.
+      if (submitted) state.uncertainNotes = [...state.uncertainNotes, text].slice(-8);
     }
   }
 
-  async _flushDeferredNotes(state, correlationId) {
+  async _flushDeferredNotes(state, correlationId, { followUp = false } = {}) {
     if (!state.callId || state.deferredNotes.length === 0) return;
     const pending = [...state.deferredNotes];
     state.deferredNotes = [];
-    for (const note of pending) await this._tryRecordNote(state, note, correlationId);
+    for (const note of pending) await this._tryRecordNote(state, note, correlationId, { followUp });
+  }
+
+  async _assertCurrentRelationship(state, correlationId) {
+    const current = await this.operationalContextService.snapshot({
+      speakerCallsign: state.callsign, correlationId,
+    });
+    return assertV3CurrentTaskCall({
+      operationalContext: current, expectedCallId: state.callId,
+      expectedUnitId: state.unitId, allowUnassigned: !state.callId,
+    });
   }
 
   _save(state) {
-    if (state.pendingGoals.length === 0 && state.deferredNotes.length === 0) {
+    if (state.pendingGoals.length === 0 && state.deferredNotes.length === 0
+      && state.uncertainNotes.length === 0) {
       this.incidents.delete(state.key);
       return;
     }
@@ -314,8 +400,10 @@ function callId(value) {
   return clean(value?.id || value?.call_id || value?.callId || value?.call?.id || value?.call?.call_id || value?.call?.callId);
 }
 
-function errorResult(error, phase) {
-  return { phase, code: error?.code || V3_ERROR_CODES.CAD_REJECTED, message: error?.message || 'CAD operation failed' };
+function errorResult(error, phase, submitted = false) {
+  return { phase, outcome: submitted ? 'unknown' : 'failed', retrySafe: false,
+    code: error?.code || V3_ERROR_CODES.CAD_REJECTED,
+    message: error?.message || 'CAD operation failed' };
 }
 
 function normalizeUnit(value) {

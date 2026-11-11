@@ -1,0 +1,207 @@
+{
+  "task": "AI-DISP-V3-001/01-01",
+  "historicalBaseline": "c5ce5feed7a4feadb86ddca3d6d8c89e2c2f90fa",
+  "testedRevision": "f23498a0a4028dd456f41ac49b0e95fce44e9c18",
+  "revisionSource": "caller_verified_checkout",
+  "runtime": "v20.20.2",
+  "platform": "linux/x64",
+  "mode": "baseline",
+  "generatedAt": "2026-10-29T14:26:24.859Z",
+  "sourceBlobs": {
+    "src/dispatcher-v3/liveRuntime.js": "d43112db7aa135d0496fab587c5737b524e7a684",
+    "src/dispatcher-v3/speechPipeline.js": "0780d92efca9bbcf2752a4fc2c65c07f85a78200",
+    "src/dispatcher-v3/conversationGate.js": "f91d8be9c76bb306fa212436c743eba8d39a0419",
+    "src/dispatcher-v3/intentPlanner.js": "2341ff5fa7ad850d88a4bfacfb220a66b17e870d",
+    "src/dispatcher-v3/deterministicIntent.js": "bb2a45d7c8454e8108e7da222d9c2616bdcc62e2",
+    "src/dispatcher-v3/fieldIncidentCoordinator.js": "6466a8243b28657984640a3e549bb562e678cd3b",
+    "src/dispatcher-v3/operationalContext.js": "e7c511ce88d5371fab2ebc950b586d092e0a88ca",
+    "src/dispatcher-v3/actionExecutor.js": "28df5c14b4b90138afc086560cf2cde40319de96",
+    "src/dispatcher-v3/responseComposer.js": "487065b5ccd58ad8d14aa23402d5332ed09de73e",
+    "src/dispatcher-v3/cadGateway.js": "94dee854fed22c89eedc35ff522107f5692a6308",
+    "src/services/azureSpeechService.js": "20430bd4967ff63acb3b9fcc48a643007758d14e",
+    "src/services/aiDispatcherRuntimeManager.js": "6c69b5f7553205ff37355f95b527c2528e596efe",
+    "package-lock.json": "95e68c9e83f40b1a085d6fc0da03082e17f6a2cc",
+    "src/dispatcher-v3/turnEnvelope.js": "c708859abb090ac5d5ad3eb3c0646a2d99e970e3",
+    "src/services/pttProvenance.js": "0802b124a209bea14b0764debd325b1798419e48",
+    "src/services/signalingService.js": "80c7e1816316f78cdba4e182ef01636184cd382d",
+    "src/services/signalingFloorIdentityHardening.js": "a125b4db51cd9549afbb67cf30fc32ca64440e96",
+    "src/routes/pttRoutes.js": "823169bdc18b51129c9837cccce0f606fc5ecbd5",
+    "src/controllers/dispatchController.js": "597a1b71b263eb89be5b1d167ebc37029ca63f38",
+    "src/services/aiDispatchService.js": "17e4ff027e328279cc9f01e13a1aedd1b5d6984b",
+    "src/services/aiDispatcherSignaling.js": "8f899a2d23b9d77b689686fd9d53bb436f6ca73f"
+  },
+  "expectedReproductions": 14,
+  "recordedReproductions": 14,
+  "requiredRepairedCases": [
+    "R06",
+    "R07"
+  ],
+  "allReproductionsRecorded": true,
+  "repairAcceptancePassed": false,
+  "productionWrites": 0,
+  "radioTransmissions": 0,
+  "paidProviderCalls": 0,
+  "note": "Mixed progress evidence: requiredRepairedCases always assert fixed behavior; other baseline cases still reproduce defects. Consult the Vitest result for fixture/control failures. This is not release acceptance.",
+  "reproductions": [
+    {
+      "id": "R01",
+      "finding": "F1",
+      "expectedFixedBehavior": "Expired A1 dialogue must not be supplied as B2 current conversation.",
+      "observed": {
+        "foreignDialoguePresent": true,
+        "hasSpeaker": false,
+        "hasAge": false
+      },
+      "repairAcceptancePassed": false,
+      "mode": "baseline"
+    },
+    {
+      "id": "R02",
+      "finding": "F2",
+      "expectedFixedBehavior": "Legitimate consecutive statuses must execute in capture order.",
+      "observed": [
+        "available",
+        "en_route"
+      ],
+      "repairAcceptancePassed": false,
+      "mode": "baseline"
+    },
+    {
+      "id": "R03",
+      "finding": "F2",
+      "expectedFixedBehavior": "An expired pending answer must be revalidated and must not mutate its old call.",
+      "observed": {
+        "expiredWrite": true,
+        "target": "OLD-CALL"
+      },
+      "repairAcceptancePassed": false,
+      "mode": "baseline"
+    },
+    {
+      "id": "R04",
+      "finding": "F2",
+      "expectedFixedBehavior": "Stopped generations cannot issue late mutations or speech.",
+      "observed": {
+        "running": false,
+        "postStopWrites": 1
+      },
+      "repairAcceptancePassed": false,
+      "mode": "baseline"
+    },
+    {
+      "id": "R05",
+      "finding": "F4",
+      "expectedFixedBehavior": "Cancellation must retire the intended dialogue, not become an old-call note.",
+      "observed": {
+        "cancellationWritten": true,
+        "target": "OLD-CALL",
+        "currentCall": "NEW-CALL"
+      },
+      "repairAcceptancePassed": false,
+      "mode": "baseline"
+    },
+    {
+      "id": "R06",
+      "finding": "F5",
+      "expectedFixedBehavior": "Negations and questions must not produce the opposite mutation.",
+      "observed": {
+        "writes": [],
+        "modelCalls": 3
+      },
+      "repairAcceptancePassed": true,
+      "mode": "acceptance"
+    },
+    {
+      "id": "R07",
+      "finding": "F5",
+      "expectedFixedBehavior": "Keep the address separate and preserve both requested operations.",
+      "observed": {
+        "actions": [
+          "CREATE_CALL",
+          "SET_UNIT_STATUS"
+        ],
+        "location": "100 Main Street"
+      },
+      "repairAcceptancePassed": true,
+      "mode": "acceptance"
+    },
+    {
+      "id": "R08",
+      "finding": "F7",
+      "expectedFixedBehavior": "Read operations must speak the requested information, not a generic acknowledgment.",
+      "observed": [
+        "A1, copy.",
+        "A1, copy."
+      ],
+      "repairAcceptancePassed": false,
+      "mode": "baseline"
+    },
+    {
+      "id": "R09",
+      "finding": "F3",
+      "expectedFixedBehavior": "A whole CAD operation, including body consumption, must have a deadline.",
+      "observed": {
+        "settledAtDeadline": false,
+        "aborted": false
+      },
+      "repairAcceptancePassed": false,
+      "mode": "baseline"
+    },
+    {
+      "id": "R10",
+      "finding": "F3",
+      "expectedFixedBehavior": "A stalled voice response must not freeze processing and later execute stale work.",
+      "observed": {
+        "progressedBeforeRelease": false,
+        "lateWrite": true
+      },
+      "repairAcceptancePassed": false,
+      "mode": "baseline"
+    },
+    {
+      "id": "R11",
+      "finding": "F6",
+      "expectedFixedBehavior": "An answer immediately after a delivered question must retain its valid reply window.",
+      "observed": {
+        "answerAccepted": false,
+        "modelCalls": 1
+      },
+      "repairAcceptancePassed": false,
+      "mode": "baseline"
+    },
+    {
+      "id": "R12",
+      "finding": "F6",
+      "expectedFixedBehavior": "Clarification must retain the original action and resolved task parameters.",
+      "observed": {
+        "originalTaskRetained": false,
+        "inputKeys": []
+      },
+      "repairAcceptancePassed": false,
+      "mode": "baseline"
+    },
+    {
+      "id": "R13",
+      "finding": "F8",
+      "expectedFixedBehavior": "Separate receipt from persistence and disclose failed, deferred or unconfirmed writes.",
+      "observed": {
+        "executorSuccess": true,
+        "hasPartialError": true,
+        "failureDisclosed": false
+      },
+      "repairAcceptancePassed": false,
+      "mode": "baseline"
+    },
+    {
+      "id": "R14",
+      "finding": "F9",
+      "expectedFixedBehavior": "A contradictory incident reference requires clarification rather than a weak match.",
+      "observed": {
+        "wrongCallSelected": true,
+        "responseDelivered": true
+      },
+      "repairAcceptancePassed": false,
+      "mode": "baseline"
+    }
+  ]
+}

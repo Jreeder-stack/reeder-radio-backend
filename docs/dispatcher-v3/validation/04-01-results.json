@@ -1,0 +1,130 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "04-01",
+  "date": "2026-11-10",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "f02290ed0ce1116268a1b0adc8d48d95f3f1529a",
+  "previousValidatedExecutable": "5d2ef11155501f87fac7f245ac57b2880b4ba802",
+  "validatedExecutableSource": "adb8c44102d5431c06401053ada554518abd0add",
+  "implementationCommits": [
+    "adb8c44102d5431c06401053ada554518abd0add"
+  ],
+  "created": [
+    "src/dispatcher-v3/conversationReplies.js",
+    "src/dispatcher-v3/__tests__/conversationOnly.test.js"
+  ],
+  "changedSource": [
+    "src/dispatcher-v3/semanticContract.js",
+    "src/dispatcher-v3/intentPlanner.js",
+    "src/dispatcher-v3/responseComposer.js",
+    "src/dispatcher-v3/liveRuntime.js"
+  ],
+  "changedWorkflow": [
+    ".github/workflows/ai-dispatcher-v3-ci.yml"
+  ],
+  "controls": {
+    "semanticConversationActNoCad": true,
+    "acts": [
+      "presence",
+      "acknowledgement",
+      "identity",
+      "channel",
+      "capabilities",
+      "request_details",
+      "standby"
+    ],
+    "actorFromAuthenticatedTurn": true,
+    "channelFromRuntime": true,
+    "modelFreeformReplyNeverSpoken": true,
+    "noConversationActOnCadAction": true,
+    "legacyNoActionSilencePreserved": true,
+    "observationSilencePreserved": true,
+    "unaddressedGatePreserved": true,
+    "cadActionExecutorNotInvoked": true,
+    "physicalEmergencyUnchanged": true,
+    "dialogueHistoryOwnerBound": true,
+    "existingOutputSchedulerAndFloor": true,
+    "transportCodecFirmwareAndProviderUnchanged": true,
+    "noSchemaOrLegacyEngineChanges": true
+  },
+  "ci": {
+    "runId": 42837273748,
+    "jobId": 129902724586,
+    "nodeMajor": 20,
+    "conclusion": "success",
+    "focused04_01": {
+      "passed": 12,
+      "failed": 0,
+      "total": 12
+    },
+    "audit": {
+      "passed": 26,
+      "failed": 0,
+      "total": 26
+    },
+    "manager": {
+      "passed": 8,
+      "failed": 0,
+      "total": 8
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "v3": {
+      "passed": 635,
+      "failed": 0,
+      "total": 635,
+      "files": 55
+    },
+    "syntaxPassed": true,
+    "legacyEngineAbsent": true,
+    "artifact": {
+      "id": 13773508271,
+      "name": "dispatcher-v3-evidence-42837273748-1",
+      "reportedSha256": "65e2f5c018c14b93665a07c2bc02fb1e789fd226459df58292411939d7cccf5f",
+      "independentlyHashed": false
+    }
+  },
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "fullV3SuiteGreen": true,
+    "fullRepositoryVerified": false,
+    "newerMainIntegrated": false,
+    "liveProviderLanguageAccuracyVerified": false,
+    "realRadioVerified": false,
+    "livePilotVerified": false,
+    "productionVerified": false,
+    "releaseAccepted": false,
+    "merged": false,
+    "deployed": false,
+    "restarted": false,
+    "productionDataChanged": false,
+    "paidProviderCalls": false
+  },
+  "counts": {
+    "parent01": 8,
+    "parent02": 8,
+    "parent03": 8,
+    "parent04": 1,
+    "completed": 25,
+    "total": 32
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "knownLimits": [
+    "Only act classification supplied by synthetic model in tests; real model phrasing quality not qualified",
+    "Trustworthy user context read from runtime rather than model",
+    "Natural grounded response generation and other Parent04 items remain",
+    "Full repo/mobile, newer main, real radio/provider and production still unverified"
+  ],
+  "next": "04-02: Generate concise, grounded radio responses"
+}

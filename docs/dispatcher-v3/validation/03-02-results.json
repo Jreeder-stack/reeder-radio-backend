@@ -1,0 +1,139 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "03-02",
+  "date": "2026-10-30",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "e482a62b001315092f2c0158a9ecdeeaf4cc305f",
+  "priorValidatedExecutable": "ff7a47894cdf7af4a1fd3f03d2dbe6f3c1f3bdbc",
+  "validatedExecutableSource": "f204e30082be6995d2dbc377941d7fbd84f19fd8",
+  "implementationCommits": [
+    "bfc9c57d3325723313c9a8c786f98c302d718d56",
+    "f204e30082be6995d2dbc377941d7fbd84f19fd8"
+  ],
+  "changedSource": [
+    "src/dispatcher-v3/intentPlanner.js",
+    "src/dispatcher-v3/liveRuntime.js"
+  ],
+  "created": [
+    "src/dispatcher-v3/semanticContract.js",
+    "src/dispatcher-v3/__tests__/semanticInterpretation.test.js"
+  ],
+  "changedWorkflow": [
+    ".github/workflows/ai-dispatcher-v3-ci.yml"
+  ],
+  "controls": {
+    "oneSharedDeterministicAndModelNormalizer": true,
+    "explicitSemanticCategories": [
+      "action_request",
+      "question",
+      "observation",
+      "correction",
+      "cancellation",
+      "clarification",
+      "conversation_only",
+      "unaddressed_gate_only"
+    ],
+    "currentRuntimeScopesAndCenterCadContextForModel": true,
+    "authenticatedSpeakerNotModelTarget": true,
+    "boundedOwnerOnlyConversationAndPending": true,
+    "freshSharedIncidentWithoutRawNotes": true,
+    "readOnlyQuestionsCannotSelectMutatingActions": true,
+    "observationsCannotChangeUnitStatusByClassification": true,
+    "unsupportedOrUnregisteredToolsRejected": true,
+    "voicePhysicalEmergencyActivationRejected": true,
+    "untrustedModelUnitIdsAndGrantsRejected": true,
+    "modelSchemaValidatedBeforeCadMaterializer": true,
+    "malformedAndContradictoryPlansSafelyClarified": true,
+    "existingCadAndTurnAuthorizationPreserved": true,
+    "verifiedCadMutationReadbackPreserved": true,
+    "hardwareEmergencyUnchanged": true,
+    "noV1V2V4OrProviderTransportCodecFirmwareSchemaChanges": true
+  },
+  "ci": {
+    "runId": 41062935182,
+    "jobId": 124086942090,
+    "nodeMajor": 20,
+    "conclusion": "failure",
+    "focused03_02": {
+      "passed": 20,
+      "failed": 0,
+      "total": 20
+    },
+    "audit": {
+      "passed": 26,
+      "failed": 0,
+      "total": 26
+    },
+    "prior02_08": {
+      "passed": 14,
+      "failed": 0,
+      "total": 14
+    },
+    "manager": {
+      "passed": 8,
+      "failed": 0,
+      "total": 8
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "v3": {
+      "passed": 570,
+      "failed": 1,
+      "total": 571,
+      "files": 48
+    },
+    "syntaxPassed": true,
+    "legacyEngineAbsent": true,
+    "artifact": {
+      "id": 12981490473,
+      "name": "dispatcher-v3-evidence-41062935182-1",
+      "reportedSha256": "5f1cd9b32106fe4f0c99110b2533948106d982e2aa195d95b53611c1735c3766",
+      "independentlyHashed": false
+    }
+  },
+  "soleKnownFailure": "Unchanged phase4Pipeline.test.js CREATE_CALL success response fixture lacks independent CAD read-back",
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "fullV3SuiteGreen": false,
+    "fullRepositoryVerified": false,
+    "newerMainIntegrated": false,
+    "liveProviderLanguageAccuracyVerified": false,
+    "realRadioVerified": false,
+    "livePilotVerified": false,
+    "productionVerified": false,
+    "releaseAccepted": false,
+    "merged": false,
+    "deployed": false,
+    "restarted": false,
+    "productionDataChanged": false,
+    "paidProviderCalls": false
+  },
+  "counts": {
+    "parent01": 8,
+    "parent02": 8,
+    "parent03": 2,
+    "parent04": 0,
+    "completed": 18,
+    "total": 32
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "knownLimits": [
+    "Semantic paraphrase examples use mocked model responses, not real-provider accuracy certification",
+    "Conversation-only natural on-air replies remain Task04",
+    "Compound dependencies remain 03-03; ambiguity 03-04; permissions 03-05; outcomes 03-06; factual responses 03-07",
+    "No full repository/mobile, newer-main or cross-repo Command Link integration",
+    "No real radio/providers, release gates, pilot or production validation"
+  ],
+  "next": "03-03: Preserve compound requests and action dependencies"
+}

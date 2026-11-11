@@ -1,0 +1,150 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "02-05",
+  "date": "2026-10-29",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "5af3a18e9d734f1ee982bef648bbe6d1178aed5d",
+  "validatedExecutableSource": "c9e92e53d9dc5b857684e222c79ae877a11f34b6",
+  "implementationCommits": [
+    "c9e92e53d9dc5b857684e222c79ae877a11f34b6"
+  ],
+  "modified": [
+    "src/dispatcher-v3/errors.js",
+    "src/dispatcher-v3/operationalContext.js",
+    "src/dispatcher-v3/conversationRecords.js",
+    "src/dispatcher-v3/liveRuntime.js",
+    "src/dispatcher-v3/fieldIncidentCoordinator.js",
+    "src/dispatcher-v3/actionExecutor.js",
+    "src/dispatcher-v3/defaultActionHandlers.js",
+    "src/dispatcher-v3/createCallHandler.js",
+    "src/dispatcher-v3/__tests__/fieldIncidentCoordinator.test.js"
+  ],
+  "created": [
+    "src/dispatcher-v3/__tests__/followUpRelationships.test.js"
+  ],
+  "behavior": {
+    "freshCurrentAssignmentAndActiveCallRequired": true,
+    "expiredOrClosedCallRejected": true,
+    "reassignmentAndIdentityChangeRejected": true,
+    "originalDispositionTargetPinned": true,
+    "writeBoundaryRecheckAfterAsyncWork": true,
+    "unrelatedNoActionIsNotAnIncidentNote": true,
+    "explicitPreviousCallAuthorizedPathPreserved": true,
+    "correctTaskOwnerAndSessionRequired": true,
+    "physicalEmergencyUntouched": true,
+    "verifiedCadReadbackPreserved": true,
+    "transientCadFailClosed": true
+  },
+  "ci": {
+    "runId": 40994880046,
+    "jobId": 123865577097,
+    "nodeMajor": 20,
+    "conclusion": "failure",
+    "focus02_05": {
+      "passed": 32,
+      "failed": 0,
+      "total": 32
+    },
+    "audit": {
+      "passed": 26,
+      "failed": 0,
+      "total": 26,
+      "repairedR05Retained": true
+    },
+    "prior02_04": {
+      "passed": 16,
+      "failed": 0,
+      "total": 16
+    },
+    "prior02_03": {
+      "passed": 20,
+      "failed": 0,
+      "total": 20
+    },
+    "prior02_02": {
+      "passed": 13,
+      "failed": 0,
+      "total": 13
+    },
+    "manager": {
+      "passed": 7,
+      "failed": 0,
+      "total": 7
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "v3": {
+      "passed": 505,
+      "failed": 1,
+      "total": 506,
+      "files": 44
+    },
+    "syntaxPassed": true,
+    "legacyEngineAbsent": true,
+    "artifact": {
+      "id": 12950672330,
+      "name": "dispatcher-v3-evidence-40994880046-1",
+      "reportedSha256": "caecb91f4d3689c1e1757575eccd5b416b06b9f5120ef785c3b4f17f39d9d1a0",
+      "independentlyHashed": false
+    }
+  },
+  "soleKnownFixtureFailure": "src/dispatcher-v3/__tests__/phase4Pipeline.test.js still expects CREATE_CALL acknowledgment without independent CAD read-back verification; untouched and red",
+  "repairedAudit": [
+    "R01",
+    "R02",
+    "R03",
+    "R04",
+    "R05",
+    "R06",
+    "R07",
+    "R09",
+    "R10",
+    "R11",
+    "R12"
+  ],
+  "pendingAudit": [
+    "R08",
+    "R13",
+    "R14"
+  ],
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "fullV3SuiteGreen": false,
+    "fullRepositoryVerified": false,
+    "newerMainIntegrated": false,
+    "liveRadioProvidersVerified": false,
+    "productionVerified": false,
+    "releaseAccepted": false,
+    "merged": false,
+    "deployed": false,
+    "paidProviderCalls": false,
+    "productionDataChanged": false
+  },
+  "counts": {
+    "parent01": 8,
+    "parent02": 5,
+    "parent03": 1,
+    "parent04": 0,
+    "completed": 14,
+    "total": 32
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "knownLimits": [
+    "No atomic cross-request conditional CAD write; after-precheck races remain possible",
+    "No live radio, real providers or production acceptance",
+    "CREATE_CALL fixture remains unchanged and failing",
+    "PR #163 conflicts with separately advanced main"
+  ],
+  "next": "02-06: Share incident facts without merging unit instructions"
+}

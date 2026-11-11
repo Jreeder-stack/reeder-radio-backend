@@ -2,6 +2,11 @@ import * as dispatchService from '../services/dispatchService.js';
 import { success, error, created } from '../utils/response.js';
 import { getDispatcher, startDispatcher } from '../services/aiDispatchService.js';
 import { isAiDispatchEnabled, getAiDispatchChannel, getAllChannels } from '../db/index.js';
+import { loadSessionPttPrincipal, matchPttChannelGrant, createPttTransmission, finishPttTransmission, findPttRequest, pttRequestMatches, discardPttRequest } from '../services/pttProvenance.js';
+
+// Only active compatibility captures are retained. Duplicated ends never create a capture.
+const notifyPttTransmissions = new Map();
+const MAX_NOTIFY_CAPTURES = 256;
 
 let unitsLogCounter = 0;
 export async function getUnits(req, res) {
@@ -250,94 +255,54 @@ export async function notifyJoin(req, res) {
 
 export async function notifyPtt(req, res) {
   try {
-    const { channel, identity, action } = req.body;
-    
-    const resolvedIdentity = req.session?.user?.username || req.session?.user?.unit_id || identity;
-    
-    if (!channel || !resolvedIdentity || !action) {
-      return error(res, 'Channel, identity, and action required', 400);
+    const { channel, identity, action, requestId } = req.body;
+    if (!channel || !['start', 'end'].includes(action)) {
+      return error(res, 'Channel and start/end action required', 400);
     }
-    
-    if (action !== 'start' && action !== 'end') {
-      return error(res, 'Action must be "start" or "end"', 400);
+    const principal = req.session?.user && req.sessionID
+      ? await loadSessionPttPrincipal(req.sessionID) : null;
+    if (!principal || (identity && ![principal.unitId, principal.username].includes(String(identity)))) {
+      return error(res, 'Authenticated speaker required', 403);
     }
-    
-    const enabled = await isAiDispatchEnabled();
-    if (!enabled) {
-      return success(res, { triggered: false, reason: 'AI Dispatch is disabled' });
-    }
-    
-    const configuredChannel = await getAiDispatchChannel();
-    if (configuredChannel !== channel) {
-      return success(res, { triggered: false, reason: 'Not dispatch channel' });
-    }
-    
-    const dispatcher = getDispatcher();
-    if (!dispatcher) {
-      return success(res, { triggered: false, reason: 'Dispatcher not available' });
-    }
-    
+    const grant = matchPttChannelGrant(principal, channel);
+    if (!grant) return error(res, 'Unambiguous account channel access required', 403);
+    if (!getDispatcher()) return success(res, { triggered: false, reason: 'Dispatcher not available' });
+    const key = `${principal.connectionId}\u001f${grant.channelId}`;
     const { aiDispatcherSignaling } = await import('../services/aiDispatcherSignaling.js');
-    
+    const existing = notifyPttTransmissions.get(key);
+    let triggered;
     if (action === 'start') {
-      await aiDispatcherSignaling.handlePttStart(channel, resolvedIdentity);
+      if (existing || findPttRequest(principal, grant.channelId, requestId)) return success(res, { triggered: false, duplicate: true, channel, action });
+      if (notifyPttTransmissions.size >= MAX_NOTIFY_CAPTURES) return error(res, 'PTT capture capacity reached', 503);
+      const transmission = createPttTransmission(principal, { channelId: grant.channelId, source: 'notify-ptt', clientRequestId: requestId });
+      notifyPttTransmissions.set(key, transmission);
+      try {
+        triggered = await aiDispatcherSignaling.handlePttStart(grant.roomKey, principal.unitId, false, transmission);
+        if (!triggered) { notifyPttTransmissions.delete(key); discardPttRequest(transmission); }
+      } catch (err) {
+        notifyPttTransmissions.delete(key);
+        discardPttRequest(transmission);
+        throw err;
+      }
     } else {
-      await aiDispatcherSignaling.handlePttEnd(channel, resolvedIdentity);
+      if (!existing || !pttRequestMatches(existing, requestId)) return success(res, { triggered: false, ignored: true, channel, action });
+      notifyPttTransmissions.delete(key);
+      const transmission = finishPttTransmission(existing);
+      triggered = await aiDispatcherSignaling.handlePttEnd(grant.roomKey, principal.unitId, null, transmission);
     }
-    
-    success(res, { triggered: true, channel, action });
+    return success(res, { triggered: !!triggered, channel, action });
   } catch (err) {
-    console.error('Notify PTT error:', err);
-    error(res, 'Failed to process PTT notification', 500);
+    console.error('Notify PTT error:', err.message);
+    return error(res, 'Failed to process PTT notification', 500);
   }
 }
 
-export async function notifyEmergency(req, res) {
-  try {
-    const { channel, identity, active } = req.body;
-    
-    if (!channel || !identity) {
-      return error(res, 'Channel and identity required', 400);
-    }
-    
-    console.log(`[AI-Dispatcher] Emergency notification: ${identity} on ${channel}, active: ${active}`);
-    
-    const enabled = await isAiDispatchEnabled();
-    if (!enabled) {
-      return success(res, { 
-        triggered: false, 
-        reason: 'AI Dispatch is disabled' 
-      });
-    }
-    
-    const dispatcher = getDispatcher();
-    
-    if (!dispatcher || !dispatcher.room) {
-      console.log('[AI-Dispatcher] Dispatcher not connected, starting...');
-      const allChannels = await getAllChannels();
-      const channelData = allChannels.find(ch => ch.room_key === channel || ch.name === channel);
-      const roomKey = channelData?.room_key || channel;
-      await startDispatcher(channelData?.name || channel, roomKey);
-    }
-    
-    const activeDispatcher = getDispatcher();
-    
-    if (activeDispatcher && activeDispatcher.aiService && active) {
-      activeDispatcher.aiService.handleEmergencySignal(identity, channel);
-      return success(res, { 
-        triggered: true, 
-        channel,
-        message: 'Emergency escalation started' 
-      });
-    }
-    
-    success(res, { 
-      triggered: false, 
-      reason: 'AI Dispatcher not available or emergency cancelled',
-      channel 
-    });
-  } catch (err) {
-    console.error('Notify emergency error:', err);
-    error(res, 'Failed to process emergency notification', 500);
-  }
+// Legacy HTTP calls cannot prove a physical radio emergency from their body.
+// Fail closed at ingress, before any dispatcher, CAD, or radio side effects.
+export async function notifyEmergency(_req, res) {
+  return res.status(410).json({
+    triggered: false,
+    code: 'LEGACY_EMERGENCY_INGRESS_DISABLED',
+    error: 'Legacy HTTP emergency notification is disabled. Use the authenticated radio emergency signaling path.',
+  });
 }

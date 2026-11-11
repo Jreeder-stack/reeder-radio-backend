@@ -49,6 +49,12 @@ export class UnitIdentityService {
       });
     }
 
+    const returnedCenter = unit.dispatch_center_id || unit.dispatchCenterId
+      || body.dispatch_center_id || body.dispatchCenterId || null;
+    if (returnedCenter && String(returnedCenter) !== String(this.context.dispatchCenterId)) {
+      throw new DispatcherV3Error(V3_ERROR_CODES.UNAUTHORIZED,
+        'CAD returned a unit outside this dispatcher center', { statusCode: 403 });
+    }
     return Object.freeze({
       unitId: String(unit.id),
       callsign: String(unit.unit_number),

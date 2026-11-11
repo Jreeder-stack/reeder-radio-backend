@@ -5,9 +5,12 @@ on:
     branches:
       - agent/t320-emergency-no-auto-tx-apk
       - build/t320-ptt-emergency-fixed-apk
+  # Preserve T320 build enforcement for PRs that actually modify Android source.
   pull_request:
     branches:
       - main
+    paths:
+      - 'android-native/**'
 
 permissions:
   contents: read
@@ -27,12 +30,9 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK 34
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
-
+      # Match the already-validated phone/bridge workflow: Gradle uses the
+      # Android SDK preinstalled on ubuntu-latest. Avoid the broken
+      # setup-android 'tools' package request and missing sdkmanager PATH.
       - name: Set up Gradle 8.6
         uses: gradle/actions/setup-gradle@v4
         with:

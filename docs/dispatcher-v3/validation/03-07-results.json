@@ -1,0 +1,83 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "03-07",
+  "date": "2026-10-31",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "implementationCommits": [
+    "9f855ea4da3f8c6002c8690581246f885fd9642c",
+    "b073e2b6551ea40d1aa2a3872c1d0d884cbb31a5"
+  ],
+  "validatedExecutableSource": "5d2ef11155501f87fac7f245ac57b2880b4ba802",
+  "focusedEvidence": "6/6 factual response tests and audit R08",
+  "details": "GET_CALL and SEARCH_CALLS return the actual CAD call nature/location/status and bounded matching results rather than a generic copy. Other supported reads, verified mutations, field reports and multi-action partials present grounded outcomes. Unknown submitted writes explicitly warn against blind replay. Pre-existing military-time formatting and the safety rule forbidding a false unverified CREATE_CALL acknowledgment are retained.",
+  "ci": {
+    "runId": 41222463778,
+    "jobId": 124599696346,
+    "nodeMajor": 20,
+    "conclusion": "success",
+    "v3": {
+      "passed": 623,
+      "failed": 0,
+      "total": 623,
+      "files": 54
+    },
+    "audit": {
+      "passed": 26,
+      "failed": 0,
+      "total": 26
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "manager": {
+      "passed": 8,
+      "failed": 0,
+      "total": 8
+    },
+    "syntaxPassed": true,
+    "legacyEngineAbsent": true,
+    "artifact": {
+      "id": 13049814030,
+      "name": "dispatcher-v3-evidence-41222463778-1",
+      "reportedSha256": "eec71de779babaaf8c3452cadd55e80136f9c6b54a113010c51e5fb5819c485a",
+      "independentlyHashed": false
+    }
+  },
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "fullV3SuiteGreen": true,
+    "fullRepositoryVerified": false,
+    "newerMainIntegrated": false,
+    "liveProviderLanguageAccuracyVerified": false,
+    "realRadioVerified": false,
+    "livePilotVerified": false,
+    "productionVerified": false,
+    "releaseAccepted": false,
+    "merged": false,
+    "deployed": false,
+    "restarted": false,
+    "productionDataChanged": false,
+    "paidProviderCalls": false
+  },
+  "boundary": "Natural radio phrasing and answer relevance evaluation remain original Task 04. Finite synthetic outcomes prove deterministic response boundaries only, not real speech comprehension or actual operator audibility.",
+  "counts": {
+    "parent01": 8,
+    "parent02": 8,
+    "parent03": 8,
+    "parent04": 0,
+    "completed": 24,
+    "total": 32
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "next": "04-01: Add a first-class conversation-only response path"
+}

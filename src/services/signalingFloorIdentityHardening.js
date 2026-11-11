@@ -188,6 +188,7 @@ function installCorrectConsistencySweep(service) {
 
         if (!holder || holderFloorKey !== expectedFloorKey) {
           this.activeTransmissions.delete(channelId);
+          this._emitTransmissionEnd?.(transmission, { unitId: transmission.unitId, channelId, timestamp: Date.now(), reason: 'consistency_sweep' });
 
           this.io?.to(`channel:${channelId}`).emit('tx:stop', {
             senderUnitId: transmission.unitId,
@@ -319,11 +320,12 @@ function installPttIdentityNormalization(service) {
 
     if (existing && existing.unitId === socket.unitId) {
       const existingFloorKey = transmissionFloorKey(existing);
-      if (existingFloorKey === requesterFloorKey) {
-        // Same physical device asking again means its local TX state has already
-        // returned to idle. Treat the server record as stale instead of calling
-        // the same device "another device" and trapping it behind a busy tone.
+      const holder = floorControlService.getFloorHolder(channelId);
+      if (existingFloorKey === requesterFloorKey && floorKeyOf(holder) !== requesterFloorKey) {
+        // Only a lost floor proves a stale record. A repeated start while this
+        // device still owns the floor must retain the original capture identity.
         this.activeTransmissions.delete(channelId);
+        this._emitTransmissionEnd?.(existing, { unitId: existing.unitId, channelId, timestamp: Date.now(), reason: 'stale_floor' });
         console.warn(
           `[Signaling] SAME_DEVICE_STALE_TX_CLEARED channelId=${channelId} ` +
           `unitId=${socket.unitId} floorKey=${requesterFloorKey}`

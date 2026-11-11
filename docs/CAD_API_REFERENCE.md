@@ -1005,26 +1005,20 @@ Notify of a PTT event (for AI dispatcher).
 
 ---
 
-### POST `/api/dispatch/notify-emergency`
+### POST `/api/dispatch/notify-emergency` (retired)
 
-Notify of an emergency event (for AI dispatcher).
+This legacy HTTP notifier **cannot activate or clear a physical officer emergency**. Client-supplied `identity` and `channel` are not trusted emergency evidence, even for an authenticated account.
 
-- **Auth:** Session required
-- **Request Body:**
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `channel` | string | Yes | Channel room key |
-| `identity` | string | Yes | Unit identity |
-| `active` | boolean | Yes | Whether emergency is active |
-
-- **Response:**
+- **Auth:** Session required.
+- **Response:** HTTP **410 Gone**, `triggered: false`, code `LEGACY_EMERGENCY_INGRESS_DISABLED`.
+- **Use instead:** The existing authenticated radio emergency signaling path. Real radio emergency events continue through the V3 manager's `onEmergencyStart` and `onEmergencyEnd` callbacks. Never replace the hardware emergency signal with a spoken command or this HTTP call.
+- **Compatibility:** Any external callers of this deprecated endpoint must be evaluated and migrated. The response does not imply that emergency traffic was delivered or handled.
 
 ```json
 {
-  "triggered": true,
-  "channel": "North__Dispatch",
-  "message": "Emergency escalation started"
+  "triggered": false,
+  "code": "LEGACY_EMERGENCY_INGRESS_DISABLED",
+  "error": "Legacy HTTP emergency notification is disabled. Use the authenticated radio emergency signaling path."
 }
 ```
 

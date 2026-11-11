@@ -48,7 +48,7 @@ describe('Task #512: resolveUnitCurrentCall', () => {
     expect(result.call_number).toBe('1-26-000169');
     expect(result.has_active_call).toBe(true);
     expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(global.fetch.mock.calls[0][0]).toBe(
+    expect(String(global.fetch.mock.calls[0][0])).toBe(
       'https://cad.example.com/api/radio/unit/INDIANA-1/call'
     );
   });
@@ -79,7 +79,7 @@ describe('Task #512: resolveUnitCurrentCall', () => {
     expect(result.status).toBe('assigned');
     expect(result.has_active_call).toBe(true);
     expect(global.fetch).toHaveBeenCalledTimes(2);
-    expect(global.fetch.mock.calls[1][0]).toBe(
+    expect(String(global.fetch.mock.calls[1][0])).toBe(
       'https://cad.example.com/api/radio/calls'
     );
   });

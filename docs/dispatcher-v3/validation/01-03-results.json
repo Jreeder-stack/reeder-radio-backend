@@ -1,0 +1,93 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "workItem": "01-03",
+  "date": "2026-10-29",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "baselineHead": "3c6200f17ea92f47312e06bf210fba29c68c4b4c",
+  "implementation": "a137daa81ae329745cd5784959c42603b1db3d50",
+  "testedHead": "01ceda2d7dea1bd6224397eeeff52e83a3d7c6a9",
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "liveVerification": false,
+    "releaseAcceptance": false
+  },
+  "limits": {
+    "processResident": 64,
+    "perUnitPerRuntime": 8,
+    "preparing": 8,
+    "executing": 4,
+    "postCaptureWaitMs": 30000,
+    "captureMaxMs": 90000
+  },
+  "ci": {
+    "runId": 40950616489,
+    "jobId": 123717447457,
+    "nodeMajor": 20,
+    "conclusion": "failure",
+    "v3": {
+      "passed": 364,
+      "failed": 1,
+      "total": 365,
+      "files": 34
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "newSchedulerTests": {
+      "passed": 14,
+      "failed": 0
+    },
+    "artifact": {
+      "id": 12931441394,
+      "digestReportedByGitHub": "sha256:4cd3fb141049e783610cfd2bce5189d8cab256475314d6b882f2c32edaebae12",
+      "independentlyDownloaded": false
+    }
+  },
+  "audit": {
+    "repairedScoped": [
+      "R02",
+      "R03",
+      "R04",
+      "R06",
+      "R07",
+      "R10"
+    ],
+    "unrepaired": [
+      "R01",
+      "R05",
+      "R08",
+      "R09",
+      "R11",
+      "R12",
+      "R13",
+      "R14"
+    ]
+  },
+  "knownFailure": {
+    "path": "src/dispatcher-v3/__tests__/phase4Pipeline.test.js",
+    "test": "does not read the generated call number over the air after creating a call",
+    "expected": "Ten-four, eleven fifty-nine hours.",
+    "actual": "INDIANA-1, unable to verify that change in CAD.",
+    "cause": "CREATE_CALL success fixture has no verification evidence"
+  },
+  "unverified": [
+    "Newer main integration and PR merge conflict",
+    "Real provider/audio/radio",
+    "Multi-instance coordination",
+    "Full repository/mobile validation",
+    "Production revision and original scenario"
+  ],
+  "unperformed": [
+    "merge",
+    "rebase",
+    "deployment",
+    "restart",
+    "production data modification",
+    "paid-provider testing"
+  ]
+}

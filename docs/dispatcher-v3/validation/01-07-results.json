@@ -1,0 +1,105 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "workItem": "01-07",
+  "date": "2026-10-29",
+  "repo": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startHead": "86f2aa40250f2b94bfe12e9341a2bf5adec5431c",
+  "implementation": "1c63cf0595f178bfa4eb4300ad1f6dcbf3615fe5",
+  "validatedExecutableSource": "58437cc691dcd25a7fffb47c9c74b3f3eda801f4",
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "liveVerified": false,
+    "releaseAccepted": false
+  },
+  "diagnosticDefaults": {
+    "maxEntries": 500,
+    "retentionMs": 900000,
+    "rateLimitPerPhasePerTurn": 12,
+    "rateWindowMs": 1000,
+    "maxDetailsKeys": 16,
+    "operatorReadScopes": [
+      "dispatcher.diagnostics.read",
+      "dispatcher.admin"
+    ],
+    "requiresMatchingDispatchCenterAndRuntime": true,
+    "publicDiagnosticAPIExposed": false,
+    "productionOperatorAuthenticationVerified": false
+  },
+  "ci": {
+    "runId": 40961688509,
+    "jobId": 123755802632,
+    "nodeMajor": 20,
+    "conclusion": "failure",
+    "v3": {
+      "passed": 414,
+      "failed": 1,
+      "total": 415,
+      "files": 39
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "new0107Tests": {
+      "passed": 14,
+      "failed": 0
+    },
+    "artifact": {
+      "id": 12935159198,
+      "name": "dispatcher-v3-evidence-40961688509-1",
+      "reportedDigest": "sha256:253c6af1d78ce4a2130dfe3ee16b9ad2fd88540b0b07d8de18548b423abaf051",
+      "independentlyHashed": false
+    }
+  },
+  "verifiedStages": [
+    "intake",
+    "transcription",
+    "addressing",
+    "conversation_selection",
+    "intent",
+    "cad_request",
+    "cad_verification_when_explicit",
+    "action",
+    "outbound",
+    "terminal"
+  ],
+  "classifications": [
+    "not_addressed",
+    "unintelligible_audio",
+    "ambiguity",
+    "unsupported_capability",
+    "denied_action",
+    "provider_failure",
+    "delivery_failure",
+    "expired_or_canceled"
+  ],
+  "cost": "Only SDK-supplied token usage, no speculative USD pricing",
+  "knownFailure": {
+    "path": "src/dispatcher-v3/__tests__/phase4Pipeline.test.js",
+    "reason": "CREATE_CALL success fixture lacks independent verification evidence",
+    "preserved": true
+  },
+  "remainingAudit": [
+    "R01",
+    "R05",
+    "R08",
+    "R11",
+    "R12",
+    "R13",
+    "R14"
+  ],
+  "unverified": [
+    "Real radio/provider/audio/mobile",
+    "Full repository and production revision",
+    "End-to-end authenticated operator diagnostics UI",
+    "Integration with newer main",
+    "Live scenario",
+    "Release gates"
+  ],
+  "noMergeOrDeployment": true,
+  "nextItem": "01-08"
+}

@@ -1,0 +1,143 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "02-08",
+  "date": "2026-10-30",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "283a85da21dfb6586bc479f22541d410a0aefa35",
+  "priorValidatedExecutable": "4faed6153b43b2936d61d143673e81098fe796e1",
+  "validatedExecutableSource": "ff7a47894cdf7af4a1fd3f03d2dbe6f3c1f3bdbc",
+  "implementationCommits": [
+    "116e0d4f2917a2161e918dce0c6e6abad2f288b2",
+    "85b775b2c65334498f55bbad4c21876f683ba64e",
+    "eb209d4ea676b221af08f6efa78cc65b2d6543cc",
+    "7218e9c45d66684bc3838a91d52de4e250f6dc6e",
+    "9279188cd57a83293b5bfe4ce57f74d46ecf383b",
+    "ff7a47894cdf7af4a1fd3f03d2dbe6f3c1f3bdbc"
+  ],
+  "changedSource": [
+    "src/dispatcher-v3/conversationGate.js",
+    "src/dispatcher-v3/conversationRecords.js",
+    "src/dispatcher-v3/liveRuntime.js",
+    "src/dispatcher-v3/outboundScheduler.js"
+  ],
+  "newTestFile": "src/dispatcher-v3/__tests__/multiUnitIntegration.test.js",
+  "expandedManagerTest": "src/services/__tests__/dispatcherV3ManagerIntegration.test.js",
+  "security": {
+    "oneAuthoritativeTaskLedger": true,
+    "pendingReceiptOnly": true,
+    "exactUnitSessionKey": true,
+    "noPendingOperationOrCallInDeliveryGate": true,
+    "readOriginalPendingTaskFromAuthenticatedLedger": true,
+    "connectionScopedRoutineAudioSupersession": true,
+    "noCrossUnitOrCrossCenterTaskTransfer": true,
+    "groupMutationClarificationPreserved": true,
+    "verifiedCadWriteAndReadbackPreserved": true,
+    "emergencyHardwareControlsUnchanged": true,
+    "transportCodecFirmwareProviderSchemaUnchanged": true,
+    "legacyDispatcherEngineAbsent": true
+  },
+  "ci": {
+    "runId": 41058261239,
+    "jobId": 124071167090,
+    "nodeMajor": 20,
+    "conclusion": "failure",
+    "focused02_08": {
+      "passed": 14,
+      "failed": 0,
+      "total": 14
+    },
+    "manager": {
+      "passed": 8,
+      "failed": 0,
+      "total": 8
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "audit": {
+      "passed": 26,
+      "failed": 0,
+      "total": 26
+    },
+    "prior02_07": {
+      "passed": 13,
+      "failed": 0,
+      "total": 13
+    },
+    "prior02_06": {
+      "passed": 18,
+      "failed": 0,
+      "total": 18
+    },
+    "prior02_05": {
+      "passed": 32,
+      "failed": 0,
+      "total": 32
+    },
+    "prior02_04": {
+      "passed": 16,
+      "failed": 0,
+      "total": 16
+    },
+    "prior02_03": {
+      "passed": 20,
+      "failed": 0,
+      "total": 20
+    },
+    "prior02_02": {
+      "passed": 13,
+      "failed": 0,
+      "total": 13
+    },
+    "v3": {
+      "passed": 550,
+      "failed": 1,
+      "total": 551,
+      "files": 47
+    },
+    "syntaxPassed": true,
+    "legacyEngineAbsent": true,
+    "artifact": {
+      "id": 12977228633,
+      "name": "dispatcher-v3-evidence-41058261239-1",
+      "reportedSha256": "d3179c4f8eca4410b27d72be70e2e326656713ff0065a5fcce05621208cc6f79",
+      "independentlyHashed": false
+    }
+  },
+  "soleKnownFailure": "Untouched phase4Pipeline.test.js CREATE_CALL affirmative acknowledgement lacks independent CAD readback",
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "fullV3SuiteGreen": false,
+    "fullRepositoryVerified": false,
+    "newerMainIntegrated": false,
+    "realRadioProvidersVerified": false,
+    "livePilotVerified": false,
+    "productionVerified": false,
+    "releaseAccepted": false,
+    "merged": false,
+    "deployed": false,
+    "restarted": false,
+    "productionDataChanged": false,
+    "paidProviderCalls": false
+  },
+  "counts": {
+    "parent01": 8,
+    "parent02": 8,
+    "parent03": 1,
+    "parent04": 0,
+    "completed": 17,
+    "total": 32
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "next": "03-02: Implement one semantic interpretation contract"
+}

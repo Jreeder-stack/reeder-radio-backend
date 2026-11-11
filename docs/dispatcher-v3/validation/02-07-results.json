@@ -1,0 +1,154 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "02-07",
+  "date": "2026-10-30",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "cafddc84b813b732e3ada5019020f4eaf932437e",
+  "priorValidatedExecutable": "0da4fb1ce858a58167260f0aac25935f2087ffa9",
+  "validatedExecutableSource": "4faed6153b43b2936d61d143673e81098fe796e1",
+  "implementationCommits": [
+    "83d2e0ae1ab5aa5992bac574a7c361393bf8fcc4",
+    "8eb4dfab908dfbb627c079759b85f27650713e8f",
+    "4faed6153b43b2936d61d143673e81098fe796e1"
+  ],
+  "modified": [
+    "src/dispatcher-v3/liveRuntime.js",
+    "src/dispatcher-v3/conversationRecords.js",
+    "src/dispatcher-v3/fieldIncidentCoordinator.js",
+    "src/dispatcher-v3/outboundScheduler.js"
+  ],
+  "created": [
+    "src/dispatcher-v3/connectionCustody.js",
+    "src/dispatcher-v3/__tests__/connectionCustody.test.js"
+  ],
+  "controls": {
+    "originalTrustedPttIdentityRetained": true,
+    "originalConversationLedgerIsSoleTaskOwner": true,
+    "freshCredentialAndChannelGrantForAction": true,
+    "socketConnectedPrincipalAndRoomRequiredForRoutineActionsAndOutput": true,
+    "sameAccountCredentialUnitCenterGenerationHandoffOnly": true,
+    "oldSessionsRetired": true,
+    "disconnectedPendingPromptNotTransferred": true,
+    "freshDeliveredPromptRequiredForAnswer": true,
+    "unfinishedTasksOnlyAsSuspended": true,
+    "liveSiblingConnectionsIndependent": true,
+    "deviceReassignmentDoesNotTransferTask": true,
+    "oldCadMutationNotRolledBack": true,
+    "emergencyHardwarePolicyUnchanged": true,
+    "cadVerificationUnchanged": true,
+    "noCrossChannelStateMigration": true,
+    "noTransportCodecSchemaProviderFirmwareChange": true,
+    "sameRuntimeInProcessOnly": true
+  },
+  "resourceLimits": {
+    "maxOwners": 1024,
+    "maxRetiredConnectionsPerOwner": 256,
+    "maxSiblingConnectionsPerOwner": 256,
+    "conversationIdleMs": 300000,
+    "replacedOwnerTombstonesSurviveIdle": true
+  },
+  "ci": {
+    "runId": 41055047521,
+    "jobId": 124060346801,
+    "nodeMajor": 20,
+    "conclusion": "failure",
+    "focused02_07": {
+      "passed": 13,
+      "failed": 0,
+      "total": 13
+    },
+    "prior02_06": {
+      "passed": 18,
+      "failed": 0,
+      "total": 18
+    },
+    "prior02_05": {
+      "passed": 32,
+      "failed": 0,
+      "total": 32
+    },
+    "prior02_04": {
+      "passed": 16,
+      "failed": 0,
+      "total": 16
+    },
+    "prior02_03": {
+      "passed": 20,
+      "failed": 0,
+      "total": 20
+    },
+    "prior02_02": {
+      "passed": 13,
+      "failed": 0,
+      "total": 13
+    },
+    "audit": {
+      "passed": 26,
+      "failed": 0,
+      "total": 26
+    },
+    "manager": {
+      "passed": 7,
+      "failed": 0,
+      "total": 7
+    },
+    "ptt": {
+      "passed": 81,
+      "failed": 0,
+      "total": 81
+    },
+    "v3": {
+      "passed": 536,
+      "failed": 1,
+      "total": 537,
+      "files": 46
+    },
+    "syntaxPassed": true,
+    "legacyEngineAbsent": true,
+    "artifact": {
+      "id": 12976482326,
+      "name": "dispatcher-v3-evidence-41055047521-1",
+      "reportedSha256": "e87b8110c6fb44fb4d8508b8e2f76621246d7a8ca2d851aa2cb453d31564fc86",
+      "independentlyHashed": false
+    }
+  },
+  "soleKnownFixtureFailure": "Unchanged phase4Pipeline.test.js CREATE_CALL affirmative speech fixture lacks independent CAD readback",
+  "completion": {
+    "coding": true,
+    "scopedMockedValidation": true,
+    "fullV3SuiteGreen": false,
+    "fullRepositoryVerified": false,
+    "realRadioProvidersVerified": false,
+    "newerMainIntegrated": false,
+    "productionVerified": false,
+    "releaseAccepted": false,
+    "merged": false,
+    "deployed": false,
+    "paidProviderCalls": false,
+    "productionDataChanged": false
+  },
+  "counts": {
+    "parent01": 8,
+    "parent02": 7,
+    "parent03": 1,
+    "parent04": 0,
+    "completed": 16,
+    "total": 32
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "knownLimits": [
+    "No cross-runtime channel migration; explicit new request required on other channel",
+    "In-process bounded leases and tombstones, not horizontally distributed custody",
+    "No proof human heard radio speech",
+    "No atomic CAD membership after final read-back",
+    "No full repository/mobile, newer-main, real providers/radio, production or release checks"
+  ],
+  "next": "02-08: Integrate and test multi-unit conversation behavior"
+}

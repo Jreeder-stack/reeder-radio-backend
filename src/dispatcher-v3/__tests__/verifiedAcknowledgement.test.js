@@ -22,7 +22,7 @@ describe('Dispatcher V3 verified mutation acknowledgements', () => {
       speakerCallsign: 'INDIANA-1',
       now,
     });
-    expect(response).toBe('INDIANA-1, copy.');
+    expect(response).toBe('INDIANA-1, CAD verified that update.');
   });
 
   it('blocks a multi-action ten-four when any CAD mutation step lacks verification', () => {

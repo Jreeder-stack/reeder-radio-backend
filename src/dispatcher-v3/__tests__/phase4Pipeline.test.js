@@ -5,6 +5,7 @@ import { materializeV3Plan } from '../planMaterializer.js';
 import { composeV3Response } from '../responseComposer.js';
 import { CommandLinkGateway } from '../cadGateway.js';
 import { normalizeV3RadioHail } from '../liveRuntime.js';
+import { V3ConversationGate } from '../conversationGate.js';
 
 const runtimeContext = Object.freeze({
   runtimeId: 'runtime-4',
@@ -46,7 +47,11 @@ describe('Dispatcher V3 phase 4 pipeline', () => {
 
   it('bypasses the LLM for protected urgent traffic without activating emergency mode', async () => {
     const planner = new V3IntentPlanner({ client: null });
-    const plan = await planner.plan({ transcript: 'Central, Indiana 1, 10-33 emergency traffic', speakerCallsign: 'INDIANA-1', runtimeContext, correlationId: 'emerg-1' });
+    const gate = new V3ConversationGate({ wakeWords: ['central'] }).shouldProcess({
+      unitId: 'INDIANA-1', transcript: 'Central, Indiana 1, 10-33 emergency traffic',
+    });
+    expect(gate).toMatchObject({ allowed: true, reason: 'emergency' });
+    const plan = await planner.plan({ transcript: gate.transcript, speakerCallsign: 'INDIANA-1', runtimeContext, correlationId: 'emerg-1' });
     expect(plan.action).toBe('REPORT_FIELD_INCIDENT');
     expect(plan.input.unitRef).toBe('INDIANA-1');
     expect(plan.input.eventType).toBe('officer_assist');
@@ -92,7 +97,10 @@ describe('Dispatcher V3 phase 4 pipeline', () => {
       speakerCallsign: 'INDIANA-1',
       now: new Date('2026-08-07T15:59:00Z'),
     });
-    expect(text).toBe('Ten-four, eleven fifty-nine hours.');
+    // A synthetic success response with no independent CAD read-back is not
+    // permission to claim that a call was created. Preserve the actual
+    // verifier boundary instead of asking the composer to lie on air.
+    expect(text).toBe('INDIANA-1, unable to verify that change in CAD.');
     expect(text).not.toContain('26-000123');
   });
 

@@ -1,0 +1,96 @@
+{
+  "plan": "AI-DISP-V3-001",
+  "item": "04-02",
+  "date": "2026-11-10",
+  "repository": "Jreeder-stack/reeder-radio-backend",
+  "branch": "test/dispatcher-v3-01-01-baseline-20261028",
+  "pr": 163,
+  "startingHead": "5ff1cdd665d89b4e5c2c2370809750c4ef031648",
+  "previousValidatedExecutable": "adb8c44102d5431c06401053ada554518abd0add",
+  "initialImplementation": "6bb21b186ce0ccaec3380c92dc7b436463fbcd77",
+  "validatedExecutable": "45a50a26f5c4580e9f40442a93a84c24ba54544a",
+  "firstCi": {
+    "run": 42840037884,
+    "v3Passed": 646,
+    "v3Failed": 1,
+    "testAssertionCaseMismatch": true,
+    "safetyBehaviorUnchanged": true
+  },
+  "finalCi": {
+    "run": 42840228520,
+    "job": 129913154768,
+    "nodeMajor": 20,
+    "conclusion": "success",
+    "newTests": {
+      "passed": 12,
+      "total": 12
+    },
+    "v3": {
+      "passed": 647,
+      "total": 647,
+      "files": 56
+    },
+    "ptt": {
+      "passed": 81,
+      "total": 81
+    },
+    "manager": {
+      "passed": 8,
+      "total": 8
+    },
+    "audit": {
+      "passed": 26,
+      "total": 26
+    },
+    "syntaxPassed": true,
+    "legacyEngineAbsent": true,
+    "artifact": {
+      "id": 13776520343,
+      "reportedSha256": "eed955ebdc59290d6f7dee362ba1fbca54a955cf7202ee861b3cc171b5195d93",
+      "independentlyVerified": false
+    }
+  },
+  "changes": [
+    "src/dispatcher-v3/groundedAnswers.js",
+    "src/dispatcher-v3/semanticContract.js",
+    "src/dispatcher-v3/intentPlanner.js",
+    "src/dispatcher-v3/responseComposer.js",
+    "src/dispatcher-v3/compoundActions.js",
+    "src/dispatcher-v3/__tests__/groundedRadioResponses.test.js",
+    ".github/workflows/ai-dispatcher-v3-ci.yml"
+  ],
+  "controls": {
+    "boundedFocusReadOnly": true,
+    "focusedMaxChars": 420,
+    "modelAuthoredFactsSpoken": false,
+    "identityFromTrustedTurn": true,
+    "unknownWriteTruthRetained": true,
+    "dispatchCenterIsolationPreserved": true,
+    "physicalEmergencyPreserved": true,
+    "paidProviderCallsMade": false,
+    "productionChanged": false
+  },
+  "counts": {
+    "parent01": 8,
+    "parent02": 8,
+    "parent03": 8,
+    "parent04": 2,
+    "completed": 26,
+    "total": 32
+  },
+  "releaseGates": {
+    "G-01": false,
+    "G-02": false,
+    "G-03": false,
+    "G-04": false
+  },
+  "unverified": [
+    "Full repository/mobile",
+    "Newer main/Command Link integration",
+    "Actual model/STT/TTS",
+    "Live radio and field scenarios",
+    "Pilot and release gates",
+    "Production"
+  ],
+  "next": "04-03: Recover from missing or unclear information"
+}

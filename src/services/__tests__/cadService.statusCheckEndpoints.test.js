@@ -31,7 +31,7 @@ afterEach(() => {
 function lastFetchCall() {
   const call = global.fetch.mock.calls[global.fetch.mock.calls.length - 1];
   const [url, opts] = call;
-  return { url, body: opts?.body ? JSON.parse(opts.body) : null, method: opts?.method || 'GET' };
+  return { url: String(url), body: opts?.body ? JSON.parse(opts.body) : null, method: opts?.method || 'GET' };
 }
 
 describe('Task #509: respondToStatusCheck body shape', () => {

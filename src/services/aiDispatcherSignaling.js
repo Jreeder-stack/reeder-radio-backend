@@ -13,16 +13,16 @@ export class AIDispatcherSignaling {
     return true;
   }
 
-  async handlePttStart(channelId, unitId, isEmergency = false) {
+  async handlePttStart(channelId, unitId, isEmergency = false, transmission = null) {
     const dispatcher = getDispatcher();
     if (!dispatcher) return false;
-    return dispatcher.handlePttStart(channelId, unitId, isEmergency);
+    return dispatcher.handlePttStart(channelId, unitId, isEmergency, transmission);
   }
 
-  async handlePttEnd(channelId, unitId, gracePeriodMs = null) {
+  async handlePttEnd(channelId, unitId, gracePeriodMs = null, transmission = null) {
     const dispatcher = getDispatcher();
     if (!dispatcher) return false;
-    return dispatcher.handlePttEnd(channelId, unitId, gracePeriodMs);
+    return dispatcher.handlePttEnd(channelId, unitId, gracePeriodMs, transmission);
   }
 
   async handleEmergencyStart(channelId, unitId) {
