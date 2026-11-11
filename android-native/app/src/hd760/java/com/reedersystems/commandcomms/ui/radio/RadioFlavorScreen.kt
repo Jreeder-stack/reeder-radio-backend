@@ -263,6 +263,12 @@ fun RadioFlavorScreen(
                         )
                         Spacer(Modifier.height(14.dp))
                     }
+                    if (emergency) {
+                        Text("EMERGENCY", color = Color(0xFFB71C1C),
+                            fontSize = 20.sp, fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(7.dp))
+                    }
                     Text(startupTitle, color = accent, fontWeight = FontWeight.Bold,
                         fontSize = 18.sp, maxLines = 2, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(10.dp))
