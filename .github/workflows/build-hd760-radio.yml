@@ -8,6 +8,7 @@ on:
       - feature/hd760-compact-status-display-20261029
       - fix/hd760-audio-reliability-20261030
       - fix/hd760-coldboot-cached-zones-20261111
+      - build/hd760-coldboot-apk-retry-20261112
     paths:
       - "android-native/**"
       - "src/services/**"
