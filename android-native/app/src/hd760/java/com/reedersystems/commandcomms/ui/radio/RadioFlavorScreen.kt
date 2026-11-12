@@ -213,8 +213,7 @@ fun RadioFlavorScreen(
     val radioReady = startup == Hd760StartupStage.READY
     val startupTitle = when {
         state.error != null -> "AUTHORIZATION REQUIRED"
-        startup == Hd760StartupStage.STARTING_RADIO -> "STARTING RADIO"
-        else -> "WAITING FOR SERVICE"
+        else -> "BOOTING"
     }
 
     BoxWithConstraints(
