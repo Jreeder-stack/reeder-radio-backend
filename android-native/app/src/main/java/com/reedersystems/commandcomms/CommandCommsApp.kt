@@ -99,6 +99,9 @@ class CommandCommsApp : Application() {
     val hd760KeyLocked = MutableStateFlow(false)
     // Do not transmit on empty/unprogrammed slots.
     val hd760SlotActive = MutableStateFlow(true)
+    // Only the server-confirmed primary radio:channelJoined event marks the
+    // HD760 online. Cached display metadata alone cannot mark it connected.
+    val hd760JoinedRoomKey = MutableStateFlow<String?>(null)
     @Volatile var hd760RadioScreenActive: Boolean = false
     val keyCapturingFlow = MutableStateFlow(false)
 

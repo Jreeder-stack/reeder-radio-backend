@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +36,8 @@ import com.reedersystems.commandcomms.CommandCommsApp
 import com.reedersystems.commandcomms.audio.radio.RadioState
 import com.reedersystems.commandcomms.data.model.PttState
 import com.reedersystems.commandcomms.hd760.Hd760MeterModel
+import com.reedersystems.commandcomms.hd760.Hd760StartupPolicy
+import com.reedersystems.commandcomms.hd760.Hd760StartupStage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -193,6 +196,25 @@ fun RadioFlavorScreen(
     val rx = !tx && state.rxMediaActive
     val emergency = state.myEmergencyActive
     val accent = if (emergency) Color(0xFFB71C1C) else Color(0xFF17618F)
+    var splashVisible by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        // Make the boot state visible even when the local cache restores instantly.
+        delay(650L)
+        splashVisible = false
+    }
+    val startup = if (splashVisible) Hd760StartupStage.STARTING_RADIO
+        else Hd760StartupPolicy.stage(
+            loadingCatalog = state.isLoading,
+            freshCatalog = state.hasFreshChannels,
+            signalingAuthenticated = state.isConnected,
+            selectedRoomKey = state.currentChannel?.roomKey?.takeUnless { state.hd760SlotEmpty },
+            confirmedJoinedRoomKey = state.radioJoinedRoomKey
+        )
+    val radioReady = startup == Hd760StartupStage.READY
+    val startupTitle = when {
+        state.error != null -> "AUTHORIZATION REQUIRED"
+        else -> "BOOTING"
+    }
 
     BoxWithConstraints(
         Modifier.fillMaxSize().background(if (emergency) Color(0xFFFFD9D9) else Color(0xFFF8FAFC))
@@ -224,7 +246,41 @@ fun RadioFlavorScreen(
                     color = Color.White, fontSize = 10.sp, maxLines = 1)
             }
 
-            if (state.hd760MenuOpen) {
+            if (state.zones.isEmpty() && !state.hd760MenuOpen && !radioReady) {
+                // An unprogrammed device gets a clear cold-boot screen rather
+                // than misleading NO ZONE / NO CHANNEL errors.
+                Column(
+                    Modifier.weight(1f).fillMaxWidth().padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    if (state.error == null) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(26.dp),
+                            strokeWidth = 2.dp,
+                            color = accent
+                        )
+                        Spacer(Modifier.height(14.dp))
+                    }
+                    if (emergency) {
+                        Text("EMERGENCY", color = Color(0xFFB71C1C),
+                            fontSize = 20.sp, fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(7.dp))
+                    }
+                    Text(startupTitle, color = accent, fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp, maxLines = 2, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        when {
+                            state.error != null -> "CHECK RADIO ACCESS"
+                            state.hasFreshChannels -> "NO AUTHORIZED CHANNELS"
+                            else -> "NO SAVED CHANNEL LIST"
+                        },
+                        color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center
+                    )
+                }
+            } else if (state.hd760MenuOpen) {
                 Column(
                     Modifier.weight(1f).fillMaxWidth().padding(8.dp),
                     verticalArrangement = Arrangement.SpaceEvenly
@@ -268,19 +324,34 @@ fun RadioFlavorScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
+                    if (!radioReady) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (state.error == null) {
+                                CircularProgressIndicator(Modifier.size(12.dp),
+                                    strokeWidth = 1.6.dp, color = accent)
+                                Spacer(Modifier.width(5.dp))
+                            }
+                            Text(startupTitle, fontSize = 11.sp, color = accent,
+                                fontWeight = FontWeight.Bold, maxLines = 1)
+                        }
+                    }
                     Text("ZN", fontSize = 13.sp, color = Muted, fontWeight = FontWeight.Medium)
-                    Text(state.currentZone?.name?.uppercase() ?: "NO ZONE",
+                    Text(state.currentZone?.name?.uppercase() ?: "--",
                         color = Ink, fontWeight = FontWeight.Bold,
                         fontSize = if (compact) 22.sp else 25.sp,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center)
                     Text("CH", fontSize = 13.sp, color = Muted, fontWeight = FontWeight.Medium)
                     Text(if (state.hd760SlotEmpty) "UNPROGRAMMED" else
-                        state.currentChannel?.name ?: "NO CHANNEL",
+                        state.currentChannel?.name ?: "--",
                         fontSize = channelSize, color = Ink,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
                         maxLines = 2, overflow = TextOverflow.Ellipsis,
                         lineHeight = if (compact) 35.sp else 42.sp)
+                    if (state.showingSavedChannels) {
+                        Text("SAVED CHANNEL LIST", color = Muted, fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium, maxLines = 1)
+                    }
 
                     // Always reserve the same room for caller ID and lock feedback.
                     Box(Modifier.fillMaxWidth().height(35.dp),
@@ -324,8 +395,12 @@ fun RadioFlavorScreen(
             ) {
                 Text(state.unitId.ifBlank { "UNASSIGNED" }, color = Color.White,
                     fontSize = 10.sp, maxLines = 1)
-                Text(if (state.isConnected) "ONLINE" else "OFFLINE",
-                    color = if (state.isConnected) Color(0xFF7DE3A7) else Color(0xFFFFB4B4),
+                Text(when {
+                        radioReady -> "ONLINE"
+                        state.error != null -> "ACCESS ERROR"
+                        else -> "WAITING"
+                    },
+                    color = if (radioReady) Color(0xFF7DE3A7) else Color(0xFFFFD58A),
                     fontSize = 10.sp, maxLines = 1)
             }
         }

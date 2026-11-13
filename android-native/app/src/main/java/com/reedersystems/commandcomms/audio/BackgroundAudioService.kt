@@ -320,6 +320,7 @@ class BackgroundAudioService : Service() {
         )
         servicePrefs = ServiceConnectionPrefs(applicationContext)
         speakerBoostPrefs = SpeakerBoostPrefs(applicationContext)
+        if (BuildConfig.FLAVOR == "hd760") app.hd760JoinedRoomKey.value = null
 
         initRadioEngine()
         observeRadioSignalingEvents()
@@ -421,6 +422,9 @@ class BackgroundAudioService : Service() {
                 val channelName = intent.getStringExtra(EXTRA_CHANNEL_NAME)
                 if (channelId >= 0 && roomKey != null) {
                     val previousRoomKey = servicePrefs.channelRoomKey
+                    if (BuildConfig.FLAVOR == "hd760" && previousRoomKey != roomKey) {
+                        app.hd760JoinedRoomKey.value = null
+                    }
                     if (BuildConfig.FLAVOR == "hd760" &&
                         previousRoomKey != roomKey &&
                         (pttState == PttState.CONNECTING ||
@@ -483,6 +487,7 @@ class BackgroundAudioService : Service() {
             }
             ACTION_STOP -> {
                 Log.d(TAG, "Service stop requested")
+                if (BuildConfig.FLAVOR == "hd760") app.hd760JoinedRoomKey.value = null
                 updateLedState(LedState.OFF)
                 restoreSpeakerState()
                 radioEngine?.stop()
@@ -612,6 +617,7 @@ class BackgroundAudioService : Service() {
                             hadPriorAuthentication = true
                         }
                         ConnectionState.DISCONNECTED -> {
+                            if (BuildConfig.FLAVOR == "hd760") app.hd760JoinedRoomKey.value = null
                             updateLedState(LedState.RED)
                             if (hadPriorAuthentication) {
                                 reconnectStartTimeMs = System.currentTimeMillis()
@@ -625,6 +631,7 @@ class BackgroundAudioService : Service() {
                             }
                         }
                         ConnectionState.CONNECTING -> {
+                            if (BuildConfig.FLAVOR == "hd760") app.hd760JoinedRoomKey.value = null
                             updateLedState(LedState.AMBER)
                         }
                         else -> Unit
@@ -1210,6 +1217,9 @@ class BackgroundAudioService : Service() {
                         }
                         if (event.channelId != currentRoomKey) return@collectLatest
                         joinedSignalingChannelId = event.channelId
+                        if (BuildConfig.FLAVOR == "hd760") {
+                            app.hd760JoinedRoomKey.value = event.channelId
+                        }
                         if (pendingSignalingChannelId == event.channelId) {
                             pendingSignalingChannelId = null
                         }
@@ -2122,6 +2132,7 @@ class BackgroundAudioService : Service() {
 
     override fun onDestroy() {
         Log.d(TAG, "BackgroundAudioService destroyed")
+        if (BuildConfig.FLAVOR == "hd760") app.hd760JoinedRoomKey.value = null
         updateLedState(LedState.OFF)
         restoreSpeakerState()
         dynamicPttReceiver?.let {
