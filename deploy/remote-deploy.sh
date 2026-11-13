@@ -1,36 +1,46 @@
 #!/bin/bash
 set -euo pipefail
 
-VM_IP="20.115.21.70"
-VM_USER="Jreeder5029"
+VM_IP="${AZURE_VM_HOST:-20.115.21.70}"
+VM_USER="${AZURE_VM_USER:-Jreeder5029}"
 DOMAIN="comms.reeder-systems.com"
 APP_DIR="/home/${VM_USER}/command-comms"
-SSH_KEY_FILE=$(mktemp)
-ENV_TMP_FILE=$(mktemp)
-
-cleanup() {
-  rm -f "$SSH_KEY_FILE" "$ENV_TMP_FILE"
-}
+ENV_TMP_FILE="$(mktemp)"
+cleanup() { rm -f "$ENV_TMP_FILE"; }
 trap cleanup EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-PEM_FILE="${PROJECT_DIR}/attached_assets/commandcomms-key_1774361622787.pem"
 
-if [ -f "$PEM_FILE" ]; then
-  cp "$PEM_FILE" "$SSH_KEY_FILE"
-elif [ -n "${AZURE_SSH_KEY:-}" ]; then
-  printf '%s\n' "-----BEGIN RSA PRIVATE KEY-----" > "$SSH_KEY_FILE"
-  echo "$AZURE_SSH_KEY" | sed 's/-----BEGIN RSA PRIVATE KEY----- //;s/ -----END RSA PRIVATE KEY-----//' | tr ' ' '\n' >> "$SSH_KEY_FILE"
-  printf '%s\n' "-----END RSA PRIVATE KEY-----" >> "$SSH_KEY_FILE"
-else
-  echo "ERROR: No SSH key found (no PEM file and AZURE_SSH_KEY secret not set)"
+# One trusted external SSH key file. Never load deploy keys from the source
+# tree, Git history, embedded text, or ad-hoc environment string reconstruction.
+if [[ -z "${AZURE_VM_SSH_KEY_FILE:-}" ]]; then
+  echo "ERROR: AZURE_VM_SSH_KEY_FILE must name a new private key stored outside this repository." >&2
   exit 1
 fi
-chmod 600 "$SSH_KEY_FILE"
+if [[ ! -f "$AZURE_VM_SSH_KEY_FILE" || -L "$AZURE_VM_SSH_KEY_FILE" ]]; then
+  echo "ERROR: The SSH key path must be an existing, non-symlink regular file." >&2
+  exit 1
+fi
+SSH_KEY_FILE="$(realpath -e -- "$AZURE_VM_SSH_KEY_FILE")"
+case "$SSH_KEY_FILE" in
+  "$PROJECT_DIR"/*)
+    echo "ERROR: Refusing an SSH key stored inside the source checkout." >&2
+    exit 1
+    ;;
+esac
+file_mode="$(stat -c %a -- "$SSH_KEY_FILE")"
+if [[ ! "$file_mode" =~ ^[0-7]{3,4}$ ]] || (( (8#$file_mode & 077) != 0 )); then
+  echo "ERROR: The deploy key is accessible to group/other users; secure it with chmod 600." >&2
+  exit 1
+fi
 
-SSH_CMD="ssh -i $SSH_KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30"
-SCP_CMD="scp -i $SSH_KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30"
+# Enforce a verified host identity from the caller-managed known_hosts file.
+# Do not disable host-key checking to make an untrusted connection work.
+SSH_CMD=(ssh -i "$SSH_KEY_FILE" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30)
+SCP_CMD=(scp -i "$SSH_KEY_FILE" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30)
+printf -v quoted_key "%q" "$SSH_KEY_FILE"
+RSYNC_RSH="ssh -i $quoted_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes"
 
 echo "=== Command Comms — Remote Deployment ==="
 echo "Target: ${VM_USER}@${VM_IP}"
@@ -39,18 +49,18 @@ echo "Domain:  ${DOMAIN}"
 echo ""
 
 echo "[1/8] Testing SSH connection..."
-$SSH_CMD ${VM_USER}@${VM_IP} "echo 'SSH connection successful'; uname -a"
+"${SSH_CMD[@]}" ${VM_USER}@${VM_IP} "echo 'SSH connection successful'; uname -a"
 
 echo ""
 echo "[2/8] Running server setup (Node.js, nginx, PM2, certbot, firewall)..."
-$SSH_CMD ${VM_USER}@${VM_IP} "sudo SKIP_LOCAL_PG=1 bash -s" < "${SCRIPT_DIR}/setup-server.sh" || {
+"${SSH_CMD[@]}" ${VM_USER}@${VM_IP} "sudo SKIP_LOCAL_PG=1 bash -s" < "${SCRIPT_DIR}/setup-server.sh" || {
   echo "WARNING: Setup script had issues, continuing..."
 }
 
 echo ""
 echo "[3/8] Syncing application code via rsync..."
 rsync -az --delete \
-  -e "ssh -i $SSH_KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+  -e "$RSYNC_RSH" \
   --exclude node_modules \
   --exclude .env \
   --exclude client/node_modules \
@@ -87,13 +97,13 @@ AI_DISPATCHER_VOICE=en-US-GuyNeural
 CAD_URL=${CAD_URL:-}
 CAD_API_KEY=${CAD_API_KEY:-}
 ENVFILE
-$SCP_CMD "$ENV_TMP_FILE" "${VM_USER}@${VM_IP}:${APP_DIR}/.env"
-$SSH_CMD ${VM_USER}@${VM_IP} "chmod 600 ${APP_DIR}/.env"
+"${SCP_CMD[@]}" "$ENV_TMP_FILE" "${VM_USER}@${VM_IP}:${APP_DIR}/.env"
+"${SSH_CMD[@]}" ${VM_USER}@${VM_IP} "chmod 600 ${APP_DIR}/.env"
 echo "  .env written and secured"
 
 echo ""
 echo "[5/8] Installing dependencies and building frontend..."
-$SSH_CMD ${VM_USER}@${VM_IP} bash <<REMOTE_SCRIPT
+"${SSH_CMD[@]}" ${VM_USER}@${VM_IP} bash <<REMOTE_SCRIPT
 set -euo pipefail
 cd ${APP_DIR}
 echo "  Installing backend dependencies..."
@@ -109,7 +119,7 @@ REMOTE_SCRIPT
 
 echo ""
 echo "[6/8] Configuring nginx with SSL..."
-$SSH_CMD ${VM_USER}@${VM_IP} bash <<REMOTE_SCRIPT
+"${SSH_CMD[@]}" ${VM_USER}@${VM_IP} bash <<REMOTE_SCRIPT
 set -euo pipefail
 
 if [ -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem ]; then
@@ -137,7 +147,7 @@ REMOTE_SCRIPT
 
 echo ""
 echo "[7/8] Starting application with PM2..."
-$SSH_CMD ${VM_USER}@${VM_IP} bash <<REMOTE_SCRIPT
+"${SSH_CMD[@]}" ${VM_USER}@${VM_IP} bash <<REMOTE_SCRIPT
 set -euo pipefail
 cd ${APP_DIR}
 if pm2 describe command-comms &>/dev/null; then
