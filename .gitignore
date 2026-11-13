@@ -17,3 +17,15 @@ yarn-error.log*
 .cache/
 .replit
 uploads/
+
+# Never commit deploy credentials or private key material.
+.env.*
+!.env.*.example
+!.env.*.sample
+*.pem
+*.key
+*.p12
+*.pfx
+*.ppk
+id_rsa*
+id_ed25519*
