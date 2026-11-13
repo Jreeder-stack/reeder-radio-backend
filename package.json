@@ -7,6 +7,7 @@
     "node": "20.x"
   },
   "scripts": {
+    "pretest": "bash deploy/tests/remote-deploy-security.test.sh",
     "start": "node --import dotenv/config src/server.js",
     "start:old": "node server.js",
     "build": "cd client && npm install && npm run build",
